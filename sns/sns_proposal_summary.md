@@ -8,8 +8,6 @@ TRAX's mission is to support the music industry with better tools to connect art
 TRAX is a social marketplace for music, powered by the Internet Computer. TRAX enables music artists to retain full ownership of their content and monetisation whilst leveraging cutting-edge web3 tooling. 
 
 
-
-
 # Proposed Token Distribution
 
 Total token supply: 1 billion TRAX tokens
@@ -24,7 +22,7 @@ Initially distributed:
 
 Ledger transaction fee: 0.0001 TRAX tokens
 
-For more information on the TRAX SNS please read our [Whitepaper](https://docsend.com/view/kuxk6x5pghemyrje).
+For more information on the TRAX SNS please read our [Whitepaper](https://docs.google.com/document/d/1a-NefE8Pqsp5qbKb6TPj3tE1J2e7qWCYu1_FwuLdLF8/edit?usp=sharing).
 
 # Decentralization SNS Swap
 
@@ -43,7 +41,7 @@ The sale is open to anyone outside of the United States of America.
 
 Participation is either via the launchpad in the NNS front end: https://nns.ic0.app/ or on the command line using [quill](https://wiki.internetcomputer.org/wiki/How-To:_Participate_in_the_SNS_decentralization_sale_via_quill).
 
-You can review [Modclubs SNS Configuration here.](https://docs.google.com/spreadsheets/d/171YTZD6d6-BfWjni3WWaB75iwZRvqNqy87sJcu4f20M/edit?usp=sharing)
+You can review the TRAX SNS Configuration [here.](https://docs.google.com/spreadsheets/d/171YTZD6d6-BfWjni3WWaB75iwZRvqNqy87sJcu4f20M/edit?usp=sharing)
 
 
 
@@ -60,7 +58,7 @@ For more information, please refer to section 10.1.4.1 of the [TRAX DAO whitepap
 
 # Source Code
 
-TRAX's source code can be found [here](https://github.com/).
+TRAX's source code can be found [here](https://github.com/onlyontrax/TraxDAO).
 
 # Notes
 
