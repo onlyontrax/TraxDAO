@@ -1,0 +1,143 @@
+type Tokens__1 = record {e8s: nat64;};
+type Tokens = record {e8s: nat64;};
+type Token = record {symbol: text;};
+type Timestamp = int;
+type Ticker = text;
+type StatusResponse = 
+ record {
+   ckbtc_balance: opt nat;
+   cycles: opt nat;
+   heap_memory_size: opt nat;
+   icp_balance: opt Tokens;
+   memory_size: opt nat;
+   version: opt nat;
+ };
+type StatusRequest = 
+ record {
+   ckbtc_balance: bool;
+   cycles: bool;
+   heap_memory_size: bool;
+   icp_balance: bool;
+   memory_size: bool;
+   version: bool;
+ };
+type Percentage = float64;
+type Participants = 
+ record {
+   participantID: ArtistID;
+   participantPercentage: Percentage;
+ };
+type PPV = 
+ service {
+   accountBalance: (principal) -> (Tokens__1);
+   accountIdentifierToBlob: (AccountIdentifier__2) ->
+    (AccountIdentifierToBlobResult);
+   addPPVContent: (ContentID, Content) -> ();
+   canisterAccount: () -> (AccountIdentifier__1) query;
+   canisterBalance: () -> (Tokens__1);
+   changePlatformFee: (float64) -> ();
+   cyclesBalance: () -> (nat);
+   drainCanisterBalance: (nat64, principal, Ticker) -> (bool);
+   fanHasPaid: (ContentID, FanID) -> (bool) query;
+   getAllArtistContentIDs: (ArtistID__1) -> (vec ContentID) query;
+   getAllArtistContentPayments: (ArtistID__1) ->
+    (vec record {
+           ContentID;
+           FanID;
+           Timestamp;
+           nat;
+           Ticker;
+         });
+   getAllContentPayments: () ->
+    (vec
+      record {
+        ContentID;
+        ArtistID__1;
+        FanID;
+        Timestamp;
+        nat;
+        Ticker;
+        ContentType__1;
+      });
+   getAllFanContentPayments: (FanID) ->
+    (vec record {
+           ContentID;
+           Timestamp;
+           nat;
+           Ticker;
+         });
+   getContent: (ContentID) -> (opt Content) query;
+   getExchangeRate: (text) -> (float64);
+   getStatus: (opt StatusRequest) -> (opt StatusResponse);
+   get_account_identifier: (GetAccountIdentifierArgs) ->
+    (GetAccountIdentifierResult) query;
+   purchaseContent: (nat64, ContentID, text, nat64) -> ();
+   removeContent: (ContentID) -> ();
+   showEntriesOfContentMap: () -> (vec record {
+                                         ContentID;
+                                         Content;
+                                       });
+   updatePPVContent: (ContentID, Content) -> ();
+ };
+type GetAccountIdentifierSuccess = record {
+                                     accountIdentifier: AccountIdentifier;};
+type GetAccountIdentifierResult = 
+ variant {
+   err: GetAccountIdentifierErr;
+   ok: GetAccountIdentifierSuccess;
+ };
+type GetAccountIdentifierErr = 
+ record {
+   kind: variant {
+           InvalidToken;
+           Other;
+         };
+   message: opt text;
+ };
+type GetAccountIdentifierArgs = 
+ record {
+   "principal": principal;
+   token: Token;
+ };
+type FanID = principal;
+type ContentType__1 = text;
+type ContentType = text;
+type ContentID = text;
+type Content = 
+ record {
+   contentType: ContentType;
+   participants: vec Participants;
+   price: float64;
+   publisher: ArtistID;
+   publisherPercentage: Percentage;
+ };
+type ArtistID__1 = principal;
+type ArtistID = principal;
+type AccountIdentifier__2 = 
+ variant {
+   "blob": blob;
+   "principal": principal;
+   "text": text;
+ };
+type AccountIdentifier__1 = blob;
+type AccountIdentifierToBlobSuccess = blob;
+type AccountIdentifierToBlobResult = 
+ variant {
+   err: AccountIdentifierToBlobErr;
+   ok: AccountIdentifierToBlobSuccess;
+ };
+type AccountIdentifierToBlobErr = 
+ record {
+   kind: variant {
+           InvalidAccountIdentifier;
+           Other;
+         };
+   message: opt text;
+ };
+type AccountIdentifier = 
+ variant {
+   "blob": blob;
+   "principal": principal;
+   "text": text;
+ };
+service : () -> PPV

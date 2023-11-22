@@ -1,0 +1,78 @@
+type UserId__1 = principal;
+type UserId = principal;
+type Timestamp = int;
+type StatusResponse = 
+ record {
+   cycles: opt nat;
+   heap_memory_size: opt nat;
+   memory_size: opt nat;
+ };
+type StatusRequest = 
+ record {
+   cycles: bool;
+   heap_memory_size: bool;
+   memory_size: bool;
+ };
+type FileExtension = 
+ variant {
+   aac;
+   avi;
+   gif;
+   jpeg;
+   jpg;
+   mp3;
+   mp4;
+   png;
+   svg;
+   wav;
+ };
+type ContentInit = 
+ record {
+   chunkCount: nat;
+   contentId: text;
+   createdAt: Timestamp;
+   description: text;
+   extension: FileExtension;
+   name: text;
+   size: nat;
+   tags: vec text;
+   userId: UserId__1;
+ };
+type ContentId = text;
+type CanisterId = principal;
+type ArtistBucket = 
+ service {
+   changeCanisterSize: (nat) -> () oneway;
+   changeCycleAmount: (nat) -> () oneway;
+   checkCyclesBalance: () -> ();
+   createContent: (ContentInit) -> (opt record {
+                                          ContentId;
+                                          principal;
+                                        });
+   deleteAccount: (principal) -> ();
+   getAllContentCanisters: () -> (vec CanisterId);
+   getCanisterOfContent: (ContentId) -> (opt CanisterId);
+   getEntriesOfCanisterToContent: () -> (vec record {
+                                               CanisterId;
+                                               ContentId;
+                                             });
+   getPrincipalThis: () -> (principal);
+   getProfileInfo: (UserId) -> (opt ArtistAccountData__1);
+   getStatus: (opt StatusRequest) -> (opt StatusResponse);
+   initCanister: () -> (bool);
+   removeContent: (ContentId, nat) -> ();
+   transferFreezingThresholdCycles: () -> ();
+   updateProfileInfo: (ArtistAccountData__1) -> (bool);
+   version: () -> (nat) query;
+ };
+type ArtistAccountData__1 = 
+ record {
+   createdAt: Timestamp;
+   userPrincipal: principal;
+ };
+type ArtistAccountData = 
+ record {
+   createdAt: Timestamp;
+   userPrincipal: principal;
+ };
+service : (opt ArtistAccountData, principal) -> ArtistBucket

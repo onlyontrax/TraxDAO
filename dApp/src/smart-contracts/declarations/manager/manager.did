@@ -1,0 +1,58 @@
+type UserType = 
+ variant {
+   artist;
+   fan;
+ };
+type UserId = principal;
+type Timestamp = int;
+type StatusResponse = 
+ record {
+   cycles: opt nat;
+   heap_memory_size: opt nat;
+   memory_size: opt nat;
+ };
+type StatusRequest = 
+ record {
+   cycles: bool;
+   heap_memory_size: bool;
+   memory_size: bool;
+ };
+type FanAccountData = 
+ record {
+   createdAt: Timestamp;
+   userPrincipal: principal;
+ };
+type ArtistAccountData = 
+ record {
+   createdAt: Timestamp;
+   userPrincipal: principal;
+ };
+service : {
+  changeCanisterSize: (nat) -> () oneway;
+  changeCycleAmount: (nat) -> () oneway;
+  createProfileArtist: (ArtistAccountData) -> (principal);
+  createProfileFan: (FanAccountData) -> (principal);
+  cyclesBalance: () -> (nat);
+  deleteAccountCanister: (UserId, principal, UserType) -> (bool);
+  deleteContentCanister: (principal) -> ();
+  getArtistAccountEntries: () -> (vec record {
+                                        principal;
+                                        principal;
+                                      }) query;
+  getAvailableMemoryCanister: (principal) -> (opt nat);
+  getCanisterArtist: (principal) -> (opt principal);
+  getCanisterFan: (principal) -> (opt principal);
+  getFanAccountEntries: () -> (vec record {
+                                     principal;
+                                     principal;
+                                   });
+  getOwnerOfArtistCanister: (principal) -> (opt UserId);
+  getOwnerOfFanCanister: (principal) -> (opt UserId);
+  getStatus: (opt StatusRequest) -> (opt StatusResponse);
+  getTotalArtistAccounts: () -> (nat) query;
+  getTotalFanAccounts: () -> (nat) query;
+  installCode: (principal, blob, blob) -> ();
+  transferCycles: (principal, nat) -> ();
+  transferOwnershipArtist: (principal, principal) -> ();
+  transferOwnershipFan: (principal, principal) -> ();
+}

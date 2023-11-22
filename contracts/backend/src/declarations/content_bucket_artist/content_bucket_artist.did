@@ -1,0 +1,77 @@
+type UserId = principal;
+type Timestamp = int;
+type StatusResponse = 
+ record {
+   cycles: opt nat;
+   heap_memory_size: opt nat;
+   memory_size: opt nat;
+   version: opt nat;
+ };
+type StatusRequest = 
+ record {
+   cycles: bool;
+   heap_memory_size: bool;
+   memory_size: bool;
+   version: bool;
+ };
+type FileExtension = 
+ variant {
+   aac;
+   avi;
+   gif;
+   jpeg;
+   jpg;
+   mp3;
+   mp4;
+   png;
+   svg;
+   wav;
+ };
+type ContentInit = 
+ record {
+   chunkCount: nat;
+   contentId: text;
+   createdAt: Timestamp;
+   description: text;
+   extension: FileExtension;
+   name: text;
+   size: nat;
+   tags: vec text;
+   userId: UserId;
+ };
+type ContentId = text;
+type ContentData = 
+ record {
+   chunkCount: nat;
+   contentId: text;
+   createdAt: Timestamp;
+   description: text;
+   extension: FileExtension;
+   name: text;
+   size: nat;
+   tags: vec text;
+   uploadedAt: Timestamp;
+   userId: UserId;
+ };
+type ArtistContentBucket = 
+ service {
+   changeCanisterSize: (nat) -> () oneway;
+   changeCycleAmount: (nat) -> () oneway;
+   checkCyclesBalance: () -> ();
+   createContent: (ContentInit) -> (opt ContentId);
+   getAllContentInfo: (ContentId) ->
+    (vec record {
+           ContentId;
+           ContentData;
+         }) query;
+   getContentChunk: (ContentId, nat) -> (opt blob) query;
+   getContentInfo: (ContentId) -> (opt ContentData) query;
+   getCurrentCyclesBalance: () -> (nat) query;
+   getPrincipalThis: () -> (principal) query;
+   getStatus: (opt StatusRequest) -> (opt StatusResponse) query;
+   putContentChunk: (ContentId, nat, blob) -> ();
+   removeContent: (ContentId, nat) -> ();
+   transferCyclesToThisCanister: () -> ();
+   transferFreezingThresholdCycles: () -> ();
+ };
+service : (principal, principal, principal) -> ArtistContentBucket

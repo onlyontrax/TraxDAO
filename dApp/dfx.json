@@ -1,0 +1,15 @@
+{
+  "canisters": {
+    "www": {
+      "type": "assets",
+      "source": ["out"]
+    }
+  },
+  "local": {
+    "bind": "127.0.0.1:12345",
+    "type": "ephemeral",
+    "replica": {
+      "subnet_type": "system"
+    }
+  }
+}

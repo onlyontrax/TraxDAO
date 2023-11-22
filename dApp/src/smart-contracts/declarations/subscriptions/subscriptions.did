@@ -1,0 +1,89 @@
+type Tokens = record {e8s: nat64;};
+type Token = record {symbol: text;};
+type Timestamp = int;
+type Ticker = text;
+type SubType = 
+ variant {
+   monthly;
+   yearly;
+ };
+type GetAccountIdentifierSuccess = record {
+                                     accountIdentifier: AccountIdentifier;};
+type GetAccountIdentifierResult = 
+ variant {
+   err: GetAccountIdentifierErr;
+   ok: GetAccountIdentifierSuccess;
+ };
+type GetAccountIdentifierErr = 
+ record {
+   kind: variant {
+           InvalidToken;
+           Other;
+         };
+   message: opt text;
+ };
+type GetAccountIdentifierArgs = 
+ record {
+   "principal": principal;
+   token: Token;
+ };
+type FanID = principal;
+type ArtistID = principal;
+type AccountIdentifier__2 = 
+ variant {
+   "blob": blob;
+   "principal": principal;
+   "text": text;
+ };
+type AccountIdentifier__1 = blob;
+type AccountIdentifierToBlobSuccess = blob;
+type AccountIdentifierToBlobResult = 
+ variant {
+   err: AccountIdentifierToBlobErr;
+   ok: AccountIdentifierToBlobSuccess;
+ };
+type AccountIdentifierToBlobErr = 
+ record {
+   kind: variant {
+           InvalidAccountIdentifier;
+           Other;
+         };
+   message: opt text;
+ };
+type AccountIdentifier = 
+ variant {
+   "blob": blob;
+   "principal": principal;
+   "text": text;
+ };
+service : {
+  _payArtistsSub: () -> ();
+  accountBalance: (principal) -> (Tokens);
+  accountIdentifierToBlob: (AccountIdentifier__2) ->
+   (AccountIdentifierToBlobResult);
+  canisterAccount: () -> (AccountIdentifier__1) query;
+  canisterBalance: () -> (Tokens);
+  checkLatePaymentStrikes: (FanID, ArtistID) -> (nat);
+  getArtistTotalSubRevenue: (ArtistID, Ticker) -> (opt nat64);
+  getExchangeRate: (text) -> (float64);
+  getNumOfSubs: (ArtistID) -> (nat32);
+  getSubTxMapArtist: (ArtistID) ->
+   (vec record {
+          FanID;
+          Timestamp;
+          nat64;
+          Ticker;
+        });
+  getSubTxMapFan: (ArtistID) ->
+   (vec record {
+          ArtistID;
+          Timestamp;
+          nat64;
+          Ticker;
+        });
+  get_account_identifier: (GetAccountIdentifierArgs) ->
+   (GetAccountIdentifierResult) query;
+  isFanSubscribed: (ArtistID, FanID) -> (bool);
+  subscribe: (ArtistID, FanID, float64, Ticker, SubType) -> (bool);
+  unsubscribe: (ArtistID, FanID) -> (bool);
+}

@@ -1,0 +1,131 @@
+type User = principal;
+type Tokens = record {e8s: nat64;};
+type TokenIndex = nat32;
+type TokenIdentifier__1 = text;
+type TokenIdentifier = text;
+type Time = int;
+type TicketNFT = 
+ service {
+   bearer: (TokenIdentifier__1) -> (Result_3) query;
+   changeCanisterSize: (nat) -> () oneway;
+   changeCycleAmount: (nat) -> () oneway;
+   checkCyclesBalance: () -> ();
+   getAllArtistContentPayments: (ArtistID__1) ->
+    (vec record {
+           text;
+           principal;
+           int;
+           nat;
+           text;
+         });
+   getAllContentPayments: () ->
+    (vec record {
+           text;
+           ArtistID__1;
+           principal;
+           int;
+           nat;
+           text;
+         });
+   getAllFanContentPayments: (principal) -> (vec record {
+                                                   text;
+                                                   int;
+                                                   nat;
+                                                   text;
+                                                 });
+   getBalance: () -> (Tokens);
+   getFanTickets: (principal) -> (opt vec text) query;
+   getMinter: () -> (principal) query;
+   getRegistry: () -> (vec record {
+                             TokenIndex;
+                             principal;
+                           });
+   getStatus: (opt StatusRequest) -> (opt StatusResponse);
+   getTokens: () -> (vec record {
+                           TokenIndex;
+                           ExtMetadata;
+                         });
+   initCanister: () -> (bool);
+   metadata: (TokenIdentifier__1) -> (Result_2) query;
+   mintNFT: (MintRequest) -> (text);
+   supply: () -> (Result_1);
+   tokens: (principal) -> (Result);
+ };
+type TicketMetaData = 
+ record {
+   description: text;
+   eventDate: text;
+   eventTime: text;
+   id: text;
+   location: text;
+   logo: blob;
+   name: text;
+   price: nat64;
+   royalty: vec Participants;
+   schedule: Time;
+   status: text;
+   ticker: text;
+   totalSupply: nat;
+ };
+type StatusResponse = 
+ record {
+   cycles: opt nat;
+   heap_memory_size: opt nat;
+   memory_size: opt nat;
+ };
+type StatusRequest = 
+ record {
+   cycles: bool;
+   heap_memory_size: bool;
+   memory_size: bool;
+ };
+type Result_3 = 
+ variant {
+   err: CommonError;
+   ok: principal;
+ };
+type Result_2 = 
+ variant {
+   err: CommonError;
+   ok: ExtMetadata;
+ };
+type Result_1 = 
+ variant {
+   err: CommonError;
+   ok: nat;
+ };
+type Result = 
+ variant {
+   err: CommonError;
+   ok: vec TokenIndex;
+ };
+type Percentage = float64;
+type Participants = 
+ record {
+   participantID: ArtistID;
+   participantPercentage: Percentage;
+ };
+type MintRequest = 
+ record {
+   metadata: opt blob;
+   to: User;
+ };
+type ExtMetadata = 
+ variant {
+   fungible:
+    record {
+      decimals: nat8;
+      metadata: opt blob;
+      name: text;
+      symbol: text;
+    };
+   nonfungible: record {metadata: opt blob;};
+ };
+type CommonError = 
+ variant {
+   InvalidToken: TokenIdentifier;
+   Other: text;
+ };
+type ArtistID__1 = principal;
+type ArtistID = principal;
+service : (opt TicketMetaData, principal) -> TicketNFT

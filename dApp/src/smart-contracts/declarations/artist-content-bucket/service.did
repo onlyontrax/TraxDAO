@@ -1,0 +1,63 @@
+type ArtistContentBucket = service {
+  changeCanisterSize : (nat) -> () oneway;
+  changeCycleAmount : (nat) -> () oneway;
+  checkCyclesBalance : () -> ();
+  createContent : (ContentInit) -> (opt ContentId);
+  getContentChunk : (ContentId, nat) -> (opt vec nat8);
+  getContentInfo : (ContentId) -> (opt ContentData);
+  getPrincipalThis : () -> (principal);
+  getStatus : (opt StatusRequest) -> (opt StatusResponse);
+  putContentChunk : (ContentId, nat, vec nat8) -> ();
+  removeContent : (ContentId, nat) -> ();
+  transferFreezingThresholdCycles : () -> ();
+  version : () -> (nat) query;
+};
+type ContentData = record {
+  contentId : text;
+  userId : UserId;
+  name : text;
+  createdAt : Timestamp;
+  size : nat;
+  tags : vec text;
+  description : text;
+  chunkCount : nat;
+  extension : FileExtension;
+  uploadedAt : Timestamp;
+};
+type ContentId = text;
+type ContentInit = record {
+  contentId : text;
+  userId : UserId;
+  name : text;
+  createdAt : Timestamp;
+  size : nat;
+  tags : vec text;
+  description : text;
+  chunkCount : nat;
+  extension : FileExtension;
+};
+type FileExtension = variant {
+  aac;
+  avi;
+  gif;
+  jpg;
+  mp3;
+  mp4;
+  png;
+  svg;
+  wav;
+  jpeg;
+};
+type StatusRequest = record {
+  memory_size : bool;
+  cycles : bool;
+  heap_memory_size : bool;
+};
+type StatusResponse = record {
+  memory_size : opt nat;
+  cycles : opt nat;
+  heap_memory_size : opt nat;
+};
+type Timestamp = int;
+type UserId = principal;
+service : ArtistContentBucket

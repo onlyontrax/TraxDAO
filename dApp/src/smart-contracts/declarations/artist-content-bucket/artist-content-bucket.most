@@ -1,0 +1,8 @@
+// Version: 1.0.0
+actor {
+  stable var CYCLE_AMOUNT : Nat;
+  stable var MAX_CANISTER_SIZE : Nat;
+  stable var canisterOwner : Principal;
+  stable var initialised : Bool;
+  stable var managerCanister : Principal
+};

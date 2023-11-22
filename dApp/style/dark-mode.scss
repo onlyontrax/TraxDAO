@@ -1,0 +1,213 @@
+@import "./vars.scss";
+
+.container.dark {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: $darkmode-color;
+  }
+  a {
+    color: $darkmode-color;
+    &:hover {
+      color: $darkmode-second-color;
+    }
+  }
+  .ant-layout,
+  .ant-layout-content {
+    background-color: #1e1e1e;
+  }
+  .main-header,
+  .header.ant-layout-header {
+    background-color: $darkmode-main-background;
+    .search-bar {
+      .ant-input-group-wrapper {
+        background-color: transparent;
+      }
+      .ant-input-affix-wrapper {
+        background-color: $darkmode-second-background;
+        border-color: $darkmode-second-background;
+      }
+      .ant-input-search .ant-input {
+        background-color: $darkmode-second-background;
+      }
+      .ant-input-search-button {
+        background-color: $darkmode-second-background;
+        border-color: $darkmode-second-background;
+      }
+      .drop-hint {
+        background-color: $darkmode-second-background;
+        border-color: $darkmode-second-background;
+      }
+    }
+    .nav-icons .active {
+      color: $darkmode-color;
+    }
+  }
+  .main-footer {
+    background-image: linear-gradient(to bottom, $darkmode-main-background 0%, $darkmode-second-background 100%);
+  }
+  .feed-card {
+    .feed-container {
+      .feed-text,
+      .ant-collapse-header,
+      .ant-collapse-content {
+        color: $darkmode-color;
+      }
+    }
+    .feed-actions {
+      .action-item {
+        .action-ico {
+          color: $darkmode-color;
+          &.liked,
+          &.active {
+            color: $primary-color;
+          }
+        }
+      }
+    }
+    .ant-collapse {
+      background: transparent;
+    }
+  }
+  .suggestion-bl .sug-top,
+  .ant-descriptions-item-content,
+  .ant-statistic-title,
+  .ant-statistic-content,
+  .pro-desc {
+    color: $darkmode-color;
+  }
+  .view-cmt,
+  .vid-info {
+    a {
+      color: $darkmode-main-background;
+      &:hover {
+        color: $darkmode-second-background;
+      }
+    }
+  }
+  .main-profile {
+    .pro-desc {
+      .show-more {
+        .ant-collapse-header {
+          color: $darkmode-second-color;
+        }
+        .ant-descriptions-item-label {
+          color: $darkmode-second-color;
+        }
+      }
+    }
+  }
+  .conversation-list {
+    background-color: $darkmode-main-background;
+    .sub-box a {
+      color: $black;
+    }
+  }
+  .mess-recipient,
+  .ant-pagination-item {
+    a {
+      color: $darkmode-main-background;
+    }
+    &.ant-pagination-item-active a {
+      color: $primary-color;
+    }
+  }
+  .contentInner,
+  .main-background {
+    background-color: $darkmode-body-background;
+  }
+  .page-heading,
+  .page-content,
+  .ant-form-item .ant-form-item-label label,
+  .login-box,
+  .vid-title {
+    color: $darkmode-color;
+    .ant-form-item-explain,
+    .title {
+      color: $darkmode-color;
+    }
+    .ant-divider {
+      color: $white;
+      &::before,
+      &::after {
+        border-top-color: $darkmode-second-color;
+      }
+    }
+  }
+  .login-box {
+    p,
+    .ant-checkbox {
+      color: $darkmode-color;
+    }
+  }
+  .copyright-text a {
+    color: $secondary-color;
+  }
+  .user-account {
+    .ant-tabs-nav {
+      .ant-tabs-tab {
+        color: $darkmode-color;
+      }
+    }
+  }
+  .table-responsive {
+    .ant-table-tbody > tr > td {
+      background-color: #1e1e1e;
+      a {
+        color: $black;
+      }
+    }
+  }
+  .welcome-box h3 {
+    color: $darkmode-main-background;
+  }
+  .filter-feed .ant-btn {
+    background: $primary-color;
+    color: $darkmode-color;
+    border-radius: 3px;
+    &.active {
+      background: $secondary-color;
+      color: $darkmode-color;
+    }
+  }
+  .story-per-card {
+    color: $white;
+  }
+  .stream-duration,
+  .reviews-list,
+  .page-not-found {
+    color: $darkmode-color;
+  }
+}
+.profile-drawer.dark,
+.private-call-drawer.dark,
+.welcome-box {
+  .ant-divider,
+  h3 {
+    color: $white;
+  }
+  .profile-user .profile-name span {
+    color: $darkmode-color;
+  }
+  a {
+    color: $darkmode-color;
+  }
+  .ant-drawer-header,
+  .ant-drawer-body,
+  .ant-drawer-title {
+    border-radius: 0;
+    background-color: $darkmode-main-background;
+    color: $darkmode-color;
+  }
+  .switchTheme {
+    color: $darkmode-second-color;
+  }
+  .ant-drawer-close {
+    .anticon {
+      color: $darkmode-second-color;
+    }
+  }
+}

@@ -1,0 +1,62 @@
+type UserType = 
+ variant {
+   artist;
+   fan;
+ };
+type UserId = principal;
+type Timestamp = int;
+type StatusResponse = 
+ record {
+   cycles: opt nat;
+   heap_memory_size: opt nat;
+   memory_size: opt nat;
+   version: opt nat;
+ };
+type StatusRequest = 
+ record {
+   cycles: bool;
+   heap_memory_size: bool;
+   memory_size: bool;
+   version: bool;
+ };
+type FanAccountData = 
+ record {
+   createdAt: Timestamp;
+   userPrincipal: principal;
+ };
+type CanisterId = principal;
+type ArtistAccountData = 
+ record {
+   createdAt: Timestamp;
+   userPrincipal: principal;
+ };
+service : {
+  changeCanisterSize: (nat) -> () oneway;
+  changeCycleAmount: (nat) -> () oneway;
+  createProfileArtist: (ArtistAccountData) -> (principal);
+  createProfileFan: (FanAccountData) -> (principal);
+  cyclesBalance: () -> (nat) query;
+  deleteAccountCanister: (UserId, principal, UserType) -> (bool);
+  getArtistAccountEntries: () -> (vec record {
+                                        UserId;
+                                        CanisterId;
+                                      }) query;
+  getAvailableMemoryCanister: (principal) -> (opt nat);
+  getCanisterArtist: (principal) -> (opt principal) query;
+  getCanisterFan: (principal) -> (opt principal) query;
+  getFanAccountEntries: () -> (vec record {
+                                     principal;
+                                     principal;
+                                   }) query;
+  getOwnerOfArtistCanister: (principal) -> (opt UserId) query;
+  getOwnerOfFanCanister: (principal) -> (opt UserId) query;
+  getStatus: (opt StatusRequest) -> (opt StatusResponse) query;
+  getTotalArtistAccounts: () -> (nat) query;
+  getTotalFanAccounts: () -> (nat) query;
+  installCode: (principal, blob, blob) -> ();
+  transferCyclesToAccountCanister: (principal, nat) -> ();
+  transferCyclesToCanister: (principal, nat) -> ();
+  transferCyclesToContentCanister: (principal, principal, nat) -> ();
+  transferOwnershipArtist: (principal, principal) -> ();
+  transferOwnershipFan: (principal, principal) -> ();
+}

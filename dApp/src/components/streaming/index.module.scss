@@ -1,0 +1,82 @@
+@import '../../../style/default.scss';
+
+.conversation-users {
+  .users {
+    height: 435px;
+    overflow-y: scroll;
+    width: 100%;
+
+    .user {
+      margin: 0 0 5px;
+      padding: 5px;
+      border-radius: 5px;
+      background-color: $white;
+      text-transform: capitalize;
+
+      img {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: 50%;
+        margin-right: 5px;
+      }
+    }
+  }
+}
+
+
+.stream-card {
+  margin-bottom: 15px;
+  position: relative;
+  cursor: pointer;
+
+  .ant-card-body {
+    padding: 30px 24px;
+  }
+
+  .ant-avatar {
+    width: 65px;
+    height: 65px;
+  }
+
+  .live-status {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background-color: $success-color;
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+
+    .live {
+      display: block;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      animation: blink 1s linear infinite;
+      opacity: 0.7;
+      background-color: $success-color;
+      color: $white;
+    }
+  }
+
+  .card-stat {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    text-align: center;
+  }
+
+  .price-tag {
+    position: absolute;
+    left: 0;
+    top: 1px;
+    color: $white;
+    background-color: $secondary-color;
+    padding: 3px 15px;
+    clip-path: polygon(0px 0px, 0px 100%, 100% 100%, 90% 50%, 100% 0);
+    font-size: 10px;
+    font-weight: 600;
+  }
+}

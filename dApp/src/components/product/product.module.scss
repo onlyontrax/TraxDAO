@@ -1,0 +1,99 @@
+@import '../../../style/vars.scss';
+.componentsproductModule{
+  ::global{
+    .prd-card {
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-position: center;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+      position: relative;
+      transition: all 0.3s ease-in-out;
+      cursor: pointer;
+      border-top-left-radius: 3px;
+      border-top-right-radius: 3px;
+      height: 250px;
+      margin-bottom: 40px;
+
+      @media screen and (max-width: $mobile-screen) {
+        margin-bottom: 50px;
+      }
+
+
+      .prd-info {
+        position: absolute;
+        top: 100%;
+        width: 100%;
+        border-bottom-left-radius: 3px;
+        border-bottom-right-radius: 3px;
+        text-transform: capitalize;
+        // font-family: $primary-font-bold;
+        color: $black;
+        background-color: $primary-color;
+        padding: 5px 10px;
+        text-align: center;
+        font-weight: 600;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
+
+      .label-wrapper {
+        position: absolute;
+        right: auto;
+        left: 0px;
+        top: 10px;
+        display: flex;
+        flex-direction: column;
+        z-index: 1;
+
+        .label-wrapper-price {
+          color: $white;
+          background-color: $secondary-color;
+          padding: 3px 15px;
+          clip-path: polygon(0px 0px, 0px 100%, 100% 100%, 90% 50%, 100% 0);
+          font-size: 11px;
+          font-weight: 600;
+          margin: 5px 0;
+        }
+
+        .label-wrapper-digital {
+          color: $black;
+          background-color: $primary-color;
+          padding: 3px 15px;
+          clip-path: polygon(0px 0px, 0px 100%, 100% 100%, 90% 50%, 100% 0);
+          font-size: 11px;
+          font-weight: 600;
+          margin: 5px 0;
+        }
+      }
+
+
+      &:hover {
+        opacity: 0.9;
+        .prd-info {
+          background-color: $secondary-color;
+        }
+      }
+
+      @media screen and (max-width: $tablet-screen) {
+        height: 220px;
+      }
+
+      @media screen and (max-width: $mobile-screen) {
+        height: 150px;
+      }
+    }
+
+    .address-option {
+      position: relative;
+      display: flex;
+      align-items: center;
+      padding-right: 30px;
+      .delete-btn {
+        position: absolute;
+        right: 0;
+        top: 0;
+      }
+    }
+  }
+}

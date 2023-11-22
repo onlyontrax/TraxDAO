@@ -1,0 +1,58 @@
+@import '../../../../style/vars.scss';
+
+.loading-screen {
+  z-index: 99999;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000000;
+  img, span {
+    animation-name: loading;
+    animation-duration: 2s;
+    animation-timing-function: ease-out;
+    animation-delay: 0s;
+    animation-direction: alternate;
+    animation-iteration-count: infinite;
+    animation-fill-mode: none;
+    animation-play-state: running;
+    padding: 20px;
+    text-align: center;
+    color: $white;
+  }
+  p {
+    color: $primary-color;
+    font-size: 16px;
+  }
+}
+
+@keyframes loading {
+  0% {
+    font-size: 25px;
+    width: 300px;
+  }
+
+  25% {
+    width: 310px;
+    font-size: 27px;
+  }
+
+  50% {
+    width: 320px;
+    font-size: 30px;
+  }
+
+  75% {
+    width: 310px;
+    font-size: 27px;
+  }
+
+  100% {
+    width: 300px;
+    font-size: 25px;
+  }
+}

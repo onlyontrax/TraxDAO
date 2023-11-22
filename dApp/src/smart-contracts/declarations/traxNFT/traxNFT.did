@@ -1,0 +1,171 @@
+type Time = int;
+type TicketMetaData = 
+ record {
+   description: text;
+   eventDate: text;
+   eventTime: text;
+   id: text;
+   location: text;
+   logo: blob;
+   name: text;
+   price: nat64;
+   royalty: vec Participants;
+   schedule: Time;
+   status: text;
+   ticker: text;
+   totalSupply: nat;
+ };
+type StatusResponse = 
+ record {
+   cycles: opt nat;
+   heap_memory_size: opt nat;
+   memory_size: opt nat;
+ };
+type StatusRequest = 
+ record {
+   cycles: bool;
+   heap_memory_size: bool;
+   memory_size: bool;
+ };
+type SongMetaData = 
+ record {
+   chunkCount: nat64;
+   description: text;
+   extension: FileExtension;
+   id: text;
+   logo: blob;
+   name: text;
+   price: nat64;
+   royalty: vec Participants;
+   schedule: Time;
+   size: nat64;
+   status: text;
+   ticker: text;
+   totalSupply: nat;
+ };
+type Percentage = float64;
+type Participants = 
+ record {
+   participantID: ArtistID;
+   participantPercentage: Percentage;
+ };
+type NFT = 
+ record {
+   canisterId: principal;
+   id: text;
+   owner: principal;
+   productType: text;
+ };
+type FileExtension = 
+ variant {
+   aac;
+   avi;
+   gif;
+   jpeg;
+   jpg;
+   mp3;
+   mp4;
+   png;
+   svg;
+   wav;
+ };
+type ArtistID = principal;
+type AccountIdentifier__1 = 
+ variant {
+   "blob": blob;
+   "principal": principal;
+   "text": text;
+ };
+type AccountIdentifierToTextSuccess = text;
+type AccountIdentifierToTextResult = 
+ variant {
+   err: AccountIdentifierToTextErr;
+   ok: AccountIdentifierToTextSuccess;
+ };
+type AccountIdentifierToTextErr = 
+ record {
+   kind: variant {
+           InvalidAccountIdentifier;
+           Other;
+         };
+   message: opt text;
+ };
+type AccountIdentifierToTextArgs = 
+ record {
+   accountIdentifier: AccountIdentifier;
+   canisterId: opt principal;
+ };
+type AccountIdentifierToBlobSuccess = blob;
+type AccountIdentifierToBlobResult = 
+ variant {
+   err: AccountIdentifierToBlobErr;
+   ok: AccountIdentifierToBlobSuccess;
+ };
+type AccountIdentifierToBlobErr = 
+ record {
+   kind: variant {
+           InvalidAccountIdentifier;
+           Other;
+         };
+   message: opt text;
+ };
+type AccountIdentifierToBlobArgs = 
+ record {
+   accountIdentifier: AccountIdentifier;
+   canisterId: opt principal;
+ };
+type AccountIdentifier = 
+ variant {
+   "blob": blob;
+   "principal": principal;
+   "text": text;
+ };
+service : {
+  accountIdentifierToBlob: (AccountIdentifierToBlobArgs) ->
+   (AccountIdentifierToBlobResult);
+  accountIdentifierToBlobFromText: (AccountIdentifier__1) ->
+   (AccountIdentifierToBlobResult);
+  accountIdentifierToText: (AccountIdentifierToTextArgs) ->
+   (AccountIdentifierToTextResult);
+  candidAccountIdentifierToBlob: (text) -> (blob);
+  createSong: (principal, SongMetaData) -> (principal);
+  createTicket: (principal, TicketMetaData) -> (principal);
+  cyclesBalance: () -> (nat);
+  getAllSongNFTs: () ->
+   (vec record {
+          text;
+          text;
+          text;
+          nat;
+          nat64;
+          text;
+          principal;
+        });
+  getAllTicketNFTs: () ->
+   (vec record {
+          text;
+          text;
+          text;
+          text;
+          text;
+          text;
+          nat;
+          nat64;
+          text;
+          principal;
+        });
+  getArtistNfts: (principal) -> (vec record {
+                                       text;
+                                       text;
+                                       principal;
+                                     }) query;
+  getArtistSongs: (principal) -> (opt vec text) query;
+  getAvailableMemoryCanister: (principal) -> (opt nat);
+  getCallerId: () -> (principal);
+  getCallerIdentifier: () -> (blob);
+  getCallerIdentifierAsText: () -> (text);
+  getNFT: (text) -> (opt NFT);
+  getSongMetadata: (text) -> (opt SongMetaData) query;
+  getStatus: (opt StatusRequest) -> (opt StatusResponse);
+  getTicketMetaData: (text) -> (opt TicketMetaData) query;
+}

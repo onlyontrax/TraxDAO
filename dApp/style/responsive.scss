@@ -1,0 +1,44 @@
+@import "./default.scss";
+@import "./mixin.scss";
+
+@media screen and (max-width: $mobile-screen) {
+  .ant-layout-content {
+    padding: 45px 0 0;
+    // min-height: calc(100vh - 100px);
+    min-height: 100vh;
+  }
+  .main-footer {
+    font-size: 12px;
+  }
+  .mobile-search-bar {
+    width: 100%;
+    padding: 5px;
+  }
+  .ant-btn.info,
+  .ant-btn.secondary-custom {
+    margin-bottom: 5px;
+  }
+  .ant-btn.secondary,
+  .ant-btn.primary {
+    display: block;
+    width: 100%;
+  }
+  .ant-col-offset-4,
+  .ant-col-offset-8 {
+    margin-left: 0 !important;
+  }
+  .switch-grp {
+    margin-bottom: 10px;
+  }
+  // textarea:focus,
+  // input:focus {
+  //   font-size: 14px !important;
+  //   &:placeholder-shown {
+  //     font-size: 30px !important;
+  //   }
+  // }
+
+  .user-account .ant-tabs .ant-tabs-nav-list {
+    width: initial !important;
+  }
+}

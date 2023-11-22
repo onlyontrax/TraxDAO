@@ -1,0 +1,211 @@
+@import '../../../style/vars.scss';
+.componentVideoModule{
+  :global {
+    .vid-card {
+      width: 100%;
+      height: 3rem;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .05);
+      position: relative;
+      transition: all 0.3s ease-in-out;
+      cursor: pointer;
+      border-radius: 10px;
+      overflow: hidden;
+      @media screen and (max-width: $tablet-screen) {
+        width: 7rem;
+        height: 7rem;
+      }
+      @media screen and (max-width: $mobile-screen) {
+        width: 5rem;
+        height: 5rem;
+      }
+
+      .vid-thumb {
+        height: 3rem;
+        width: 3rem;
+        position: relative;
+        display: flex;
+        
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+
+        
+
+        .lock-middle {
+          position: relative;
+          width: 100%;
+          display: inline-flex;
+          justify-content: center;
+          flex-direction: column;
+
+          .anticon {
+            font-size: 32px;
+            color: $white;
+            @media screen and (max-width: $mobile-screen) {
+              font-size: 20px;
+            }
+          }
+
+          .ant-btn {
+            font-size: 11px;
+            color: $white;
+            // font-family: $primary-font-bold;
+          }
+        }
+
+        .card-bg {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 3rem;
+          height: 3rem;
+          background-color: $light-grey;
+          background-size: cover;
+          background-repeat: no-repeat;
+          background-position: center;
+          transition: all 0.3s ease-in-out;
+        }
+
+        @media screen and (max-width: $tablet-screen) {
+          height: 114px;
+        }
+
+        @media screen and (max-width: $mobile-screen) {
+          height: 82px;
+        }
+      }
+
+      .vid-stats {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        color: $white;
+        font-size: 10px;
+        padding: 5px 0 5px 5px;
+        font-weight: 600;
+        position: absolute;
+        bottom: 0;
+        background-image: linear-gradient(to bottom, #04040e00 0%, rgba(60, 60, 60, .5) 100%);
+
+        a {
+          color: $white;
+          padding-right: 10px;
+        }
+      }
+
+      .vid-info {
+        // font-family: $primary-font-bold;
+        color: $black;
+        background-color: $primary-color;
+        padding: 5px;
+        font-size: 12px;
+        text-align: center;
+        font-weight: 600;
+        text-transform: capitalize;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+        transition: all 0.3s ease-in-out;
+
+        @media screen and (max-width: $mobile-screen) {
+          font-size: 11px;
+        }
+      }
+
+      .upload-content-heading {
+        .p{
+        font-size: 20px;
+        color: $lime-green;
+      }
+      }
+
+      .vid-price {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        color: $white;
+        font-size: 10px;
+        padding: 5px 0 5px 5px;
+        font-weight: 600;
+        position: absolute;
+        bottom: 0;
+        .label-price {
+          color: #FFFFFF !important;
+          background-color: $true-black;
+          padding: 3px 15px;
+          clip-path: polygon(0px 0px, 0px 100%, 100% 100%, 90% 50%, 100% 0);
+          font-size: 11px;
+          font-weight: 600;
+          margin: 5px 0;
+
+          @media screen and (max-width: $mobile-screen) {
+            margin: -6px 0 !important;
+          }
+          @media screen and (max-width: $tablet-screen) {
+            padding: 2px 13px;
+            font-size: 10px;
+            margin: 2px 0;
+          }
+          
+        
+        }
+      }
+
+
+
+      &:hover {
+        opacity: 0.9;
+        .vid-info {
+          background-color: $secondary-color;
+        }
+      }
+    }
+
+    .upload-bl {
+      position: relative;
+      text-align: center;
+      padding: 4rem 2rem;
+      border: 1.5px dashed #616161 !important;
+      border-radius: 7px;
+      background-color: #141414;
+      transition: all 0.2s ease-in-out;
+
+      &:hover{
+        border: 1.5px dashed $lime-green !important;
+      }
+      
+      border: 0.5px solid #FFFFFF20;
+      .remove-btn {
+        position: absolute;
+        right: 0;
+        top: 0;
+      }
+    }
+
+    .upload-bl-track-form {
+      position: relative;
+      text-align: center;
+      padding: 4rem 2rem;
+      border: none !important;
+      border-radius: 7px;
+      background-color: #14141400;
+      transition: all 0.2s ease-in-out;
+      margin: 0px 6px;
+    margin-top: 2rem;
+    margin-bottom: -2rem;
+
+      // &:hover{
+      //   border: 1.5px dashed $lime-green !important;
+      // }
+      
+      // border: 0.5px solid #FFFFFF20;
+      .remove-btn {
+        position: absolute;
+        right: 0;
+        top: 0;
+      }
+    }
+  }
+}

@@ -1,0 +1,28 @@
+@import '../../style/vars';
+
+.layoutModule {
+  :global {
+    .backTop {
+      right: 50px;
+
+      .ant-back-top-content {
+        background: $black;
+        opacity: 0.5;
+        transition: all 0.3s;
+        box-shadow: 0 0 15px 1px rgba(69, 65, 78, 0.1);
+        color:$white;
+
+        &:hover {
+          opacity: 1;
+        }
+      }
+    }
+
+    @media (max-width: $mobile-screen) {
+      .backTop {
+        right: 20px;
+        bottom: 80px !important;
+      }
+    }
+  }
+}
