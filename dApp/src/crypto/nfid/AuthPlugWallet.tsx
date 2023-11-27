@@ -61,7 +61,7 @@ function AuthPlugWallet({ onSignOut, onConnect, isAuthenticated, handlePlugWalle
         </Button>
       ) : (
         <div>
-          <Button onClick={handlePlugWalletConnectUp} htmlType="button" type="primary" className={from === 'sign-up' ? "nfid-button-wrapper-sign-up" : "nfid-button-wrapper"}>
+          <Button onClick={handlePlugWalletConnectUp} htmlType="button" className={from === 'sign-up' ? "nfid-button-wrapper-sign-up" : "nfid-button-wrapper"}>
             {from === 'sign-up' ? (
             <>
               {loading ? (

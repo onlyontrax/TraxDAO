@@ -35,8 +35,8 @@ import { IoIosVideocam } from 'react-icons/io';
 import type { _SERVICE as _SERVICE_PPV } from '../../../smart-contracts/declarations/ppv/ppv.did';
 import styles from './header.module.scss';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSquarePlus, faCompass, faComment, faCirclePlay, faBookmark } from '@fortawesome/free-regular-svg-icons'
-import { faBars, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+import { faSquarePlus, faCompass, faComment, faCirclePlay, faBookmark  } from '@fortawesome/free-regular-svg-icons'
+import { faBars, faMagnifyingGlass, faUser } from '@fortawesome/free-solid-svg-icons'
 import { BiWalletAlt } from 'react-icons/bi';
 import { RiMoneyDollarCircleLine } from 'react-icons/ri';
 import { LiaMoneyBillWaveSolid } from 'react-icons/lia';
@@ -273,11 +273,38 @@ class Header extends PureComponent<IProps> {
               <Drawer
                 style={{ backdropFilter: 'blur(12px)' }}
                 title={(
-                  <>
-                  <div className="trax-logo-wrapper-alternate-mobile" style={{marginBottom: '1rem', marginLeft: '6px'}}>
-                    <img src="/static/LogoAlternate.png" width="105px" alt="Loading..." />
-                  </div>
-                  </>
+                  <Link
+                  href={user.isPerformer ? `/artist/profile?id=${user?.username || user?._id}` : "/user/account"}
+                  as={user.isPerformer ? `/artist/profile?id=${user?.username || user?._id}` : "/user/account"}
+                  legacyBehavior
+                >
+                    <div className="profile-user">
+                    {user.isPerformer && (
+                        
+                          <Link
+                              href={user.isPerformer ? `/artist/profile?id=${user?.username || user?._id}` : "/user/account"}
+                              as={user.isPerformer ? `/artist/profile?id=${user?.username || user?._id}` : "/user/account"}
+                              // legacyBehavior
+                              className='performer-profile-btn-wrapper'
+                          >
+                            <FontAwesomeIcon className='performer-profile-btn-icon' icon={faUser} />
+                          </Link>
+                        
+                      )}
+                      <img className="avatar" src={user?.avatar || '/static/no-avatar.png'} alt="avatar" />
+                      <span className="profile-name">
+                        <span>
+                          {user?.name || 'N/A'}
+                          {' '}
+                          {user?.verifiedAccount ? <BadgeCheckIcon className="sidebar-v-badge" /> : ''}
+                      &nbsp;
+
+                          {user?.earlyBird ? <Image preview={false} className="early-bird-icon" src="/static/traxXLogoGreen.svg" /> : ''}
+                          {' '}
+                        </span>
+                      </span>
+                    </div>
+                </Link>
             )}
                 closable
                 onClose={() => this.setState({ openProfile: false })}
@@ -304,22 +331,13 @@ class Header extends PureComponent<IProps> {
                   </Link>
                   <Link href="/artist/account" as="/artist/account" legacyBehavior>
                     <div className={router.pathname === '/artist/account' ? 'menu-item active' : 'menu-item'}>
-                      <SettingOutlined className={router.pathname === '/artist/account' ? 'active-icon' : ''}/>
+                      <SettingOutlined style={{paddingLeft: '0.6rem'}} className={router.pathname === '/artist/account' ? 'active-icon' : ''}/>
                       {' '}
                       Settings
                     </div>
                   </Link>
 
-                  <Link
-                        href={`/artist/profile?id=${user?.username || user?._id}`}
-                        as={`/artist/profile?id=${user?.username || user?._id}`}
-                        legacyBehavior
-                      >
-                        <div className={router.asPath === `/artist/profile?id=${user.username || user._id}` ? 'menu-item active' : 'menu-item'}>
-                          {user?.avatar ? <Avatar style={{ minWidth: '25px', minHeight: '25px', height: '25px', width: '25px', position: 'relative', top: '-2px', marginLeft: '5px', marginRight: '6px'}} src={user?.avatar || '/static/no-avatar.png'} /> : <UserIcon />}
-                          <span style={{marginLeft: '7px'}} className={router.pathname === '/artist/profile' ? 'page-name-active' : 'page-name'}>{user.name.length > 16 ? `${user.name.substring(0, 16)}...` : user.name }</span>
-                        </div>
-                      </Link>
+    
 
                   <Divider />
 
@@ -328,7 +346,7 @@ class Header extends PureComponent<IProps> {
                   <Divider />
 
                   <div aria-hidden className="menu-item" onClick={() => this.beforeLogout()}>
-                    <LogoutOutlined />
+                    <LogoutOutlined style={{paddingLeft: '1rem'}}/>
                     {' '}
                     Sign Out
                   </div>
@@ -346,29 +364,28 @@ class Header extends PureComponent<IProps> {
                   </Link>
                   <Link href="/user/bookmarks" as="/user/bookmarks" legacyBehavior>
                     <div className={router.pathname === '/user/bookmarks' ? 'menu-item active' : 'menu-item'}>
-                    <FontAwesomeIcon style={{fontSize: '19px', position: 'relative', top: '1px', marginRight: '0.9rem', paddingLeft: '0.6rem'}} icon={faBookmark} className={router.pathname === '/user/bookmarks' ? 'active-icon' : ''}/>
+                    <FontAwesomeIcon style={{fontSize: '19px', position: 'relative', top: '1px', marginRight: '0.9rem', paddingLeft: '0.7rem'}} icon={faBookmark} className={router.pathname === '/user/bookmarks' ? 'active-icon' : ''}/>
                       {' '}
                       Saved
                     </div>
                   </Link>
                   <Link href="/user/artist-sign-up" as="/user/artist-sign-up" legacyBehavior>
                   <div className={router.pathname === '/user/artist-sign-up' ? 'menu-item active' : 'menu-item'}>
+                    {/* <PlusIcon  />  */}
                     <FontAwesomeIcon style={{fontSize: '19px', position: 'relative', top: '1px', marginRight: '0.9rem', paddingLeft: '0.6rem'}} icon={faSquarePlus} className={router.pathname === '/user/artist-sign-up' ? 'active-icon' : ''}/>
                     
                     Create
                     </div>
                   
                   </Link>
-                  <Link
-                  href="/user/account"
-                  as="/user/account"
-                  legacyBehavior
-                >
-                  <div className={router.asPath === "/user/account" ? 'menu-item active' : 'menu-item'}>
-                    {user?.avatar ? <Avatar style={{ minWidth: '25px', minHeight: '25px', height: '25px', width: '25px', position: 'relative', top: '-2px', marginLeft: '5px', marginRight: '4px'}} src={user?.avatar || '/static/no-avatar.png'} /> : <UserIcon />}
-                    <span style={{marginLeft: '7px'}} className={router.pathname === "/user/account" ? 'page-name-active' : 'page-name'}>{user.name.length > 16 ? `${user.name.substring(0, 16)}...` : user.name }</span>
-                  </div>
-                </Link>
+                  
+                <Link href="/user/account" as="/user/account" legacyBehavior>
+                    <div className={router.pathname === '/user/account' ? 'menu-item active' : 'menu-item'}>
+                      <SettingOutlined style={{paddingLeft: '0.6rem'}} className={router.pathname === '/user/account' ? 'active-icon' : ''}/>
+                      {' '}
+                      Settings
+                    </div>
+                  </Link>
                   <Divider />
                   <CopyReferralCode referralCode={referralCode} />
                   <Divider />

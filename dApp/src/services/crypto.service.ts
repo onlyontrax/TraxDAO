@@ -8,7 +8,7 @@ export class CryptoService {
   public appName = 'Trax';
 
   // URL to 37x37px logo of your application (URI encoded)
-  public appLogoUrl = '/settings/er0ks-scroppedx.png';
+  public appLogoUrl = 'https://trax.so/static/LogoAlternate.png';
 
   public authPath = `/authenticate/?applicationName=${this.appName}&applicationLogo=${this.appLogoUrl}#authorize`;
 
@@ -23,6 +23,7 @@ export class CryptoService {
       authClientOptions: {
         maxTimeToLive: BigInt(Date.now() + 7 * 24 * 60 * 60 * 1e9),
         identityProvider: this.getIdentityProvider(),
+        //derivationOrigin: this.getIDerivationOrigin(),
         windowOpenerFeatures:
         `left=${(typeof window !== 'undefined' ? window.screen.width : 500) / 2 - 525 / 2}, `
         + `top=${(typeof window !== 'undefined' ? window.screen.height : 500) / 2 - 705 / 2},`
@@ -35,13 +36,17 @@ export class CryptoService {
       nfidProvider.authClientOptions.identityProvider = `https://nfid.one${this.authPath}`;
     }
 
-
     return nfidProvider;
   }
 
   getIdentityProvider() {
     // needs to change to public
-    return (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? 'https://identity.ic0.app' : process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string;
+    return (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? `https://nfid.one${this.authPath}` : process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string;
+  }
+
+  getIDerivationOrigin() {
+    // needs to change to public
+    return (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? 'https://o2kpe-tqaaa-aaaap-qb3ga-cai.ic0.app' : process.env.NEXT_PUBLIC_ASSET_CANISTER_ID_LOCAL as string;
   }
 
   async createBucketActor (idl, canisterId, host = '', identity = null) {

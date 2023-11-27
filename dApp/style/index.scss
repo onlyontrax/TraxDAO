@@ -4010,7 +4010,7 @@ a {
     }
 
     .payment-type-select{
-      margin-bottom: 0.5rem;
+      
 
       &:hover{
         .ant-select-selector{
@@ -4064,6 +4064,7 @@ a {
       display: flex;
       flex-direction: row;
       border-radius: 10px;
+      margin-bottom: 0.5rem;
     }
 
 
@@ -4104,6 +4105,7 @@ a {
       display: flex;
       align-items: center;
       width: 5%;
+      margin-right: 3px;
     }
 
     

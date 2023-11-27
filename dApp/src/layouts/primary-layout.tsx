@@ -12,10 +12,6 @@ import Footer from '@components/common/layout/footer';
 import Sidebar from '@components/common/layout/sidebar';
 import styles from './primary-layout.module.scss';
 
-// const Header = dynamic(() => import('@components/common/layout/header'), {ssr: false}); // We need to recheck this
-// const Footer = dynamic(() => import('@components/common/layout/footer'));
-const Loader = dynamic(() => import('@components/common/base/loader'), { ssr: false });
-
 interface DefaultProps {
   loadUIValue: Function;
   children: any;

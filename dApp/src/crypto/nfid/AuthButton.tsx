@@ -36,14 +36,14 @@ function AuthButton({ onSignOut, onAuthenticate, currentPrincipal, from }: IAuth
   };
 
   const authenticateNow = async () => {
-    setLoading(true)
+    setLoading(true);
     await dispatch(attachNfidLogout({ nfidLogout: signout }));
     if (typeof onAuthenticate === 'function') {
       onAuthenticate();
     } else {
-
+      authenticate();
     }
-    setLoading(false)
+    setLoading(false);
   };
 
   return (

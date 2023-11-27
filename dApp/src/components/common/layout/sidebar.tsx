@@ -259,7 +259,7 @@ class Sidebar extends PureComponent<IProps> {
                       <>
                         <li key="login" className='logged-out-link-wrapper' onClick={()=> this.setState({openLogInModal: true})}>
                           <div className='logged-out-link'>
-                            Log In
+                            Log in
                           </div>
                         </li>
                       </>
@@ -269,7 +269,7 @@ class Sidebar extends PureComponent<IProps> {
                       <li className={router.pathname === '/user/artist-sign-up' ? 'active' : ''}>
                         <Link href="/user/artist-sign-up">
                         <>
-                          <FontAwesomeIcon icon={faSquarePlus} className={router.pathname === '/user/artist-sign-up' ? 'active-icon' : ''}style={{marginLeft: 4}} />
+                          <FontAwesomeIcon icon={faSquarePlus} className={router.pathname === '/user/artist-sign-up' ? 'active-icon' : ''} style={{marginLeft: 4}} />
                           {!isTablet && (
                           <span className={router.pathname === '/user/artist-sign-up' ? 'page-name-active' : 'page-name'} style={{marginLeft: 16}}>Create</span>
                           )}
@@ -302,7 +302,39 @@ class Sidebar extends PureComponent<IProps> {
                     )}
                       <div className='sidebar-subtitle'>
                       </div>
-                      <li key="signOut">
+
+                      {/* <li key="airdrop">
+                        <Link href="https://zealy.io/c/traxbeta/questboard" target="_blank" >
+                          <>
+                            <TbParachute style={{fontSize: '16px', position: 'relative', top: '4px', marginTop: '-4px'}}/>
+                            <span className="page-name" style={{position: 'relative', top: '2px', marginLeft: '12px'}}>Airdrop</span>
+                            <span className="required-badge" style={{position: 'relative', top: '1px', marginLeft: '0.3rem', fontSize: '9px'}}>NEW</span>
+                          </>
+                        </Link>
+                      </li> */}
+
+
+                      {/* <li key="learn-more">
+                      <Link href="https://wiki.trax.so" target="_blank">
+                        <>
+                          <InfoCircleOutlined />
+                          <span className="page-name" style={{marginLeft: '14px'}}>Learn more</span>
+                        </>
+                      </Link>
+                      </li> */}
+                      {/* <li key="settings" className={router.pathname === '/user/account' ? 'active' : ''}>
+                      <Link href="/user/account" as="/user/account">
+                        <>
+                          <SettingOutlined className={router.pathname === '/user/account' ? 'active-icon' : ''} />
+                          {' '}
+                          <span className={router.pathname === '/user/account' ? 'page-name-active' : 'page-name'}>Settings</span>
+                        </>
+                      </Link>
+                      </li> */}
+                      {/* <Divider />
+                      <CopyReferralCode referralCode={referralCode} />
+                      <Divider /> */}
+                      <li key="signOut" className='sign-out-btn-wrapper'>
                         <div className="menu-item sign-out-btn" aria-hidden onClick={() => this.beforeLogout()}>
                           <LogoutOutlined />
                           {!isTablet && (
@@ -318,9 +350,10 @@ class Sidebar extends PureComponent<IProps> {
                       <li className={router.pathname === '/artist/my-post/create' ? 'active' : ''}>
                         <Link href="/artist/my-post/create">
                         <>
-                          <FontAwesomeIcon icon={faSquarePlus} className={router.pathname === '/artist/my-post/create' ? 'active-icon' : ''}/> 
+                          
+                          <FontAwesomeIcon icon={faSquarePlus} className={router.pathname === '/artist/my-post/create' ? 'active-icon' : ''} style={{marginLeft: 4}}/> 
                           {!isTablet && (
-                          <span className={router.pathname === '/artist/my-post/create' ? 'page-name-active' : 'page-name'}>Create</span>
+                          <span className={router.pathname === '/artist/my-post/create' ? 'page-name-active' : 'page-name'} style={{marginLeft: 16}}>Create</span>
                           )}
                         </>
                         </Link>
@@ -328,9 +361,10 @@ class Sidebar extends PureComponent<IProps> {
                       <li key="content" className={router.pathname === '/artist/my-content' ? 'active' : ''}>
                       <Link href="/artist/my-content" as="/artist/my-content">
                         <>
-                          <FontAwesomeIcon icon={faCirclePlay} className={router.pathname === '/artist/my-content' ? 'active-icon' : ''}/> 
+                          
+                          <FontAwesomeIcon icon={faCirclePlay} className={router.pathname === '/artist/my-content' ? 'active-icon' : ''} style={{marginLeft: 3}}/> 
                           {!isTablet && (
-                          <span className={router.pathname === '/artist/my-content' ? 'page-name-active' : 'page-name'}>Content</span>
+                          <span className={router.pathname === '/artist/my-content' ? 'page-name-active' : 'page-name'} style={{marginLeft: 15.5}}>Content</span>
                           )}
                         </>
                       </Link>
@@ -338,9 +372,11 @@ class Sidebar extends PureComponent<IProps> {
                       <li key="earnings" className={router.pathname === '/artist/earnings-page' ? 'active' : ''}>
                       <Link href="/artist/earnings-page" as="/artist/earnings-page">
                         <>
-                          <RiMoneyDollarCircleLine className={router.pathname === '/artist/earnings-page' ? 'active-icon' : ''} style={{fontSize: '20px', position: 'relative', top: '4px', marginTop: '-4px', left: '-2px'}}/> 
+                          {/* <DollarOutlined  /> */}
+                          {/* <FontAwesomeIcon icon={faMoneyBillWave} /> */}
+                          <RiMoneyDollarCircleLine className={router.pathname === '/artist/earnings-page' ? 'active-icon' : ''} style={{fontSize: '25px', position: 'relative', top: '4px', marginTop: '-4px', left: '2px'}}/> 
                           {!isTablet && (
-                          <span style={{marginLeft: '6px'}} className={router.pathname === '/artist/earnings-page' ? 'page-name-active' : 'page-name'}>Earnings</span>
+                          <span style={{marginLeft: '15px'}} className={router.pathname === '/artist/earnings-page' ? 'page-name-active' : 'page-name'}>Earnings</span>
                           )}
                         </>
                       </Link>
@@ -360,7 +396,41 @@ class Sidebar extends PureComponent<IProps> {
                       </li>
                       <div className='sidebar-subtitle'>
                       </div>
-                      <li key="signOut" className={router.pathname === '/user/account' ? 'active' : ''}>
+                      {/* <li key="setting" className={router.pathname === '/artist/account' ? 'active' : ''}>
+                      <Link href="/artist/account" as="/artist/account">
+                        <>
+                          <SettingOutlined className={router.pathname === '/artist/account' ? 'active-icon' : ''} />
+                          {' '}
+                          <span className={router.pathname === '/artist/account' ? 'page-name-active' : 'page-name'}>Settings</span>
+                        </>
+                      </Link>
+                      </li> */}
+                      {/* <li key="airdrop">
+                        <Link href="https://zealy.io/c/traxbeta/questboard" target="_blank" >
+                          <>
+                            <TbParachute style={{fontSize: '16px', position: 'relative', top: '4px', marginTop: '-4px'}}/>
+                            <span className="page-name" style={{position: 'relative', top: '2px', marginLeft: '12px'}}>Airdrop</span>
+                            <span className="required-badge" style={{position: 'relative', top: '1px', marginLeft: '0.3rem', fontSize: '9px'}}>NEW</span>
+                          </>
+                        </Link>
+                      </li> */}
+                      {/* <li key="learn-more">
+                      <Link href="https://wiki.trax.so" target="_blank">
+                        <>
+                          <InfoCircleOutlined />
+                          <span className="page-name" style={{marginLeft: '14px'}}>Learn more</span>
+                        </>
+                      </Link>
+                      </li> */}
+                      
+                    
+                      {/* <Divider />
+                    
+                      <CopyReferralCode referralCode={referralCode} />
+                    
+                      <Divider /> */}
+                    
+                      <li key="signOut" className='sign-out-btn-wrapper'>
                         <div className="menu-item sign-out-btn" aria-hidden onClick={() => this.beforeLogout()}>
                           <LogoutOutlined />
                           {!isTablet && (
@@ -390,6 +460,7 @@ class Sidebar extends PureComponent<IProps> {
                           {user?.earlyBird ? <Image preview={false} className="early-bird-icon" src="/static/traxXLogoGreen.svg" /> : ''}
                           {' '}
                         </span>
+                        
                       </span>
                     </div>
                     <div className="sub-info">

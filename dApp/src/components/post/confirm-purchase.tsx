@@ -12,7 +12,7 @@ import { Actor, HttpAgent } from '@dfinity/agent';
 import { AuthClient } from '@dfinity/auth-client';
 import { paymentService } from '@services/index';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCircleInfo } from '@fortawesome/free-solid-svg-icons'
+import { faCircleInfo, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { getResponseError } from '@lib/utils';
 import {
   tokenTransctionService
@@ -47,12 +47,12 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
     custom: false,
     cards: [],
     loading: false,
-    paymentOption: 'card'
+    paymentOption: 'noPayment'
   }
 
   async componentDidMount() {
     const { feed } = this.props;
-    this.getData()
+    await this.getData()
     let identity;
     const authClient = await AuthClient.create();
     let host;
@@ -93,6 +93,14 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
     try {
       this.setState({ loading: true });
       const resp = await paymentService.getStripeCards();
+
+      if(resp.data.data.length > 0){
+        this.setState({paymentOption: 'card'});
+      }else{
+        this.setState({paymentOption: 'noPayment'});
+      }
+
+
       this.setState({
         cards: resp.data.data.map((d) => {
           if (d.card) return { ...d.card, id: d.id };
@@ -156,6 +164,19 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
           
           <div className='payment-details'>
           <span>Payment details</span>
+          <div className='payment-recipient-wrapper'>
+              <div className='payment-recipient-avatar-wrapper'>
+                <Avatar src={feed?.performer?.avatar || '/static/no-avatar.png'} />
+              </div>
+              <div className='payment-recipient-info'>
+                <p>Pay to</p>
+                <span>{feed?.performer?.name}</span>
+                  <p style={{color: '#c8ff02'}}>Verified Artist</p>
+              </div>
+              <a href={`/artist/profile?id=${feed?.performer?.username || feed?.performer?._id}`} className='info-icon-wrapper'>
+                <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
+              </a>
+            </div>
           <Select onChange={(v) => this.changePaymentOption(v)} defaultValue={paymentOption} value={paymentOption}  className="payment-type-select">
           {!loading && cards.length > 0 && cards.map((card) => (
             <Option value="card" key="card" className="payment-type-option-content">
@@ -174,7 +195,7 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
             </Option>
             ))}
             
-            <Option disabled={true} value="plug" key="plug" className="payment-type-option-content">
+            {/* <Option disabled={true} value="plug" key="plug" className="payment-type-option-content">
               <div className='payment-type-img-wrapper'>
                 <img src='/static/plug-favicon.png' width={40} height={40}/>
               </div>
@@ -203,29 +224,33 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
                   <p>{`**** **** **** -****`}</p>
                   <p>Internet Computer</p>
               </div>
-            </Option>
+            </Option> */}
+
+            {paymentOption === "noPayment" && (
+              <Option value="noPayment" key="noPayment" className="payment-type-option-content">
+                <div className='payment-type-img-wrapper'>
+                <FontAwesomeIcon style={{width: 45, height: 45}} icon={faXmark} />
+                </div>
+                <div className='payment-type-info'>
+                  <span style={{}}>No Payment Method Connected</span>
+                    <p>Please visit settings to add a card <br /> or connect a wallet</p>
+                    {/* <p>Click to add crypto wallet</p> */}
+                </div>
+              </Option>
+            )}
           </Select>
-            <div className='payment-recipient-wrapper'>
-              <div className='payment-recipient-avatar-wrapper'>
-                <Avatar src={feed?.performer?.avatar || '/static/no-avatar.png'} />
-              </div>
-              <div className='payment-recipient-info'>
-                <p>Pay to</p>
-                <span>{feed?.performer?.name}</span>
-                  <p style={{color: '#c8ff02'}}>Verified Artist</p>
-              </div>
-              <a href={`/artist/profile?id=${feed?.performer?.username || feed?.performer?._id}`} className='info-icon-wrapper'>
-                <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
-              </a>
-            </div>
+            
+            
           </div>
           <div className='currency-picker-btns-container'>
             <span>Select a currency</span>
             <div className='currency-picker-btns-wrapper'>
+            {cards.length > 0 && (
               <div className='currency-picker-btn-wrapper' onClick={()=> this.changeTicker('USD')}>
                 <img src='/static/usd-logo.png' width={40} height={40} style={{border: selectedCurrency === 'USD' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
               </div>
-              <div className='currency-picker-btn-wrapper-disabled' >
+            )}
+              {/* <div className='currency-picker-btn-wrapper-disabled' >
                 <img src='/static/icp-logo.png' width={40} height={40} style={{border: selectedCurrency === 'ICP' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
               </div>
               <div className='currency-picker-btn-wrapper-disabled' >
@@ -233,7 +258,7 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
               </div>
               <div className='currency-picker-btn-wrapper-disabled' >
                 <img src='/static/trax-token.png' width={40} height={40} />
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -262,7 +287,7 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
           </div>
           <Button
               className="tip-button"
-              disabled={submiting || selectedCurrency === 'BTC' || (selectedCurrency === 'ICP')}
+              disabled={submiting || paymentOption === 'noPayment'}
               loading={submiting}
               onClick={() => {
                 selectedCurrency === 'USD' ? onFinish(false) : onFinish(true);

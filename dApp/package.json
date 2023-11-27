@@ -38,6 +38,7 @@
     "antd-img-crop": "^4.12.2",
     "autoprefixer": "10.4.14",
     "classnames": "^2.2.6",
+    "copy-webpack-plugin": "^11.0.0",
     "countrycitystatejson": "^20.8.14",
     "crc": "^4.3.2",
     "css-loader": "^6.7.3",

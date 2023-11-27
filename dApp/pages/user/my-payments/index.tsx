@@ -261,11 +261,19 @@ class MyPaymentsPage extends PureComponent<IProps> {
           centered
           onOk={() => this.setState({ openSendModal: false })}
           footer={null}
-          width={600}
+          width={500}
           title={null}
           onCancel={() => this.setState({ openSendModal: false })}
         >
-          <SendCrypto user={user} icpBalance={balanceICP} ckbtcBalance={balanceCKBTC} icpPrice={icpPrice} ckbtcPrice={ckbtcPrice}/>
+          {currentUser?.wallet_icp ? (
+                <SendCrypto user={user} icpBalance={balanceICP} ckbtcBalance={balanceCKBTC} icpPrice={icpPrice} ckbtcPrice={ckbtcPrice}/>
+              ):(
+                <div className='no-send-crypto-container'>
+                  <h1 style={{color: 'white'}} className=''>Unable to send crypto.</h1>
+                  <span style={{color: '#f2f2f2d9', fontSize: 15}}>You must connect a web3 wallet in order to be able to send crypto. Please visit settings connect.</span>
+                </div>
+              )}
+          
         </Modal>
       </Layout>
     );

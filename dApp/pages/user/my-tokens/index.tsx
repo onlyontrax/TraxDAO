@@ -137,6 +137,9 @@ class MyTokens extends PureComponent<IProps> {
         });
       }
 
+
+      console.log(user.wallet_icp)
+
       const fanAI = AccountIdentifier.fromPrincipal({
         principal: Principal.fromText(user && user.wallet_icp)
       });
@@ -155,6 +158,8 @@ class MyTokens extends PureComponent<IProps> {
       });
       const formattedBalance = Number(bal.e8s) / 100000000;
       const ckbtcFormattedBalance = Number(ckbtcBal) / 100000000;
+
+      console.log("ICP Balance: ", formattedBalance)
 
       const amountICPUSD = icpPrice * formattedBalance;
       const amountCKBTCUSD = ckbtcPrice * ckbtcFormattedBalance;
@@ -253,7 +258,8 @@ class MyTokens extends PureComponent<IProps> {
                         </div>
                         
                     </div>
-                    <Button className="withdraw-button" disabled={user && !user.wallet_icp} onClick={() => this.setState({ openDepositICPModal: true })}>
+                    
+                    <Button className="withdraw-button" onClick={() => this.setState({ openDepositICPModal: true })}>
                         Deposit
                     </Button>
                 </div>
@@ -269,7 +275,7 @@ class MyTokens extends PureComponent<IProps> {
                         </div>
                         
                     </div>
-                    <Button className="withdraw-button" disabled={user && !user.wallet_icp} onClick={() => this.setState({ openDepositICPModal: true })}>
+                    <Button className="withdraw-button"  onClick={() => this.setState({ openDepositICPModal: true })}>
                         Deposit
                     </Button>
                 </div>
@@ -361,11 +367,19 @@ class MyTokens extends PureComponent<IProps> {
           title={null}
           open={openDepositICPModal}
           footer={null}
-          width={600}
+          width={500}
           destroyOnClose
           onCancel={() => this.setState({ openDepositICPModal: false })}
         >
-          <DepositICP user={user} />
+          {user?.wallet_icp ? (
+                <DepositICP user={user} />
+              ):(
+                <div className='no-send-crypto-container'>
+                  <h1 style={{color: 'white'}} className=''>Unable to send crypto.</h1>
+                  <span style={{color: '#f2f2f2d9', fontSize: 15}}>You must connect a web3 wallet in order to be able to send crypto. Please visit settings connect.</span>
+                </div>
+              )}
+          
         </Modal>
       </Layout>
     );

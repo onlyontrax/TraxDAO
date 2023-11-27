@@ -111,12 +111,25 @@
       }
   }
 
-  .sign-out-btn{
+  .sign-out-btn-wrapper{
+    transition: all ease-in-out 0.2s;
+    &:hover{
+      background: transparent !important;
+      
+    }
+
+    .sign-out-btn{
+      transition: all ease-in-out 0.2s;
+    margin-left: 1.7rem;
     &:hover{
       color: $lime-green;
       transition: all ease-in-out 0.2s;
     }
   }
+
+  }
+
+  
 
   .header.ant-layout-header {
     padding: 0;
@@ -340,7 +353,7 @@
       }
 
       &:hover {
-        background-color: #1f1f1f !important;
+        background-color: #1f1f1f;
         border-radius: 7px;
         .ant-badge-count {
           background: #c8ff00;
@@ -465,10 +478,41 @@
       font-size: 15px;
     }
   }
+  
   .logged-out-link-wrapper{
-    @media (max-width: $tablet-screen) {
-      padding: 0px 0px 0px 11px !important;
-      font-size: 14px;
+    margin-left: 1.5rem !important;
+    margin-top: 2rem !important;
+    padding: 4px 11px;
+    border-radius: 5px;
+    background: #1e1e1e;
+    width: 4.8rem;
+    justify-content: center;
+
+
+    .logged-out-link{
+      font-size: 16px;
+      font-weight: 300;
+
+      @media (max-width: 1000px) {
+        font-size: 14px;
+      }
+    }
+
+    &:hover{
+      background: #141414 !important;
+      color: $lime-green;
+
+    }
+    @media (max-width: 1000px) {
+      padding: 4px 5px;
+      margin-left: 0rem !important;
+      width: 3.7rem;
+
+      .logged-out-link{
+        font-size: 14px !important;
+      }
+      
+
     }
     
   }

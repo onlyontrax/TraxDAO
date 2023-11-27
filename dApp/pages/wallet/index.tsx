@@ -317,7 +317,10 @@ class TokenPackages extends PureComponent<IProps> {
               title={null}
               onCancel={() => this.setState({ openSendModal: false })}
             >
-              <SendCrypto user={user} icpBalance={balanceICP} ckbtcBalance={balanceCKBTC} icpPrice={icpPrice} ckbtcPrice={ckbtcPrice}/>
+              
+                <SendCrypto user={user} icpBalance={balanceICP} ckbtcBalance={balanceCKBTC} icpPrice={icpPrice} ckbtcPrice={ckbtcPrice}/>
+              
+              
             </Modal>
 
             <Modal

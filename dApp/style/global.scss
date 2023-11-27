@@ -22,7 +22,12 @@
 
 .ant-layout {
   background: #000000;
-  
+  // font-family: $primary-font;
+  // font-family: $primary-font;
+}
+
+html{
+  // font-family: $primary-font;
 }
 
 a {
@@ -486,7 +491,7 @@ a {
   .ant-drawer-header {
     padding: 15px 20px 5px;
     color: white;
-    border-color: #47474700;
+    border-color: #2d2d2d;
     // backdrop-filter: blur(12px) !important;
     // background: #000000a6;
     background: #0f0f0f00;
@@ -4501,6 +4506,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 body {
+  font-family: $primary-font !important;
     margin: 0;
 }
 @media (min-width: 1536px) {
@@ -4524,17 +4530,39 @@ body {
 
   .profile-user {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     background-color: #0f0f0f00;
+    justify-content: center;
     text-align: center;
     margin-bottom: 1rem;
     gap: 10px;
 
+   
+    .performer-profile-btn-wrapper{
+      position: absolute;
+      top: 1.9rem;
+      right: 6rem;
+      width: 30px;
+      height: 30px;
+      background-color: #252525;
+      border-radius: 50%;
+      // padding: 3px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      .performer-profile-btn-icon{
+        width: 14px;
+        height: 14px;
+        
+      }
+    }
+
     .avatar {
-      width: 3.25rem;
-      height: 3.25rem;
+      width: 6rem;
+      height: 6rem;
       margin: auto;
-      border-radius: 0.75rem;
+      border-radius: 50%;
       object-fit: cover;
       margin-top: 1rem;
     }
@@ -4544,11 +4572,9 @@ body {
       width: 100%;
       flex-direction: column;
       text-transform: capitalize;
-      font-size: 1.1rem;
+      font-size: 1.3rem;
       color: white;
       margin: auto;
-      margin-left: -2rem;
-      padding-top: 1rem;
       font-weight: 400;
       align-items: center;
       vertical-align: middle;
@@ -4710,7 +4736,7 @@ body {
 
     .profile-menu-item {
       .menu-item {
-        padding: 0.5rem 0.25rem;
+        padding: 0.7rem 0.25rem;
         margin-bottom: 2px;
         width: 100%;
         cursor: pointer;
@@ -7924,5 +7950,93 @@ select:-webkit-autofill:focus {
 }
 
 
+.selected-wallet-upload-modal{
+  .ant-modal-content{
+    background-color: #000000;
+  }
+
+.selected-wallet-upload-container{
+  display: flex;
+  flex-direction: column;
+  .selected-wallet-upload{
+    display: flex;
+    flex-direction: column;
+  }
 
 
+.connect-wallets-wrapper{
+  display: flex; 
+  flex-direction: column;
+  justify-content: space-evenly; 
+  margin-top: 1.5rem; 
+  gap: 10px;
+
+  .wallet-wrapper{
+    background-color: #0e0e0e;
+    border-radius: 10px;
+    padding: 10px;
+    color: white;
+    display: flex;
+    flex-direction: row;
+    cursor: pointer;
+    border: 1px solid #121212;
+    height: 47px;
+    width: 100%;
+    justify-content: center;
+    transition: ease-in-out 0.2s !important;
+
+    &:hover{
+      background-color: #0a0a0a !important;
+      transform: scale(1.01) !important;
+      transition: ease-in-out 0.2s !important;
+      border: 1px solid #c7ff00 !important;
+      color: white !important;
+    }
+
+    img{
+      height: 25px;
+      width: 25px;
+      border-radius: 50%;
+    }
+    span{
+      font-size: 14px;
+      margin-left: 0.5rem;
+
+    }
+
+    .tick-icon-wallet{
+      color: $lime-green;
+      margin-top: 4px;
+      margin-left: 3px;
+    }
+
+  }
+
+
+}
+
+  .upload-with-wallet-btn{
+    background-color: #0e0e0e;
+    border-radius: 10px;
+    padding: 10px;
+    color: white;
+    display: flex;
+    flex-direction: row;
+    cursor: pointer;
+    border: 1px solid #121212;
+    height: 47px;
+    width: 100%;
+    justify-content: center;
+    transition: ease-in-out 0.2s !important;
+    margin-top: 2rem;
+
+    &:hover{
+      background-color: #0a0a0a !important;
+      transform: scale(1.01) !important;
+      transition: ease-in-out 0.2s !important;
+      border: 1px solid #c7ff00 !important;
+      color: white !important;
+    }
+  }
+  }
+}

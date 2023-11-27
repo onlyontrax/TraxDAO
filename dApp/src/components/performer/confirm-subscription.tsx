@@ -17,7 +17,7 @@ import { idlFactory as idlFactoryPPV } from '../../smart-contracts/declarations/
 import type { _SERVICE as _SERVICE_PPV } from '../../smart-contracts/declarations/ppv/ppv.did';
 import styles from './performer.module.scss';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCircleInfo } from '@fortawesome/free-solid-svg-icons'
+import { faCircleInfo, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { paymentService } from '@services/index';
 import { getResponseError } from '@lib/utils';
 
@@ -48,12 +48,12 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
     isPriceLoading: true,
     cards: [],
     loading: false,
-    paymentOption: 'card'
+    paymentOption: 'noPayment'
   };
 
   async componentDidMount() {
     const { performer } = this.props;
-    this.getData()
+    await this.getData()
     this.setState({ price: (performer?.monthlyPrice || 0).toFixed(2) });
 
     let ppv;
@@ -125,6 +125,11 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
     try {
       this.setState({ loading: true });
       const resp = await paymentService.getStripeCards();
+      if(resp.data.data.length > 0){
+        this.setState({paymentOption: 'card'});
+      }else{
+        this.setState({paymentOption: 'noPayment'});
+      }
       this.setState({
         cards: resp.data.data.map((d) => {
           if (d.card) return { ...d.card, id: d.id };
@@ -186,13 +191,27 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
 
           <div className='sub-preview-container'>
             <div className='sub-preview-wrapper'>
-              <span className='sub-price-preview'>${Number(price).toFixed(2)}</span>
+              <span className='sub-price-preview'>${subscriptionType === 'monthly' ? Number(performer.monthlyPrice).toFixed(2) : Number(performer.yearlyPrice).toFixed(2)}</span>
               <span className='sub-per-type'>{subscriptionType === 'monthly' ? 'per month': 'per year'}</span>
             </div>
             <span className='sub-cancel-note'>Cancel at any time</span>
           </div>
           <div className='payment-details'>
           <span>Payment details</span>
+          <div className='payment-recipient-wrapper'>
+              <div className='payment-recipient-avatar-wrapper'>
+                <Avatar src={performer?.avatar || '/static/no-avatar.png'} />
+              </div>
+              <div className='payment-recipient-info'>
+                <p>Pay to</p>
+                <span>{performer?.name}</span>
+                  <p style={{color: '#c8ff02'}}>Verified Artist</p>
+              </div>
+              <a href={`/artist/profile?id=${performer?.username || performer?._id}`} className='info-icon-wrapper'>
+                <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
+              </a>
+            </div>
+            
           <Select onChange={(v) => this.changePaymentOption(v)} defaultValue={paymentOption} value={paymentOption}  className="payment-type-select">
           {!loading && cards.length > 0 && cards.map((card) => (
             <Option value="card" key="card" className="payment-type-option-content">
@@ -211,7 +230,7 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
             </Option>
             ))}
             
-            <Option disabled={true} value="plug" key="plug" className="payment-type-option-content">
+            {/* <Option disabled={true} value="plug" key="plug" className="payment-type-option-content">
               <div className='payment-type-img-wrapper'>
                 <img src='/static/plug-favicon.png' width={40} height={40}/>
               </div>
@@ -242,31 +261,34 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
                   <p>{`**** **** **** -b4aed`}</p>
                   <p>Internet Computer</p>
               </div>
-            </Option>
+            </Option> */}
+
+            {paymentOption === "noPayment" && (
+              <Option value="noPayment" key="noPayment" className="payment-type-option-content">
+                <div className='payment-type-img-wrapper'>
+                <FontAwesomeIcon style={{width: 45, height: 45}} icon={faXmark} />
+                </div>
+                <div className='payment-type-info'>
+                  <span style={{}}>No Payment Method Connected</span>
+                    <p>Please visit settings to add a card <br /> or connect a wallet</p>
+                    {/* <p>Click to add crypto wallet</p> */}
+                </div>
+              </Option>
+            )}
             
           </Select>
             
-            <div className='payment-recipient-wrapper'>
-              <div className='payment-recipient-avatar-wrapper'>
-                <Avatar src={performer?.avatar || '/static/no-avatar.png'} />
-              </div>
-              <div className='payment-recipient-info'>
-                <p>Pay to</p>
-                <span>{performer?.name}</span>
-                  <p style={{color: '#c8ff02'}}>Verified Artist</p>
-              </div>
-              <a href={`/artist/profile?id=${performer?.username || performer?._id}`} className='info-icon-wrapper'>
-                <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
-              </a>
-            </div>
+            
           </div>
           <div className='currency-picker-btns-container'>
             <span>Select a currency</span>
             <div className='currency-picker-btns-wrapper'>
+            {cards.length > 0 && (
               <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('USD')}>
                 <img src='/static/usd-logo.png' width={40} height={40} style={{border: selectedCurrency === 'USD' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
               </div>
-              <div className='currency-picker-btn-wrapper-disabled'>
+            )}
+              {/* <div className='currency-picker-btn-wrapper-disabled'>
                 <img src='/static/icp-logo.png' width={40} height={40} style={{border: selectedCurrency === 'ICP' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
               </div>
               <div className='currency-picker-btn-wrapper-disabled'>
@@ -274,7 +296,7 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
               </div>
               <div className='currency-picker-btn-wrapper-disabled' >
                 <img src='/static/trax-token.png' width={40} height={40} />
-              </div>
+              </div> */}
             </div>
           </div>
           <div className='tip-input-number-container'>
@@ -292,7 +314,9 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
               <InputNumber 
                 disabled={true} 
                 type="number"
-                value={price}
+                // min={0.000001}
+                // onChange={this.onChangeValue.bind(this)}
+                value={subscriptionType === 'monthly' ? performer.monthlyPrice : performer.yearlyPrice}
                 stringMode
                 step="0.01"
                 placeholder="0.00"
@@ -302,7 +326,7 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
           </div>
           <Button
               className="tip-button"
-              disabled={submiting || selectedCurrency === 'ckBTC' || selectedCurrency === 'ICP'}
+              disabled={submiting || paymentOption === "noPayment"}
               loading={submiting}
               onClick={() => onFinish(selectedCurrency, subscriptionType)}
             >

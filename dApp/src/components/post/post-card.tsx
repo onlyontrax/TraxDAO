@@ -287,8 +287,17 @@ class FeedCard extends Component<IProps> {
     }
   };
 
-  async sendTip(price: number, ticker: string) {
-    ticker === 'USD' ? await this.sendTipFiat(price) : await this.sendTipCrypto(price, ticker);
+  async sendTip(price: number, ticker: string, paymentOption: string ) {
+    if(ticker === 'USD'){
+      await this.sendTipFiat(price)
+    }else{
+      if(paymentOption === 'plug'){
+        console.log('plug payment option')
+        await this.sendTipPlug(price, ticker)
+      }else{
+        await this.sendTipCrypto(price, ticker);
+      } 
+    }
   }
 
   sendTipFiat = async (price) => {
@@ -474,6 +483,173 @@ class FeedCard extends Component<IProps> {
           return error;
         });
   }
+
+
+
+  async sendTipPlug(amount:number, ticker:string){
+    const { feed } = this.props;
+    let tippingCanID, ledgerCanID, ckBTCLedgerCanID, transfer;
+    let amountToSend = BigInt(Math.trunc(Number(amount) * 100000000));
+    this.setState({
+      requesting: false,
+      submiting: false,
+      openTipProgressModal: false,
+      tipProgress: 0
+    });
+
+    if((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic'){
+      tippingCanID = process.env.NEXT_PUBLIC_TIPPING_CANISTER_ID_LOCAL as string;
+      ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID_LOCAL as string;
+      ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID_LOCAL as string;
+    }else{
+      tippingCanID = process.env.NEXT_PUBLIC_TIPPING_CANISTER_ID as string;
+      ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID as string;
+      ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID as string;
+    }
+
+    // const identityCanisterId = (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? (process.env.NEXT_PUBLIC_IDENTITY_CANISTER as string) : (process.env.NEXT_PUBLIC_IDENTITY_CANISTER_LOCAL as string);
+    const whitelist = [
+      // (process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic' && ledgerCanID, 
+      // (process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic' &&  ckBTCLedgerCanID, 
+      tippingCanID, 
+    ];
+    console.log('whitelist: ', whitelist)
+
+    if(typeof window !== 'undefined' && 'ic' in window){
+      // @ts-ignore
+      const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
+        whitelist,
+        host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') 
+        ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) 
+        : (process.env.NEXT_PUBLIC_HOST as string)
+      }) : false;
+
+      !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
+        
+      this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 20 });
+
+      // @ts-ignore
+      if (!window?.ic?.plug?.agent && connected  ) {
+        console.log('creating agent')
+        // @ts-ignore
+        await window.ic.plug.createAgent({ 
+          whitelist, 
+          host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) : (process.env.NEXT_PUBLIC_HOST as string) 
+        });
+      }
+      
+      let tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
+        agent: (window as any).ic.plug.agent,
+        canisterId: tippingCanID
+      });
+
+      // @ts-ignore
+      console.log(window.ic.plug.principalId); console.log(window.ic.plug.accountId); console.log("plug agent: ", window?.ic?.plug?.agent)
+      const participants = [];
+      
+      if(connected){
+        //@ts-ignore
+        const requestBalanceResponse = await window.ic?.plug?.requestBalance();
+        const icp_balance = requestBalanceResponse[0]?.amount;
+        const ckBTC_balance = requestBalanceResponse[1]?.amount;
+
+        console.log("icp balance: ", icp_balance);
+        console.log("ckbtc balance: ", ckBTC_balance);
+
+        if(ticker === 'ckBTC'){
+          if(ckBTC_balance >= amount){
+            this.setState({ tipProgress: 30 });
+            const params = {
+              to: tippingCanID,
+              strAmount: amount,
+              token: 'mxzaz-hqaaa-aaaar-qaada-cai'
+            };
+            //@ts-ignore
+            transfer = await window.ic.plug.requestTransferToken(params).catch((error) =>{
+              message.error('Transaction failed. Please try again later.');
+              this.setState({requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0})
+            })
+            
+          } else {
+            this.setState({
+              requesting: false,
+              submiting: false,
+              openTipProgressModal: false,
+              tipProgress: 0
+            })
+            message.error('Insufficient balance, please top up your wallet and try again.');
+          }
+        }
+        
+        if (ticker === 'ICP') {
+          this.setState({ tipProgress: 30 });
+          if(icp_balance >= amount){
+            const requestTransferArg = {
+              to: tippingCanID,
+              amount: Math.trunc(Number(amount) * 100000000)
+            }
+            //@ts-ignore
+            transfer = await window.ic?.plug?.requestTransfer(requestTransferArg).catch((error) =>{
+              message.error('Transaction failed. Please try again later.');
+              this.setState({requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0})
+            })
+            
+          } else {
+            this.setState({
+              requesting: false,
+              submiting: false,
+              openTipProgressModal: false,
+              tipProgress: 0
+            })
+            message.error('Insufficient balance, please top up your wallet and try again.');
+          }
+        }
+
+        this.setState({ tipProgress: 50 });
+
+        if(transfer.height){
+          const obj2: Participants = {
+            participantID: Principal.fromText(feed.performer?.wallet_icp),
+            participantPercentage: 1
+          };
+          participants.push(obj2);
+          const participantArgs: TippingParticipants = participants;
+        
+          await tippingActor.sendTip(transfer.height, participantArgs, amountToSend, ticker).then(() => {
+            this.setState({ tipProgress: 100 });
+            tokenTransctionService.sendCryptoTip(feed.performer?._id, {
+                performerId: feed.performer?._id,
+                price: Number(amountToSend),
+                tokenSymbol: ticker
+              }).then(() => {});
+            setTimeout(
+              () => this.setState({
+                requesting: false,
+                submiting: false,
+                openTipProgressModal: false,
+                tipProgress: 0
+              }),1000);
+            message.success(`Payment successful! ${feed.performer?.name} has recieved your tip`);
+            this.setState({ requesting: false, submiting: false });
+          }).catch((error) => {
+            this.setState({
+              requesting: false,
+              submiting: false,
+              openTipProgressModal: false,
+              tipProgress: 0
+            });
+            message.error(error.message || 'error occured, please try again later');
+            return error;
+          });
+        }else{
+          message.error('Transaction failed. Please try again later.');
+        }
+    }
+    }
+  }
+
+
+
 
   async sendTipCrypto(amount: number, ticker: string) {
     let ckBTCLedgerCanID3 = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID as string;
@@ -1007,7 +1183,7 @@ class FeedCard extends Component<IProps> {
             title={null}
             open={openPurchaseModal}
             footer={null}
-            width={600}
+            width={420}
             destroyOnClose
             onCancel={() => this.setState({ openPurchaseModal: false })}
           >
@@ -1070,7 +1246,7 @@ class FeedCard extends Component<IProps> {
                   <BadgeCheckIcon style={{ height: '1.5rem' }} className="primary-color" />
                   )}
                 </div>
-                <p className="p-subtitle">Transaction progress</p>
+                <p className="p-subtitle">Please wait while your transaction is processing. Please do not refresh the page.</p>
               </div>
             </div>
             <Progress percent={Math.round(tipProgress)} />

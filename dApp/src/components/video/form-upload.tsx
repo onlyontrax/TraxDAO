@@ -78,7 +78,9 @@ export class FormUploadVideo extends PureComponent<IProps> {
     featuring: [],
     royaltyCut: [],
     uploadToIC: false,
-    active: true
+    active: true,
+    openConnectModal: false,
+    walletOption: null
   };
 
   changeTrackType(val: any) {
@@ -347,7 +349,9 @@ export class FormUploadVideo extends PureComponent<IProps> {
       royaltyCut,
       uploadToIC,
       active,
-      previewUrl
+      previewUrl, 
+      openConnectModal,
+      walletOption
     } = this.state;
 
     const dataSource = featuring.map((p) => ({ ...p, key: p._id }));
@@ -373,6 +377,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
             }
             data.isCrypto = isCrypto;
             data.isSale = isSale;
+            data.walletOption = walletOption;
             data.trackType = trackType;
             data.royaltyCut = royaltyCut;
             data.uploadToIC = uploadToIC;
@@ -717,7 +722,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
                         <p className="create-post-info">Add hashtags for better discoverability</p>
                 <Form.Item name="tags">
                   <Select
-                  className='upload-select'
+                    className='upload-select'
                     mode="tags"
                     style={{ width: '100%', marginLeft: '0.1rem'}}
                     size="middle"
@@ -881,15 +886,42 @@ export class FormUploadVideo extends PureComponent<IProps> {
                   </div>
                   <h1 className='upload-header'>Upload a track</h1>
                   <div className="new-post-create-btn-wrapper">
-                    <Button
+                    {isSale === 'pay' && isCrypto && !walletOption && (
+                      <Button
+                      className="new-post-create-btn"
+                      // htmlType="submit"
+                      loading={uploading}
+                      disabled={uploading}
+                      style={{ marginRight: 10, marginTop: 3 }}
+                      onClick={()=> this.setState({openConnectModal: true})}
+                    >
+                      Continue
+                    </Button>
+                    )}
+                    { !isCrypto && (
+                      <Button
                       className="new-post-create-btn"
                       htmlType="submit"
                       loading={uploading}
                       disabled={uploading}
                       style={{ marginRight: 10, marginTop: 3 }}
-                    >
-                      Upload
-                    </Button>
+                      >
+                        Upload
+                      </Button>
+                    )}
+                      
+                    
+                    {isSale === 'pay' && isCrypto && walletOption && (
+                      <Button
+                        className="new-post-create-btn"
+                        htmlType="submit"
+                        loading={uploading}
+                        disabled={uploading}
+                        style={{ marginRight: 10, marginTop: 3 }}
+                      >
+                        Upload
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className='form-middle-wrapper' style={{borderBottom: 'none'}}>
@@ -948,7 +980,60 @@ export class FormUploadVideo extends PureComponent<IProps> {
           {uploadPercentage ? <Progress percent={Math.round(uploadPercentage)} /> : null}
           <Form.Item wrapperCol={{ ...layout.wrapperCol, offset: 4 }} />
           {this.previewModal()}
+          <Modal 
+            className='selected-wallet-upload-modal'
+            style={{backgroundColor: '#000000 !important'}}
+            key="purchase_post"    
+            title={null}
+            open={openConnectModal}
+            footer={null}
+            width={420}
+            destroyOnClose
+            onCancel={() => this.setState({openConnectModal: false})}
+          >
+            <div className='selected-wallet-upload-container'>
+              <div className='selected-wallet-upload'>
+                  <span style={{fontSize: '23px', fontWeight: '600', color: 'white'}}>Connect</span>
+                  <span style={{ fontSize: '14px', color: 'grey'}}>Select your preferred wallet and click Continue</span>
+              </div>
+              <div className='connect-wallets-wrapper'>
+                    <div className='wallet-wrapper' onClick={()=> this.setState({walletOption: 'nfid'})}>
+                      <img src="/static/nfid-logo-og.png" alt="" className='nfid-icon-sign'/>
+                      <span>NFID</span>
+                      {walletOption === 'nfid' && (
+                        <FontAwesomeIcon width={25} height={25} className="tick-icon-wallet" icon={faCircleCheck} />
+                      )}
+                    </div>
+                    <div className='wallet-wrapper' onClick={()=> this.setState({walletOption: 'plug'})}>
+                      <img src="/static/plug-favicon.png" alt="" className='plug-icon-sign'/>
+                      <span>Plug Wallet</span>
+                      {walletOption === 'plug' && (
+                        <FontAwesomeIcon width={25} height={25} icon={faCircleCheck} className="tick-icon-wallet"/>
+                      )}
+                    </div>
+                    <div className='wallet-wrapper' onClick={()=> this.setState({walletOption: 'ii'})}>
+                      <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
+                      <span>Internet Identity</span>
+                      {walletOption === 'ii' && (
+                        <FontAwesomeIcon width={25} height={25} icon={faCircleCheck} className="tick-icon-wallet"/>
+                      )}
+                    </div>
+              </div>
+              <div>
+              <Button
+                className="upload-with-wallet-btn"
+                loading={uploading}
+                disabled={uploading}
+                onClick={()=> this.setState({openConnectModal: false})}
+              >
+                Continue
+              </Button>
+              </div>
+
+            </div>
+          </Modal>
         </Form>
+        
       </div>
     );
   }

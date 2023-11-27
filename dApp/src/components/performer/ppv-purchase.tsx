@@ -21,14 +21,14 @@ import { Actor, HttpAgent } from '@dfinity/agent';
 import { AuthClient } from '@dfinity/auth-client';
 import { paymentService } from '@services/index';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCircleInfo } from '@fortawesome/free-solid-svg-icons'
+import { faCircleInfo, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { getResponseError } from '@lib/utils';
 
 const { Option } = Select;
 interface IProps {
   type: string;
   performer: IPerformer;
-  onFinish(isCryptoPayment: boolean, ticker: string): Function;
+  onFinish(ticker: string, paymentOption?: string): Function;
   submiting: boolean;
   settings: ISettings;
   user: IUser;
@@ -54,20 +54,34 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
     custom: false,
     cards: [],
     loading: false,
-    paymentOption: 'card'
+    paymentOption: 'noPayment',
   }
 
   async componentDidMount() {
     const { video } = this.props;
-    this.setState({ price: video.price.toFixed(2) });
+    await this.getData()
     await this.checkContentExistsICP();
   }
 
 
   async getData() {
+    const {user, video, contentPriceICP} = this.props
     try {
       this.setState({ loading: true });
       const resp = await paymentService.getStripeCards();
+  
+      if(resp.data.data.length > 0){
+        this.setState({paymentOption: 'card'});
+        this.setState({selectedCurrency: 'USD'})
+        this.setState({ price: video.price.toFixed(2) });
+      }else if(user?.wallet_icp){
+        this.setState({paymentOption: 'plug'});
+        this.setState({selectedCurrency: 'ICP'})
+        this.setState({ price: contentPriceICP });
+      }else{
+        this.setState({paymentOption: 'noPayment'});
+      }
+      
       this.setState({
         cards: resp.data.data.map((d) => {
           if (d.card) return { ...d.card, id: d.id };
@@ -84,7 +98,6 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
 
   async checkContentExistsICP(){
     const { video } = this.props;
-    this.getData()
 
     let identity;
     const authClient = await AuthClient.create();
@@ -134,6 +147,8 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
       if(result[0].price){
         // message.error('This content has not been registered on-chain. Crypto purchases for this content are not available. Purchase with USD instead.');
         this.setState({ isContentICP: true });
+      }else{
+        message.info("This artist has disabled crypto payments for this piece of content.")
       }
     }
   }
@@ -176,7 +191,7 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
 
   render() {
     const {
-      onFinish, submiting = false, performer, video, isPriceICPLoading, contentPriceICP, 
+      onFinish, submiting = false, performer, video, isPriceICPLoading, contentPriceICP, user
     } = this.props;
     const {
       currencies, selectedCurrency, price, cards, loading, paymentOption, isContentICP
@@ -192,6 +207,19 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
           
           <div className='payment-details'>
           <span>Payment details</span>
+          <div className='payment-recipient-wrapper'>
+              <div className='payment-recipient-avatar-wrapper'>
+                <Avatar src={performer?.avatar || '/static/no-avatar.png'} />
+              </div>
+              <div className='payment-recipient-info'>
+                <p>Pay to</p>
+                <span>{performer?.name}</span>
+                  <p style={{color: '#c8ff02'}}>Verified Artist</p>
+              </div>
+              <a href={`/artist/profile?id=${performer?.username || performer?._id}`} className='info-icon-wrapper'>
+                <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
+              </a>
+            </div>
           <Select onChange={(v) => this.changePaymentOption(v)} defaultValue={paymentOption} value={paymentOption}  className="payment-type-select">
           {!loading && cards.length > 0 && cards.map((card) => (
             <Option value="card" key="card" className="payment-type-option-content">
@@ -208,7 +236,8 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
               </div>
             </Option>
             ))}
-            
+            {user.wallet_icp && isContentICP &&(
+              <>
             <Option value="plug" key="plug" className="payment-type-option-content">
               <div className='payment-type-img-wrapper'>
                 <img src='/static/plug-favicon.png' width={40} height={40}/>
@@ -241,36 +270,49 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
                   <p>Internet Computer</p>
               </div>
             </Option>
+            </>
+            )}
+
+            {paymentOption === "noPayment" && (
+              <Option value="noPayment" key="noPayment" className="payment-type-option-content">
+                <div className='payment-type-img-wrapper'>
+                <FontAwesomeIcon style={{width: 45, height: 45}} icon={faXmark} />
+                </div>
+                <div className='payment-type-info'>
+                  <span style={{}}>No Payment Method Connected</span>
+                    <p>Please visit settings to add a card <br /> or connect a wallet</p>
+                    {/* <p>Click to add crypto wallet</p> */}
+                </div>
+              </Option>
+            )}
           </Select>
-            <div className='payment-recipient-wrapper'>
-              <div className='payment-recipient-avatar-wrapper'>
-                <Avatar src={performer?.avatar || '/static/no-avatar.png'} />
-              </div>
-              <div className='payment-recipient-info'>
-                <p>Pay to</p>
-                <span>{performer?.name}</span>
-                  <p style={{color: '#c8ff02'}}>Verified Artist</p>
-              </div>
-              <a href={`/artist/profile?id=${performer?.username || performer?._id}`} className='info-icon-wrapper'>
-                <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
-              </a>
-            </div>
+            
+            
           </div>
           <div className='currency-picker-btns-container'>
             <span>Select a currency</span>
             <div className='currency-picker-btns-wrapper'>
+            {cards.length > 0 && (
               <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('USD')}>
                 <img src='/static/usd-logo.png' width={40} height={40} style={{border: selectedCurrency === 'USD' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
               </div>
-              <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('ICP')}>
-                <img src='/static/icp-logo.png' width={40} height={40} style={{border: selectedCurrency === 'ICP' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
-              </div>
-              <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('ckBTC')}>
-                <img src='/static/ckbtc_nobackground.png' width={40} height={40} style={{border: selectedCurrency === 'ckBTC' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
-              </div>
-              <div className='currency-picker-btn-wrapper-disabled' >
-                <img src='/static/trax-token.png' width={40} height={40} />
-              </div>
+            )}
+              {(isContentICP && user.wallet_icp) &&(
+                <>
+                
+                  <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('ICP')}>
+                    <img src='/static/icp-logo.png' width={40} height={40} style={{border: selectedCurrency === 'ICP' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
+                  </div>
+                  {/* className={`${isContentICP ? 'currency-picker-btn-wrapper' : 'currency-picker-btn-wrapper-disabled'} `} */}
+                  <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('ckBTC')}>
+                    <img src='/static/ckbtc_nobackground.png' width={40} height={40} style={{border: selectedCurrency === 'ckBTC' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
+                  </div>
+                  <div className='currency-picker-btn-wrapper-disabled' >
+                    <img src='/static/trax-token.png' width={40} height={40} />
+                  </div>
+                </>
+              )}
+              
             </div>
           </div>
           <div className='tip-input-number-container'>
@@ -300,11 +342,9 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
           </div>
           <Button
               className="tip-button"
-              disabled={submiting || (selectedCurrency === 'ICP' && !video.isCrypto) || (selectedCurrency === 'ckBTC' && !video.isCrypto)}
+              disabled={submiting || (selectedCurrency === 'ICP' && !video.isCrypto) || (selectedCurrency === 'ckBTC' && !video.isCrypto) || paymentOption === 'noPayment'}
               loading={submiting}
-              onClick={() => {
-                selectedCurrency === 'USD' ? onFinish(false, selectedCurrency) : onFinish(true, selectedCurrency);
-              }}
+              onClick={() => onFinish(selectedCurrency, paymentOption)}
             >
               Unlock
             </Button>

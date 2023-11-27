@@ -166,6 +166,8 @@ class VideoViewPage extends PureComponent<IProps> {
     }
     const icp = (await tokenTransctionService.getExchangeRate()).data.rate;
     const ckbtc = (await tokenTransctionService.getExchangeRateBTC()).data.rate;
+    // const icp = '20';
+    // const ckbtc = '30000';
 
     const amountToSendICP = video.price / parseFloat(icp);
     const amountToSendCKBTC = video.price / parseFloat(ckbtc);
@@ -321,8 +323,170 @@ class VideoViewPage extends PureComponent<IProps> {
     handleDeleteComment(item._id);
   }
 
-  beforePurchase(isCrypto: boolean, ticker: string) {
-    isCrypto ? this.purchaseVideoCrypto(ticker) : this.purchaseVideo();
+  beforePurchase(ticker: string, paymentOption: string) {
+    console.log("in here")
+    console.log(paymentOption)
+    if(paymentOption == 'card'){
+      this.purchaseVideo()
+    }else if(paymentOption === 'plug'){
+      this.purchaseVideoPlug(ticker)
+    }else if(paymentOption === 'II' || paymentOption === 'nfid'){
+      this.purchaseVideoCrypto(ticker)
+    }
+  }
+
+  async purchaseVideoPlug(ticker){
+    console.log("in here plug")
+    const { video } = this.state;
+    const { amountICP, amountCKBTC } = this.state;
+
+    this.setState({ openPPVProgressModal: true, openPPVModal: false, ppvProgress: 20 });
+
+    let amountToSendICP = Math.trunc(Number(amountICP) * 100000000)
+    let amountToSendCKBTC = Math.trunc(Number(amountCKBTC) * 100000000)
+
+    let ppvCanID, ledgerCanID, ckBTCLedgerCanID, transfer;
+
+    this.setState({
+      requesting: false,
+      submiting: false,
+      openPPVProgressModal: false,
+      openPPVModal: false,
+      ppvProgress: 10
+    });
+
+    if((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic'){
+      ppvCanID = process.env.NEXT_PUBLIC_PPV_CANISTER_ID_LOCAL as string;
+      ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID_LOCAL as string;
+      ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID_LOCAL as string;
+    }else{
+      ppvCanID = process.env.NEXT_PUBLIC_PPV_CANISTER_ID as string;
+      ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID as string;
+      ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID as string;
+    }
+
+    // const identityCanisterId = (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? (process.env.NEXT_PUBLIC_IDENTITY_CANISTER as string) : (process.env.NEXT_PUBLIC_IDENTITY_CANISTER_LOCAL as string);
+    const whitelist = [
+      ppvCanID, 
+    ];
+    console.log('whitelist: ', whitelist);
+
+    if(typeof window !== 'undefined' && 'ic' in window){
+      // @ts-ignore
+      const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
+        whitelist,
+        host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') 
+        ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) 
+        : (process.env.NEXT_PUBLIC_HOST as string)
+      }) : false;
+
+      !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
+        
+      this.setState({ openPPVProgressModal: true, openPPVModal: false, ppvProgress: 20 });
+
+      // @ts-ignore
+      if (!window?.ic?.plug?.agent && connected  ) {
+        console.log('creating agent');
+        // @ts-ignore
+        await window.ic.plug.createAgent({ 
+          whitelist, 
+          host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) : (process.env.NEXT_PUBLIC_HOST as string) 
+        });
+      }
+      
+      let ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
+        agent: (window as any).ic.plug.agent,
+        canisterId: ppvCanID
+      });
+      
+
+      // @ts-ignore
+      console.log(window.ic.plug.principalId); console.log(window.ic.plug.accountId); console.log("plug agent: ", window?.ic?.plug?.agent)
+      
+      if(connected){
+        //@ts-ignore
+        const requestBalanceResponse = await window.ic?.plug?.requestBalance();
+        const icp_balance = requestBalanceResponse[0]?.amount;
+        const ckBTC_balance = requestBalanceResponse[1]?.amount;
+
+        console.log("icp balance: ", icp_balance);
+        console.log("ckbtc balance: ", ckBTC_balance);
+
+        if(ticker === 'ckBTC'){
+          if(ckBTC_balance >= Number(amountCKBTC)){
+            this.setState({ ppvProgress: 30 });
+            const params = {
+              to: ppvCanID,
+              strAmount: amountCKBTC,
+              token: 'mxzaz-hqaaa-aaaar-qaada-cai'
+            };
+            //@ts-ignore
+            transfer = await window.ic.plug.requestTransferToken(params).catch((error) =>{
+              message.error('Transaction failed. Please try again later.');
+              this.setState({requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0})
+            });
+            
+          } else {
+            this.setState({ requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0 })
+            message.error('Insufficient balance, please top up your wallet and try again.');
+          }
+        }
+        
+        if (ticker === 'ICP') {
+          this.setState({ ppvProgress: 30 });
+          if(icp_balance >= Number(amountICP)){
+            const requestTransferArg = {
+              to: ppvCanID,
+              amount: amountToSendICP
+            }
+            //@ts-ignore
+            transfer = await window.ic?.plug?.requestTransfer(requestTransferArg).catch((error) =>{
+              message.error('Transaction failed. Please try again later.');
+              this.setState({requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0})
+            })
+            
+          } else {
+            this.setState({requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0})
+            message.error('Insufficient balance, please top up your wallet and try again.');
+          }
+        }
+
+        this.setState({ ppvProgress: 50 });
+
+        if(transfer.height){
+
+          this.setState({ ppvProgress: 70 });
+        
+          await ppvActor.purchaseContent(transfer.height, video._id, ticker, ticker === "ICP" ? BigInt(amountToSendICP) : BigInt(amountToSendCKBTC)).then(async () => {
+            this.setState({ ppvProgress: 90 });
+            await tokenTransctionService.sendCryptoPpv(video?.performer?._id, { performerId: video?.performer?._id, price: Number(amountToSendICP), tokenSymbol: ticker }).then(() => {
+              this.setState({ ppvProgress: 100 });
+              this.setState({ requesting: false, openPPVModal: false, submiting: false });
+              message.success('Payment successful! You can now access this content');
+            });
+            setTimeout(() => this.setState({
+              requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0
+            }), 1000);
+  
+            this.setState({ isBought: true, requesting: false });
+          }).catch((error) => {
+            this.setState({
+              requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0
+            });
+  
+            // message.(`Payment successful! You can now access this content` );
+            console.error(error);
+            message.error(error.message || 'error occured, please try again later');
+            return error;
+          });
+        }else{
+          setTimeout(() => this.setState({
+            requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0
+          }), 1000);
+          message.error('Transaction failed. Please try again later.');
+        }
+    }
+    }
   }
 
   async handlePurchaseVideoCrypto(ppvCanID: Principal, fanID: Principal, ledgerActor: any, ppvActor: any, ticker: string) {
@@ -439,13 +603,13 @@ class VideoViewPage extends PureComponent<IProps> {
             message.success('Payment successful! You can now access this content');
           });
           setTimeout(() => this.setState({
-            requesting: false, submiting: false, openPPVProgressModal: false, tipProgress: 0
+            requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0
           }), 1000);
 
           this.setState({ isBought: true, requesting: false });
         }).catch((error) => {
           this.setState({
-            requesting: false, submiting: false, openPPVProgressModal: false, tipProgress: 0
+            requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0
           });
 
           // message.(`Payment successful! You can now access this content` );
@@ -455,7 +619,7 @@ class VideoViewPage extends PureComponent<IProps> {
         });
       }).catch((error) => {
         this.setState({
-          requesting: false, submiting: false, openPPVProgressModal: false, tipProgress: 0
+          requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0
         });
         this.setState({ requesting: false, openPPVModal: false, submiting: false });
         console.error(error);
@@ -1085,7 +1249,7 @@ class VideoViewPage extends PureComponent<IProps> {
                 {video?.performer?.verifiedAccount && <BadgeCheckIcon style={{ height: '1.5rem' }} className="primary-color" />}
               </div>
               <br />
-              <p className="p-subtitle">Transaction progress</p>
+              <p className="p-subtitle">Please wait while your transaction is processing. Please do not refresh the page.</p>
 
             </div>
             <Progress percent={Math.round(ppvProgress)} style={{color: 'white'}}/>

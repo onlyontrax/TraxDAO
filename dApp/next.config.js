@@ -1,6 +1,7 @@
 /* eslint-disable no-param-reassign */
 const path = require('path');
 const nextComposePlugins = require('next-compose-plugins');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 const { withPlugins } = nextComposePlugins.extend(() => ({}));
 
@@ -31,6 +32,32 @@ const nextConfig = {
   webpack: (
     config, { buildId, dev, isServer, defaultLoaders, nextRuntime, webpack }
   ) => {
+    if (process.env.NEXT_PUBLIC_BUILD_ENV === 'staging') {
+      // Copy staging files to the output directory
+      config.plugins.push(
+        new CopyWebpackPlugin({
+          patterns: [
+            {
+              from: path.resolve(__dirname, 'builds/staging'),
+              to: path.resolve(__dirname, 'public')
+            }
+          ]
+        })
+      );
+    } else if (process.env.NEXT_PUBLIC_BUILD_ENV === 'production') {
+      // Copy production files to the output directory
+      config.plugins.push(
+        new CopyWebpackPlugin({
+          patterns: [
+            {
+              from: path.resolve(__dirname, 'builds/production'),
+              to: path.resolve(__dirname, 'public')
+            }
+          ]
+        })
+      );
+    }
+
     return config;
   }
 };

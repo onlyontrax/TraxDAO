@@ -76,6 +76,7 @@ class UploadVideo extends PureComponent<IProps> {
       return;
     }
     const submitData = { ...data };
+    console.log(data.walletOption)
     if ((data.isSale === 'pay' && !data.price) || (data.isSale === 'pay' && data.price < 1)) {
       message.error('Invalid amount of tokens');
       return;
@@ -127,49 +128,88 @@ class UploadVideo extends PureComponent<IProps> {
           contentType: data.trackType === null ? 'video' : data.trackType
         };
 
-        let identity;
-        let ppvActor;
-        let agent;
-        let host;
+        let identity, ppvActor, agent, host;
 
         const authClient = await AuthClient.create();
+        
+        if(data.walletOption === ('II' || 'nfid' )){
+          if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+            await authClient.login({
+              identityProvider: process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string,
+              onSuccess: async () => {
+                if (await authClient.isAuthenticated()) {
+                  identity = authClient.getIdentity();
+                  host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
+                  agent = new HttpAgent({
+                    identity,
+                    host
+                  });
 
-        if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
-          await authClient.login({
-            identityProvider: process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string,
-            onSuccess: async () => {
-              if (await authClient.isAuthenticated()) {
-                identity = authClient.getIdentity();
-                host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
-                agent = new HttpAgent({
-                  identity,
-                  host
-                });
-
-                let sender = await agent.getPrincipal();
-                agent.fetchRootKey();
+                  let sender = await agent.getPrincipal();
+                  agent.fetchRootKey();
+                  ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
+                    agent,
+                    canisterId: process.env.NEXT_PUBLIC_PPV_CANISTER_ID_LOCAL as string
+                  });
+                }
+                await this.handleAddPPVContent(res.data._id, content, ppvActor);
+              }
+            });
+          } else {
+            host = process.env.NEXT_PUBLIC_HOST as string;
+            await authClient.login({
+              onSuccess: async () => {
+                identity = await authClient.getIdentity();
+                agent = new HttpAgent({ identity, host });
                 ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
                   agent,
-                  canisterId: process.env.NEXT_PUBLIC_PPV_CANISTER_ID_LOCAL as string
+                  canisterId: process.env.NEXT_PUBLIC_PPV_CANISTER_ID as string
                 });
-              }
-              await this.handleAddPPVContent(res.data._id, content, ppvActor);
-            }
-          });
-        } else {
-          host = process.env.NEXT_PUBLIC_HOST as string;
-          await authClient.login({
-            onSuccess: async () => {
-              identity = await authClient.getIdentity();
-              agent = new HttpAgent({ identity, host });
-              ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
-                agent,
-                canisterId: process.env.NEXT_PUBLIC_PPV_CANISTER_ID as string
-              });
 
-              await this.handleAddPPVContent(res.data._id, content, ppvActor);
+                await this.handleAddPPVContent(res.data._id, content, ppvActor);
+              }
+            });
+          }
+        }else if(data.walletOption === 'plug'){
+
+          const whitelist = [
+            process.env.NEXT_PUBLIC_PPV_CANISTER_ID as string, 
+          ];
+
+          if(typeof window !== 'undefined' && 'ic' in window){
+            // @ts-ignore
+            const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
+              whitelist,
+              host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') 
+              ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) 
+              : (process.env.NEXT_PUBLIC_HOST as string)
+            }) : false;
+      
+            !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
+              
+            this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 20 });
+      
+            // @ts-ignore
+            if (!window?.ic?.plug?.agent && connected  ) {
+              console.log('creating agent')
+              // @ts-ignore
+              await window.ic.plug.createAgent({ 
+                whitelist, 
+                host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) : (process.env.NEXT_PUBLIC_HOST as string) 
+              });
             }
-          });
+
+            ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
+              agent: (window as any).ic.plug.agent,
+              canisterId: process.env.NEXT_PUBLIC_PPV_CANISTER_ID as string
+            });
+
+            await this.handleAddPPVContent(res.data._id, content, ppvActor);
+
+          }
+
+        }else{
+          message.error("This wallet does not exist. Please try again.")
         }
       }
 

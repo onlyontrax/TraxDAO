@@ -2,8 +2,7 @@
 import { Principal } from '@dfinity/principal';
 import { IUser } from '@interfaces/index';
 import {
-  Avatar,
-  Divider, message, InputNumber, Select, Image, Input, Button, Progress
+  Avatar, Divider, message, InputNumber, Select, Image, Input, Button, Progress, Modal
 } from 'antd';
 import { PureComponent } from 'react';
 import { TickIcon } from 'src/icons';
@@ -22,6 +21,8 @@ import type { _SERVICE as _SERVICE_LEDGER } from '../../../src/smart-contracts/d
 import {
   TransferArgs, Tokens, TimeStamp, AccountBalanceArgs
 } from '../../../src/smart-contracts/declarations/ledger/ledger.did';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faXmark, faBullhorn, faImage, faVideo, faSquarePollHorizontal, faCircleCheck } from '@fortawesome/free-solid-svg-icons';
 
 import { IcrcLedgerCanister, TransferParams } from "@dfinity/ledger";
 const { Option } = Select;
@@ -44,7 +45,9 @@ export class SendCrypto extends PureComponent<IProps> {
     isAddressValid: false,
     isAmountValid: false,
     progress: 0,
-    revealProgressBar: false
+    revealProgressBar: false,
+    openConnectModal: false,
+    walletOption: null
   }
 
   componentDidMount() {}
@@ -59,7 +62,7 @@ export class SendCrypto extends PureComponent<IProps> {
     return accountIdBlob;
   }
 
-  async sendCrypto(ticker: string, actor: any){
+  async handleSendCrypto(ticker: string, actor: any){
     const { destinationAddress, addressType, amountToSend } = this.state
     let transferArgs: TransferArgs;
     let transferParams: TransferParams;
@@ -113,7 +116,7 @@ export class SendCrypto extends PureComponent<IProps> {
             submiting: false,
             openProgressModal: false,
             openPurchaseModal: false,
-            progress: 100
+            progress: 100,
           });
           message.success("Payment successful!");
       }).catch((error) => {
@@ -129,6 +132,99 @@ export class SendCrypto extends PureComponent<IProps> {
 
 
   async beforeSendCrypto(){
+    const { walletOption} = this.state;
+    this.setState({openConnectModal: false})
+
+    walletOption === 'plug' ? this.sendCryptoPlug() : this.sendCrypto()
+  }
+
+
+  async sendCryptoPlug(){
+    const { selectedCurrency, addressType, destinationAddress, amountToSend, walletOption} = this.state;
+    let transfer;
+    this.setState({progress: 10});
+
+    if(typeof window !== 'undefined' && 'ic' in window){
+      // @ts-ignore
+      const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect() : false;
+
+      !connected && message.error("Failed to connected to canister. Please try again later or contact us. ")
+        
+      this.setState({ progress: 20 });
+
+      // @ts-ignore
+      console.log(window.ic.plug.principalId); console.log(window.ic.plug.accountId); console.log("plug agent: ", window?.ic?.plug?.agent)
+      
+      if(connected){
+        //@ts-ignore
+        const requestBalanceResponse = await window.ic?.plug?.requestBalance();
+        const icp_balance = requestBalanceResponse[0]?.amount;
+        const ckBTC_balance = requestBalanceResponse[1]?.amount;
+
+        console.log("icp balance: ", icp_balance);
+        console.log("ckbtc balance: ", ckBTC_balance);
+
+        if(selectedCurrency === 'ckBTC'){
+          if(ckBTC_balance >= Number(amountToSend)){
+            this.setState({ ppvProgress: 30 });
+            const params = {
+              to: destinationAddress,
+              strAmount: amountToSend,
+              token: 'mxzaz-hqaaa-aaaar-qaada-cai'
+            };
+            //@ts-ignore
+            transfer = await window.ic.plug.requestTransferToken(params).catch((error) =>{
+              message.error('Transaction failed. Please try again later.');
+              this.setState({progress: 0})
+            });
+            
+          } else {
+            this.setState({ progress: 0 })
+            message.error('Insufficient balance, please top up your wallet and try again.');
+          }
+        }
+        
+        if (selectedCurrency === 'ICP') {
+          this.setState({ progress: 30 });
+          if(icp_balance >= Number(amountToSend)){
+            const requestTransferArg = {
+              to: destinationAddress,
+              amount: Math.trunc(Number(amountToSend) * 100000000)
+            }
+            //@ts-ignore
+            transfer = await window.ic?.plug?.requestTransfer(requestTransferArg).catch((error) =>{
+              message.error('Transaction failed. Please try again later.');
+              this.setState({progress: 0})
+            })
+            
+          } else {
+            this.setState({progress: 0})
+            message.error('Insufficient balance, please top up your wallet and try again.');
+          }
+        }
+
+        console.log(transfer)
+
+        this.setState({ progress: 50 });
+
+        if(transfer){
+          this.setState({ progress: 100 });
+          message.success('Payment successful! You can now access this content');
+        }else{
+          setTimeout(() => this.setState({
+            progress: 0
+          }), 1000);
+          message.error('Transaction failed. Please try again later.');
+        }
+    }
+    }
+  }
+
+
+
+
+
+  async sendCrypto(){
     const { selectedCurrency, addressType, destinationAddress, amountToSend} = this.state;
     const { icpBalance, ckbtcBalance} = this.props;
     this.setState({ requesting: true, submiting: true });
@@ -200,7 +296,7 @@ export class SendCrypto extends PureComponent<IProps> {
                 message.error('Invalid ticker, please select a different token!');
               }
               this.setState({ progress: 30 });
-              this.sendCrypto(selectedCurrency, ledgerActor)
+              this.handleSendCrypto(selectedCurrency, ledgerActor)
             }
           }
         });
@@ -258,7 +354,7 @@ export class SendCrypto extends PureComponent<IProps> {
             }else{
               message.error('Invalid ticker, please select a different token!');
             }
-            this.sendCrypto(selectedCurrency, ledgerActor)
+            this.handleSendCrypto(selectedCurrency, ledgerActor)
           }
         });
       }
@@ -338,7 +434,7 @@ export class SendCrypto extends PureComponent<IProps> {
     const {
       user, icpBalance, ckbtcBalance, icpPrice, ckbtcPrice
     } = this.props;
-    const { amountToSend, selectedCurrency, isAddressValid, isAmountValid, progress } = this.state;
+    const { amountToSend, selectedCurrency, isAddressValid, isAmountValid, progress, openConnectModal, walletOption } = this.state;
 
     return (
         <div className='confirm-purchase-form'>
@@ -389,12 +485,62 @@ export class SendCrypto extends PureComponent<IProps> {
                 <Progress percent={Math.round(progress)} />
                 <div className='send-container'>
                 <div className='send-wrapper'>
-                    <Button className='withdraw-button' disabled={!isAddressValid && !isAmountValid} onClick={()=> this.beforeSendCrypto()}>
+                    <Button className='withdraw-button' disabled={(!isAddressValid && !isAmountValid) || progress > 0 && progress < 100} onClick={()=> this.setState({openConnectModal: true})}>
                       Send
                     </Button>
                 </div>
             </div>
             </div>
+            <Modal 
+            className='selected-wallet-upload-modal'
+            style={{backgroundColor: '#000000 !important'}}
+            key="purchase_post"    
+            title={null}
+            open={openConnectModal}
+            footer={null}
+            width={420}
+            destroyOnClose
+            onCancel={() => this.setState({openConnectModal: false})}
+          >
+            <div className='selected-wallet-upload-container'>
+              <div className='selected-wallet-upload'>
+                  <span style={{fontSize: '23px', fontWeight: '600', color: 'white'}}>Connect</span>
+                  <span style={{ fontSize: '14px', color: 'grey'}}>Select your preferred wallet and click Continue</span>
+              </div>
+              <div className='connect-wallets-wrapper'>
+                    <div className='wallet-wrapper' onClick={()=> this.setState({walletOption: 'nfid'})}>
+                      <img src="/static/nfid-logo-og.png" alt="" className='nfid-icon-sign'/>
+                      <span>NFID</span>
+                      {walletOption === 'nfid' && (
+                        <FontAwesomeIcon width={25} height={25} className="tick-icon-wallet" icon={faCircleCheck} />
+                      )}
+                    </div>
+                    <div className='wallet-wrapper' onClick={()=> this.setState({walletOption: 'plug'})}>
+                      <img src="/static/plug-favicon.png" alt="" className='plug-icon-sign'/>
+                      <span>Plug Wallet</span>
+                      {walletOption === 'plug' && (
+                        <FontAwesomeIcon width={25} height={25} icon={faCircleCheck} className="tick-icon-wallet"/>
+                      )}
+                    </div>
+                    <div className='wallet-wrapper' onClick={()=> this.setState({walletOption: 'ii'})}>
+                      <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
+                      <span>Internet Identity</span>
+                      {walletOption === 'ii' && (
+                        <FontAwesomeIcon width={25} height={25} icon={faCircleCheck} className="tick-icon-wallet"/>
+                      )}
+                    </div>
+              </div>
+              <div>
+              <Button
+                className="upload-with-wallet-btn"
+                onClick={()=> this.beforeSendCrypto()}
+              >
+                Continue
+              </Button>
+              </div>
+
+            </div>
+          </Modal>
         </div>
     );
   }

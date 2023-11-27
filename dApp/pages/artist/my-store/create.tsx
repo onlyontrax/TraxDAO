@@ -55,10 +55,12 @@ class CreateProduct extends PureComponent<IProps> {
   }
 
   async submit(data: any) {
+    const {user} = this.props;
     if (!this._files.image) {
       message.error('Please upload product image!');
       return;
     }
+    
     if (data.type === 'digital' && !this._files.digitalFile) {
       message.error('Please select digital file!');
       return;
@@ -83,7 +85,7 @@ class CreateProduct extends PureComponent<IProps> {
     try {
       await productService.createProduct(files, data, this.onUploading.bind(this));
       message.success('New product was successfully created');
-      Router.push('/artist/my-store');
+      Router.push(`/artist/profile?id=${user?.username || user?._id}`);
     } catch (error) {
       message.error(getResponseError(error) || 'Something went wrong, please try again!');
       this.setState({
