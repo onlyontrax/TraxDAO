@@ -407,7 +407,7 @@ Distribution:
           stake: 8_000_000 tokens
           memo: 1
           dissolve_delay: 1 month
-          vesting_period: 1 years
+          vesting_period: 1 year
 
         - principal: nopei-dx2qy-vhrkp-nscnw-74ltz-jx2jf-4t3gr-e47y2-7pnwd-vr54s-fae
           stake: 8_000_000 tokens
@@ -432,7 +432,7 @@ Distribution:
           stake: 7_500_000 tokens
           memo: 11
           dissolve_delay: 1 month
-          vesting_period: 1 years
+          vesting_period: 1 year
 
         - principal: kafcz-faucw-bt2r5-f5klj-u7r2t-riqum-y5jdh-rfj6t-kbji4-ngrdv-mae
           stake: 7_500_000 tokens
@@ -457,7 +457,7 @@ Distribution:
           stake: 7_500_000 tokens
           memo: 21
           dissolve_delay: 1 month
-          vesting_period: 1 years
+          vesting_period: 1 year
 
         - principal: dnhod-nindr-2yoao-jxr2s-arogh-feoua-yykds-mkftj-725mn-2ps6x-bae
           stake: 7_500_000 tokens
@@ -482,7 +482,7 @@ Distribution:
           stake: 4_375_000 tokens
           memo: 31
           dissolve_delay: 1 month
-          vesting_period: 1 years
+          vesting_period: 1 year
 
         - principal: glkn5-sseqj-ws2zx-csai7-yzp7e-whonn-a6qaa-ay6ep-4dtmc-ukk7i-gae
           stake: 4_375_000 tokens
@@ -507,7 +507,7 @@ Distribution:
           stake: 2_325_000 tokens
           memo: 41
           dissolve_delay: 1 month
-          vesting_period: 1 years
+          vesting_period: 1 year
 
         - principal: bshgr-tiw3q-cvmok-ugku4-e4qgs-lv2os-jnwsl-2amx5-ukd2u-6sct4-4qe
           stake: 2_325_000 tokens
@@ -532,7 +532,7 @@ Distribution:
           stake: 300_000 tokens
           memo: 51
           dissolve_delay: 1 month
-          vesting_period: 1 years
+          vesting_period: 1 year
 
         - principal: feljd-s2676-sy4ly-gvuht-x3ln6-6itne-qw263-4jetg-6r4b4-3skzf-wae
           stake: 300_000 tokens
@@ -558,7 +558,7 @@ Distribution:
           stake: 30_000_000 tokens
           memo: 61
           dissolve_delay: 1 month
-          vesting_period: 1 years
+          vesting_period: 1 year
 
         - principal: ljxsi-5du4w-3se32-vba6v-dd543-rrj3g-nayx2-f7xhd-o4u7a-ycmxw-bae
           stake: 30_000_000 tokens
@@ -569,28 +569,29 @@ Distribution:
           
           # 30_000_000 tokens for airdrop participants, NFT Holders and early community contributors
         - principal: osvld-w7oku-lu5er-n5xy7-dyzyv-ufig6-vixnu-foihq-wha3z-2uaen-mae
-          stake: 15_000_000 tokens
+          stake: 10_000_000 tokens
           memo: 70
           dissolve_delay: 0 seconds
           vesting_period: 0 seconds
 
         - principal: osvld-w7oku-lu5er-n5xy7-dyzyv-ufig6-vixnu-foihq-wha3z-2uaen-mae
-          stake: 5_000_000 tokens
+          stake: 10_000_000 tokens
           memo: 71
-          dissolve_delay: 1 month
-          vesting_period: 1 months
+          dissolve_delay: 0 seconds
+          vesting_period: 1 month
 
         - principal: osvld-w7oku-lu5er-n5xy7-dyzyv-ufig6-vixnu-foihq-wha3z-2uaen-mae
           stake: 5_000_000 tokens
           memo: 72
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 3 months
 
         - principal: osvld-w7oku-lu5er-n5xy7-dyzyv-ufig6-vixnu-foihq-wha3z-2uaen-mae
           stake: 5_000_000 tokens
           memo: 73
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 5 months
+
     # The initial SNS token balances of the various canisters of the SNS.
     InitialBalances:
         # The initial SNS token balance of the SNS Governance canister is known
