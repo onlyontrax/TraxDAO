@@ -31,10 +31,9 @@ For more information on the TRAX SNS please read our [Whitepaper](https://docs.g
 Swap participation parameters:
 
 - Min participation: 1 ICP
-- Max participation: 200,000 ICP
+- Max participation: 150,000 ICP
 - Max to be raised: 800,000 ICP
-- Min to be raised: 400,000 ICP
-- From Neuron Fund: 200,000 ICP
+- Min to be raised: 150,000 ICP
 - Min participants: 250
 
 The sale is open to anyone outside of the United States of America. 

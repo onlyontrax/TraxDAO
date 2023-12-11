@@ -123,10 +123,9 @@ NnsProposal:
         Swap participation parameters:
 
         * Min participation: 1 ICP
-        * Max participation: 200,000 ICP
+        * Max participation: 150,000 ICP
         * Max to be raised: 800,000 ICP
-        * Min to be raised: 400,000 ICP
-        * From Neuron Fund: 200,000 ICP
+        * Min to be raised: 150,000 ICP
         * Min participants: 250
 
         Participation is either via the launchpad in the NNS: https://nns.ic0.app/ or via the command line using [quill](https://wiki.internetcomputer.org/wiki/How-To:_Participate_in_the_SNS_decentralization_sale_via_quill).
@@ -406,19 +405,19 @@ Distribution:
         - principal: nopei-dx2qy-vhrkp-nscnw-74ltz-jx2jf-4t3gr-e47y2-7pnwd-vr54s-fae
           stake: 8_000_000 tokens
           memo: 1
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 1 year
 
         - principal: nopei-dx2qy-vhrkp-nscnw-74ltz-jx2jf-4t3gr-e47y2-7pnwd-vr54s-fae
           stake: 8_000_000 tokens
           memo: 2
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 2 years
 
         - principal: nopei-dx2qy-vhrkp-nscnw-74ltz-jx2jf-4t3gr-e47y2-7pnwd-vr54s-fae
           stake: 8_000_000 tokens
           memo: 3
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 3 years
 
 
@@ -431,19 +430,19 @@ Distribution:
         - principal: kafcz-faucw-bt2r5-f5klj-u7r2t-riqum-y5jdh-rfj6t-kbji4-ngrdv-mae
           stake: 7_500_000 tokens
           memo: 11
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 1 year
 
         - principal: kafcz-faucw-bt2r5-f5klj-u7r2t-riqum-y5jdh-rfj6t-kbji4-ngrdv-mae
           stake: 7_500_000 tokens
           memo: 12
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 2 years
 
         - principal: kafcz-faucw-bt2r5-f5klj-u7r2t-riqum-y5jdh-rfj6t-kbji4-ngrdv-mae
           stake: 7_500_000 tokens
           memo: 13
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 3 years
 
 
@@ -456,19 +455,19 @@ Distribution:
         - principal: dnhod-nindr-2yoao-jxr2s-arogh-feoua-yykds-mkftj-725mn-2ps6x-bae
           stake: 7_500_000 tokens
           memo: 21
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 1 year
 
         - principal: dnhod-nindr-2yoao-jxr2s-arogh-feoua-yykds-mkftj-725mn-2ps6x-bae
           stake: 7_500_000 tokens
           memo: 22
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 2 years
 
         - principal: dnhod-nindr-2yoao-jxr2s-arogh-feoua-yykds-mkftj-725mn-2ps6x-bae
           stake: 7_500_000 tokens
           memo: 23
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 3 years
 
 
@@ -481,19 +480,19 @@ Distribution:
         - principal: glkn5-sseqj-ws2zx-csai7-yzp7e-whonn-a6qaa-ay6ep-4dtmc-ukk7i-gae
           stake: 4_375_000 tokens
           memo: 31
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 1 year
 
         - principal: glkn5-sseqj-ws2zx-csai7-yzp7e-whonn-a6qaa-ay6ep-4dtmc-ukk7i-gae
           stake: 4_375_000 tokens
           memo: 32
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 2 years
 
         - principal: glkn5-sseqj-ws2zx-csai7-yzp7e-whonn-a6qaa-ay6ep-4dtmc-ukk7i-gae
           stake: 4_375_000 tokens
           memo: 33
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 3 years
 
 
@@ -506,19 +505,19 @@ Distribution:
         - principal: bshgr-tiw3q-cvmok-ugku4-e4qgs-lv2os-jnwsl-2amx5-ukd2u-6sct4-4qe
           stake: 2_325_000 tokens
           memo: 41
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 1 year
 
         - principal: bshgr-tiw3q-cvmok-ugku4-e4qgs-lv2os-jnwsl-2amx5-ukd2u-6sct4-4qe
           stake: 2_325_000 tokens
           memo: 42
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 2 years
 
         - principal: bshgr-tiw3q-cvmok-ugku4-e4qgs-lv2os-jnwsl-2amx5-ukd2u-6sct4-4qe
           stake: 2_325_000 tokens
           memo: 43
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 3 years
 
 
@@ -531,19 +530,19 @@ Distribution:
         - principal: feljd-s2676-sy4ly-gvuht-x3ln6-6itne-qw263-4jetg-6r4b4-3skzf-wae
           stake: 300_000 tokens
           memo: 51
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 1 year
 
         - principal: feljd-s2676-sy4ly-gvuht-x3ln6-6itne-qw263-4jetg-6r4b4-3skzf-wae
           stake: 300_000 tokens
           memo: 52
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 2 years
 
         - principal: feljd-s2676-sy4ly-gvuht-x3ln6-6itne-qw263-4jetg-6r4b4-3skzf-wae
           stake: 300_000 tokens
           memo: 53
-          dissolve_delay: 1 month
+          dissolve_delay: 0 seconds
           vesting_period: 3 years
 
 
@@ -591,7 +590,6 @@ Distribution:
           memo: 73
           dissolve_delay: 0 seconds
           vesting_period: 5 months
-
     # The initial SNS token balances of the various canisters of the SNS.
     InitialBalances:
         # The initial SNS token balance of the SNS Governance canister is known
@@ -630,7 +628,7 @@ Swap:
     # the swap to succeed. If this amount is not achieved, the swap will be
     # aborted (instead of committed) when the due date/time occurs.
     # Must be smaller than or equal than `maximum_direct_participation_icp`.
-    minimum_direct_participation_icp: 400_000 tokens
+    minimum_direct_participation_icp: 150_000 tokens
 
     # Maximum amount of ICP from direct participants. If this amount is achieved,
     # the swap will finalize immediately, without waiting for the due date/time;
@@ -648,7 +646,7 @@ Swap:
     # The maximum amount of ICP that each participant may contribute
     # to participate. This field is specified as a token. For instance,
     # "1 token".
-    maximum_participant_icp: 200_000 tokens
+    maximum_participant_icp: 150_000 tokens
 
     # The text that swap participants must confirm before they may participate
     # in the swap.
@@ -726,7 +724,7 @@ Swap:
     # The duration of the decentralization swap. When `start_time` is calculated
     # during CreateServiceNervousSystem proposal execution, this `duration` will
     # be added to that absolute time and set as the swap's deadline.
-    duration: 10 days
+    duration: 7 days
 
     # Whether Neurons' Fund participation is requested.
     neurons_fund_participation: true
