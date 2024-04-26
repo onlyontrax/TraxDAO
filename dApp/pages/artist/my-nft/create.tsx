@@ -30,7 +30,7 @@ class NFTCreatePage extends PureComponent<IProps, IStates> {
   componentDidMount() {
     const { user } = this.props;
     if (!user.verifiedDocument) {
-      message.warning('Your ID documents are not verified yet! You could not post any content right now.');
+      message.warning('Your Identity has not been verified yet! You can\'t post any content right now. Please to to Account settings to verify your account.');
       Router.back();
     }
     if (!user?.wallet_icp) {

@@ -8,6 +8,7 @@
       "esnext"
     ],
     "allowJs": true,
+    "declaration": false,
     "skipLibCheck": true,
     "strict": false,
     "forceConsistentCasingInFileNames": true,
@@ -44,7 +45,7 @@
       ],
       "src/*": [
         "./src/*"
-      ]/*,
+      ] /*,
       "static/*": [
         "./public/static/*"
       ]*/
@@ -64,7 +65,7 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "./src/**/*", 
+    "./src/**/*",
     "./public/**/*",
     ".next/types/**/*.ts"
   ]

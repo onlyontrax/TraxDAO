@@ -11,6 +11,9 @@ import NewHeader from '@components/common/layout/new-header';
 import Footer from '@components/common/layout/footer';
 import Sidebar from '@components/common/layout/sidebar';
 import styles from './primary-layout.module.scss';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faPlay } from '@fortawesome/free-solid-svg-icons'
+// import {AudioPlayer} from '../components/common/layout/audio-player'
 
 interface DefaultProps {
   loadUIValue: Function;
@@ -62,23 +65,47 @@ class PrimaryLayout extends PureComponent<DefaultProps> {
                 <Header />
               ):(
                 <Sidebar />
+                
               )}
+              
               <Layout.Content
                 className="content"
                 style={{ position: 'relative' }}
               >
                 {routerChange && <Loader />}
                 {children}
-                <div className="alpha-tag-wrapper">
+                {/* <div className="alpha-tag-wrapper">
                   <div className="alpha-tag">
-                    Beta v2.5
+                    Beta v2.7
                   </div>
-                </div>
+                </div> */}
+                
               </Layout.Content>
+              {/* <AudioPlayer /> */}
               <FloatButton.BackTop className="backTop" />
 
             </div>
+            
           </Layout>
+
+          {/* <div className='music-player-container'>
+            <div className='music-player-wrapper'>
+              <div className='music-player-left'>
+                <button className='music-player-play-btn'>
+                  <FontAwesomeIcon icon={faPlay} />
+                </button>
+                
+              </div>
+              <div className='music-player-middle'>
+
+              </div>
+              <div className='music-player-right'>
+
+              </div>
+            </div>
+          </div> */}
+
+          
 
         </div>
         <Footer />

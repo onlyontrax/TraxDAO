@@ -2,6 +2,7 @@ import { videoService } from '@services/video.service';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {FaPlay} from 'react-icons/fa'
+import artist from 'pages/artist';
 
 export default function MappedElement (video) {
   const [hover, setHover] = useState(false)
@@ -51,6 +52,9 @@ export default function MappedElement (video) {
               onPointerOut={() => setHover(false)} 
               href={`/video?id=${video.video.slug}`} 
               className="h-track-link">
+          <div className='h-track-ranking'>
+          <p>{video.idValue + 1}</p>
+          </div>
           <div className="h-track-thumb">
             <div className="h-track-bg" style={{ backgroundImage: `url(${getUrl(video.video)})` }} />
             {hover && (
@@ -63,10 +67,17 @@ export default function MappedElement (video) {
             <p className="h-track-title">
               {getTitle(video.video.title)}
             </p>
-            <p className="h-track-artist">
+            <Link 
+              href={`/artist/profile?id=${video.video?.performer?.username || video.video?.performer?._id}`}
+              as={`/artist/profile?id=${video.video?.performer?.username || video.video?.performer?._id}`} 
+              className="h-track-artist"
+            >
               {getArtist(video.video.performer.name)}
-            </p>
+            </Link>
           </div>
+          {/* <div className='h-track-options'>
+            <p>...</p>
+          </div> */}
         </Link>
   </div>
   )}

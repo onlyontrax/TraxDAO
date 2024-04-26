@@ -5,7 +5,8 @@ import { PureComponent } from 'react';
 // import PlugConnect from '@psychedelic/plug-connect';
 // import { payments_backend } from "../../smart-contracts/payments_backend";
 import { BadgeCheckIcon } from '@heroicons/react/solid';
-import { IPerformer, IUser } from '@interfaces/index';
+import { IPerformer, IUser, ISettings } from '@interfaces/index';
+import { connect } from 'react-redux';
 import { tokenTransctionService } from '@services/index';
 import {
   InputNumber, Button, Avatar, Select, Image, message
@@ -16,6 +17,13 @@ import { faCircleInfo, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { paymentService } from '@services/index';
 import { getResponseError } from '@lib/utils';
 import { icpPrice } from 'src/crypto/live-price-oracle';
+
+import { Principal } from "@dfinity/principal";
+import { Actor, HttpAgent } from "@dfinity/agent";
+
+import { AuthClient } from "@dfinity/auth-client";
+import { idlFactory } from "../../../src/smart-contracts/declarations/tipping/tipping.did.js";
+import type { _SERVICE  } from "../../../src/smart-contracts/declarations/tipping/tipping2.did";
 // import { useInternetIdentity } from '@internet-identity-labs/react-ic-ii-auth';
 
 const { Option } = Select;
@@ -31,13 +39,14 @@ interface IProps {
   participants?: any[];
   isProfile: boolean;
   user?: IUser;
+  settings: ISettings;
 }
 
-export class TipPerformerForm extends PureComponent<IProps> {
+class TipPerformerForm extends PureComponent<IProps> {
   state = {
     price: 1.00,
     type: 'fiat',
-    btnText: 'Send',
+    btnText: 'Pay',
     btnTipDisabled: false,
     currencies: [
       { name: 'USD', imgSrc: '/static/usd-logo.png', key: 'USD' },
@@ -47,32 +56,37 @@ export class TipPerformerForm extends PureComponent<IProps> {
     selectedCurrency: 'USD',
     icpPrice: 0,
     ckbtcPrice: 0,
+    traxPrice: 0,
     custom: false,
     cards: [],
     loading: false,
     paymentOption: 'noPayment',
-    ckbtcBal: 0,
-    icpBal: 0,
     priceBtn: 1.00,
     plugConnected: false,
     iiConnected: false,
-    nfidConnected: false
+    nfidConnected: false,
+    icpBalance: 0,
+    traxBalance: 0,
+    ckbtcBalance: 0
 
     // senderID: window.ic.plug.agent.getPrincipal()
   };
 
   async componentDidMount() {
-    const {user} = this.props
+    const {user} = this.props;
 
     const icpPrice = (await tokenTransctionService.getExchangeRate()).data.rate;
     const ckbtcPrice = (await tokenTransctionService.getExchangeRateBTC()).data.rate;
-    // const icpPrice = 3.50;
-    // const ckbtcPrice = 30000;
+    const traxPrice = (await tokenTransctionService.getExchangeRateTRAX()).data.rate;
+    // const icpPrice = 14.50;
+    // const ckbtcPrice = 70000;
+    // const traxPrice = 0.0285;
 
     
 
-    this.setState({icpPrice: icpPrice, ckbtcPrice: ckbtcPrice})
+    this.setState({icpPrice, ckbtcPrice, traxPrice})
     await this.getData();
+    await this.fetchUserBalance();
 
     if(!user.wallet_icp){
       message.info("You do not have a wallet connected. If you would like to pay with crypto please navigate to settings and connect your preferred wallet. ")
@@ -100,15 +114,14 @@ export class TipPerformerForm extends PureComponent<IProps> {
   
       if(resp.data.data.length > 0){
         this.setState({paymentOption: 'card'});
-        this.setState({selectedCurrency: 'USD'})
+        this.setState({selectedCurrency: 'USD'});
       }else if(user?.wallet_icp){
         this.setState({paymentOption: 'plug'});
-        this.setState({selectedCurrency: 'ICP'})
+        this.setState({selectedCurrency: 'ICP'});
       }else{
         this.setState({paymentOption: 'noPayment'});
       }
 
-      console.log(resp.data.data.length)
       this.setState({
         cards: resp.data.data.map((d) => {
           if (d.card) return { ...d.card, id: d.id };
@@ -149,7 +162,7 @@ export class TipPerformerForm extends PureComponent<IProps> {
   }
 
   correctInput(val: number, selectedCurrency: string){
-    const {icpPrice, ckbtcPrice} = this.state;
+    const {icpPrice, ckbtcPrice, traxPrice} = this.state;
     if(selectedCurrency === 'ICP'){
       val === 1 && this.setState({price: (1 / icpPrice).toFixed(3) });
       val === 3 && this.setState({price: (3 / icpPrice).toFixed(3) });
@@ -160,7 +173,44 @@ export class TipPerformerForm extends PureComponent<IProps> {
       val === 3 && this.setState({price: (3 / ckbtcPrice).toFixed(9) });
       val === 5 && this.setState({price: (5 / ckbtcPrice).toFixed(9) });
     }
+    if(selectedCurrency === 'TRAX'){
+      val === 1 && this.setState({price: (1 / traxPrice).toFixed(9) });
+      val === 3 && this.setState({price: (3 / traxPrice).toFixed(9) });
+      val === 5 && this.setState({price: (5 / traxPrice).toFixed(9) });
+    }
     selectedCurrency === 'USD' && this.setState({price: val });
+  }
+
+  async fetchUserBalance(){
+    const { icpBalance, traxBalance, ckbtcBalance } = this.state;
+    const { user, settings } = this.props;
+
+    try{
+      const tippingCanID = settings.icTipping;
+      let identity;
+      const authClient = await AuthClient.create();
+      const host = settings.icHost;
+      let agent;
+
+      identity = authClient.getIdentity();
+      agent = new HttpAgent({ identity, host });
+
+      settings.icNetwork !== true && await agent.fetchRootKey();
+
+      let tippingActor = Actor.createActor<_SERVICE>(idlFactory, {
+        agent: agent,
+        canisterId: tippingCanID,
+      });
+
+      let icpBalance = await tippingActor.icpBalance(Principal.fromText(user.wallet_icp));
+      let traxBalance = await tippingActor.traxBalance(Principal.fromText(user.wallet_icp));
+      let ckbtcBalance = await tippingActor.ckbtcBalance(Principal.fromText(user.wallet_icp));
+
+      this.setState({icpBalance: Number(icpBalance.e8s) / 100000000, traxBalance: Number(traxBalance) / 100000000, ckbtcBalance: Number(ckbtcBalance) / 100000000});
+
+    }catch(error){
+      console.log(error)
+    }
   }
 
   render() {
@@ -168,7 +218,7 @@ export class TipPerformerForm extends PureComponent<IProps> {
       onFinish, submiting = false, performer, participants, isProfile, user
     } = this.props;
     const {
-      price, selectedCurrency, btnText, icpPrice, ckbtcPrice, custom, cards, loading, paymentOption, ckbtcBal, icpBal, priceBtn, plugConnected, iiConnected, nfidConnected
+      price, selectedCurrency, btnText, icpPrice, ckbtcPrice, traxPrice, custom, cards, loading, paymentOption, priceBtn, plugConnected, iiConnected, nfidConnected, icpBalance, ckbtcBalance, traxBalance
     } = this.state;
 
     return (
@@ -176,18 +226,17 @@ export class TipPerformerForm extends PureComponent<IProps> {
         <div className='send-tip-container'>
           <div className='tip-header-wrapper'>
             <span>Send a tip</span>
-            <p>Support this creator on their journey</p>
           </div>
 
           <div className='tip-amount-shortcut-container'>
             <div className={`amount-shortcut-btn ${priceBtn === 1 ? 'active' : '' }`} onClick={()=> this.changeShortcut( 1, false)}>
-              <span>$1.00</span>
+              <span>$1</span>
             </div>
             <div className={`amount-shortcut-btn ${priceBtn === 3 ? 'active' : '' }`} onClick={()=>  this.changeShortcut( 3, false)}>
-              <span>$3.00</span>
+              <span>$3</span>
             </div>
             <div className={`amount-shortcut-btn ${priceBtn === 5 ? 'active' : '' }`} onClick={()=>  this.changeShortcut( 5, false)}>
-              <span>$5.00</span>
+              <span>$5</span>
             </div>
             <div className={`amount-shortcut-btn ${custom === true ? 'active' : '' }`} onClick={()=>  this.changeShortcut(null, true)}>
               <span>Custom</span>
@@ -195,20 +244,20 @@ export class TipPerformerForm extends PureComponent<IProps> {
           </div>
 
           <div className='payment-details'>
-          <span>Payment details</span>
+          
           <div className='payment-recipient-wrapper'>
               <div className='payment-recipient-avatar-wrapper'>
                 <Avatar src={performer?.avatar || '/static/no-avatar.png'} />
               </div>
               <div className='payment-recipient-info'>
-                <p>Pay to</p>
+                <p>Pay</p>
                 <span>{performer?.name}</span>
-                  <p style={{color: '#c8ff02'}}>Verified Artist</p>
+                  <p style={{color: '#FFFFF50', marginTop:'-0.125rem'}}>Verified Artist</p>
               </div>
               <a href={`/artist/profile?id=${performer?.username || performer?._id}`} className='info-icon-wrapper'>
                 <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
               </a>
-            </div>
+          </div>
           <Select onChange={(v) => this.changePaymentOption(v)} defaultValue={paymentOption} value={paymentOption}  className="payment-type-select">
             {!loading && cards.length > 0 && cards.map((card) => (
               <Option value="card" key="card" className="payment-type-option-content">
@@ -226,7 +275,7 @@ export class TipPerformerForm extends PureComponent<IProps> {
                   </div>
               </Option>
             ))}
-            {user.wallet_icp && (
+            {(user.wallet_icp && performer.wallet_icp) && (
               <>
                 <Option value="plug" key="plug" className="payment-type-option-content">
                   <div className='payment-type-img-wrapper'>
@@ -272,8 +321,8 @@ export class TipPerformerForm extends PureComponent<IProps> {
                 <FontAwesomeIcon style={{width: 45, height: 45}} icon={faXmark} />
                 </div>
                 <div className='payment-type-info'>
-                  <span style={{}}>No Payment Method Connected</span>
-                    <p>Please visit settings to add a card <br /> or connect a wallet</p>
+                  <span style={{}}>Connect payment method</span>
+                    <p>Visit the Settings page to connect</p>
                     {/* <p>Click to add crypto wallet</p> */}
                 </div>
               </Option>
@@ -283,30 +332,54 @@ export class TipPerformerForm extends PureComponent<IProps> {
             
           </div>
           <div className='currency-picker-btns-container'>
-            <span>Select a currency</span>
+            
             <div className='currency-picker-btns-wrapper'>
               {cards.length > 0 && (
-              <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('USD')}>
-                <img src='/static/usd-logo.png' width={40} height={40} style={{border: selectedCurrency === 'USD' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
-              </div>
+                <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('USD')}>
+                  <img src='/static/usd-logo.png' width={40} height={40} style={{border: selectedCurrency === 'USD' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
+                </div>
               )}
-              {user.wallet_icp && (
+              {(user.wallet_icp && performer.wallet_icp) && (
                 <>
-              <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('ICP')}>
-                <img src='/static/icp-logo.png' width={40} height={40} style={{border: selectedCurrency === 'ICP' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
-              </div>
-              <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('ckBTC')}>
-                <img src='/static/ckbtc_nobackground.png' width={40} height={40} style={{border: selectedCurrency === 'ckBTC' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
-              </div>
-              <div className='currency-picker-btn-wrapper-disabled' >
-                <img src='/static/trax-token.png' width={40} height={40} />
-              </div>
-              </>
+                  <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('ICP')}>
+                    <img src='/static/icp-logo.png' width={40} height={40} style={{border: selectedCurrency === 'ICP' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
+                  </div>
+                  <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('ckBTC')}>
+                    <img src='/static/ckbtc_nobackground.png' width={40} height={40} style={{border: selectedCurrency === 'ckBTC' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
+                  </div>
+                  <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('TRAX')}>
+                    <img src='/static/trax-token.png' width={40} height={40} style={{border: selectedCurrency === 'TRAX' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
+                  </div>
+                </>
               )}
             </div>
           </div>
+
+          {selectedCurrency !== 'USD' && (
+            <div className='balance-container'>
+              <span>
+              {selectedCurrency === 'ICP' && ( "ICP ")}
+              {selectedCurrency === 'TRAX' && ( "TRAX ")}
+              {selectedCurrency === 'ckBTC' && ( "ckBTC ")}
+                Balance: 
+              
+              </span>
+                <div className='balance-wrapper'>
+                  {selectedCurrency === 'ICP' && (
+                    <span> {icpBalance}</span>
+                  )}
+                  {selectedCurrency === 'ckBTC' && (
+                    <span> {ckbtcBalance}</span>
+                  )}
+                  {selectedCurrency === 'TRAX' && (
+                    <span> {traxBalance}</span>
+                  )}
+                </div>
+            </div>
+          )}
+          
           <div className='tip-input-number-container'>
-            <span>Payment amount</span>
+            <span>Total</span>
             <div className='tip-input-number-wrapper'>
               {selectedCurrency === 'USD' && (
                 <p>$</p>
@@ -316,6 +389,9 @@ export class TipPerformerForm extends PureComponent<IProps> {
               )}
               {selectedCurrency === 'ckBTC' && (
                 <img src='/static/ckbtc_nobackground.png' width={40} height={40}/>
+              )}
+              {selectedCurrency === 'TRAX' && (
+                <img src='/static/trax-token.png' width={40} height={40}/>
               )}
               <InputNumber 
                 disabled={custom !== true} 
@@ -334,6 +410,9 @@ export class TipPerformerForm extends PureComponent<IProps> {
               {selectedCurrency === 'ckBTC' && (
                 <span className='usd-conversion'>~${(price * ckbtcPrice).toFixed(2)}</span>
               )}
+              {selectedCurrency === 'TRAX' && (
+                <span className='usd-conversion'>~${(price * traxPrice).toFixed(2)}</span>
+              )}
             </div>
           </div>
             <Button
@@ -349,3 +428,10 @@ export class TipPerformerForm extends PureComponent<IProps> {
     );
   }
 }
+
+const mapStates = (state: any) => ({
+  settings: { ...state.settings }
+});
+
+const mapDispatch = {};
+export default connect(mapStates, mapDispatch)(TipPerformerForm);

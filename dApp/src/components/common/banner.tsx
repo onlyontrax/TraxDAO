@@ -21,7 +21,6 @@ export class Banner extends PureComponent<IProps> {
           </Carousel>
         )}
       </div>
-
     );
   }
 }

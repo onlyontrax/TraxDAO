@@ -12,12 +12,13 @@ import { LoadingOutlined } from '@ant-design/icons';
 interface IAuthButton {
   onSignOut?: Function
   onAuthenticate?: Function,
+  nfidLoading?: boolean;
   currentPrincipal?: string;
   state: any,
   from: string
 }
 
-function AuthButton({ onSignOut, onAuthenticate, currentPrincipal, from }: IAuthButton) {
+function AuthButton({ onSignOut, onAuthenticate, currentPrincipal, from, nfidLoading }: IAuthButton) {
   const dispatch = useDispatch();
 
   const [loading, setLoading] = useState(false);
@@ -52,18 +53,18 @@ function AuthButton({ onSignOut, onAuthenticate, currentPrincipal, from }: IAuth
         <Button onClick={authenticateNow} htmlType="button" className={from === 'sign-up' ? "nfid-button-wrapper-sign-up" : "nfid-button-wrapper"}>
           {from === 'sign-up' ? (
             <>
-              { loading ? (
+              { loading || nfidLoading ? (
                 <LoadingOutlined style={{color: '#c8ff00', fontSize: 17, marginRight: '0.5rem'}}/>
               ):(
                 <img src="/static/nfid-logo-og.png" alt="" className='nfid-icon-sign'/>
               )}
-              <span>NFID</span>
+              <span>Continue with NFID</span>
             </>
           )
           :
           (
             <>
-              {loading ? (
+              {loading || nfidLoading ? (
                 <LoadingOutlined style={{color: '#c8ff00', fontSize: 23, marginTop: 2}}/>
               ):(
                 <img src="/static/nfid-logo-og.png" alt="" className='nfid-icon-sign'/>
@@ -74,10 +75,10 @@ function AuthButton({ onSignOut, onAuthenticate, currentPrincipal, from }: IAuth
       ) : (
         <div>
           <div>
-            <Button onClick={authenticateNow} htmlType="button" type="primary" className={from === 'sign-up' ? "nfid-button-wrapper-sign-up" : "nfid-button-wrapper"}>
+            <Button onClick={authenticateNow} htmlType="button" className={from === 'sign-up' ? "nfid-button-wrapper-sign-up" : "nfid-button-wrapper"}>
               {from === 'sign-up' ? (
                 <>
-                {loading ? (
+                {loading || nfidLoading ? (
                   <LoadingOutlined style={{color: '#c8ff00', fontSize: 17, marginRight: '0.5rem'}}/>
                 ):(
                   <img src="/static/nfid-logo-og.png" alt="" className='nfid-icon-sign'/>
@@ -86,13 +87,13 @@ function AuthButton({ onSignOut, onAuthenticate, currentPrincipal, from }: IAuth
               </>
               ):(
                 <>
-                  {loading ? (
+                  {loading || nfidLoading ? (
                      <LoadingOutlined style={{color: '#c8ff00', fontSize: 23, marginTop: 2}}/>
                    ):(
                     <img src="/static/nfid-logo-og.png" alt="" className='nfid-icon-sign'/>
                    )}
                 </>
-                
+
               )}
             </Button>
           </div>

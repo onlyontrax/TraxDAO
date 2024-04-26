@@ -5,18 +5,20 @@ import { TableListVideo } from '@components/video/table-list';
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { AuthClient } from '@dfinity/auth-client';
 import { videoService } from '@services/video.service';
+import { cryptoService } from '@services/crypto.service';
 import {
   Button, Col, Layout, Row, message
 } from 'antd';
 import Head from 'next/head';
 import Link from 'next/link';
 import { PureComponent } from 'react';
-import { IUIConfig, IVideo } from 'src/interfaces';
-import { idlFactory as idlFactoryPPV } from '../../../src/smart-contracts/declarations/ppv';
-import type { _SERVICE as _SERVICE_PPV } from '../../../src/smart-contracts/declarations/ppv/ppv.did';
+import { IUIConfig, IVideo, ISettings } from 'src/interfaces';
+import { idlFactory as idlFactoryPPV } from '../../../src/smart-contracts/declarations/ppv/ppv.did.js';
+import type { _SERVICE as _SERVICE_PPV } from '../../../src/smart-contracts/declarations/ppv/ppv2.did';
 
 interface IProps {
   ui: IUIConfig;
+  settings: ISettings;
 }
 
 class Videos extends PureComponent<IProps> {
@@ -102,6 +104,7 @@ class Videos extends PureComponent<IProps> {
   }
 
   async deleteVideo(id: string) {
+    const { settings } = this.props;
     const res = await videoService.findById(id);
    
     const vidData: IVideo = res.data;
@@ -114,17 +117,16 @@ class Videos extends PureComponent<IProps> {
         let identity;
         let ppvActor;
         let agent;
-        let host;
+        const host = settings.icHost;
         const authClient = await AuthClient.create();
 
-        if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+        if (settings.icNetwork !== true) {
           await authClient.login({
-            identityProvider: process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string,
+            identityProvider: cryptoService.getIdentityProviderLink(),
             onSuccess: async () => {
               if (await authClient.isAuthenticated()) {
                 identity = authClient.getIdentity();
 
-                host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
                 agent = new HttpAgent({
                   identity,
                   host
@@ -133,7 +135,7 @@ class Videos extends PureComponent<IProps> {
                 agent.fetchRootKey();
                 ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
                   agent,
-                  canisterId: process.env.NEXT_PUBLIC_PPV_CANISTER_ID_LOCAL as string
+                  canisterId: settings.icPPV
                 });
               }
 
@@ -141,15 +143,13 @@ class Videos extends PureComponent<IProps> {
             }
           });
         } else {
-          host = process.env.NEXT_PUBLIC_HOST as string;
-
           await authClient.login({
             onSuccess: async () => {
               identity = authClient.getIdentity();
               agent = new HttpAgent({ identity, host });
               ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
                 agent,
-                canisterId: process.env.NEXT_PUBLIC_PPV_CANISTER_ID as string
+                canisterId: settings.icPPV
               });
 
               await this.handleRemovePPVContent(id, ppvActor);
@@ -227,6 +227,7 @@ class Videos extends PureComponent<IProps> {
   }
 }
 const mapStates = (state) => ({
-  ui: state.ui
+  ui: state.ui,
+  settings: { ...state.settings }
 });
 export default connect(mapStates)(Videos);

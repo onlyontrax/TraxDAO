@@ -218,7 +218,8 @@ class AccountSettings extends PureComponent<IProps> {
         <div className="main-container user-account" style={{maxWidth: '650px'}}>
           {!currentUser.verifiedDocument && (
             <div className="verify-info">
-              Your ID documents are not verified yet! You could not post any content right now.
+              Your Identity has not been verified yet! You can't post any content right now.
+              <p>Please go <a href="/artist/account/">here</a> to verify your identity.</p>
               <p>If you have any question, please contact our administrator to get more information.</p>
             </div>
           )}

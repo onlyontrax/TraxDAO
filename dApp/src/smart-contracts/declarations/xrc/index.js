@@ -1,5 +1,6 @@
 /* eslint-disable no-shadow, no-param-reassign, no-console */
 import { Actor, HttpAgent } from '@dfinity/agent';
+import storeHolder from '@lib/storeHolder';
 
 // Imports and re-exports candid interface
 import { idlFactory } from './xrc.did.js';
@@ -7,19 +8,32 @@ import { idlFactory } from './xrc.did.js';
 export { idlFactory } from './xrc.did.js';
 
 // CANISTER_ID is replaced by webpack based on node environment
-export const canisterId = process.env.NEXT_PUBLIC_XRC_CANISTER_ID.toString();
+export const canisterId = () => {
+  const store = storeHolder.getStore();
+  if (!store) {
+    throw new Error('Redux store is not initialized');
+  }
+
+  const state = store.getState();
+  const { settings } = state;
+  return settings.icXRC;
+};
 
 export const createActor = (canisterId, options = {}) => {
-  // options.agentOptions.host = `http://127.0.0.1:6?canisterId=ryjl3-tyaaa-aaaaa-aaaba-cai&id=${process.env.TIPPING_CANISTER_ID}`;
+  const store = storeHolder.getStore();
+  if (!store) {
+    throw new Error('Redux store is not initialized');
+  }
+
+  const state = store.getState();
+  const { settings } = state;
+
   const agent = options.agent || new HttpAgent({
-    host:
-      process.env.NEXT_PUBLIC_DFX_NETWORK.toString() === 'ic'
-        ? 'https://icp0.io'
-        : 'http://127.0.0.1:8006'
+    host: settings.icHost
   });
 
   // Fetch root key for certificate validation during development
-  if (process.env.NEXT_PUBLIC_DFX_NETWORK.toString() !== 'ic') {
+  if (settings.icNetwork !== true) {
     agent.fetchRootKey().catch((err) => {
       console.warn(
         'Unable to fetch root key. Check to ensure that your local replica is running'

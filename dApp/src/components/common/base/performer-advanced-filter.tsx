@@ -28,7 +28,6 @@ export class PerformerAdvancedFilter extends PureComponent<IProps> {
       onSearch(false)
     }
     this.setState({searchValue: val});
-
   };
 
   handleSubmit() {
@@ -47,17 +46,17 @@ export class PerformerAdvancedFilter extends PureComponent<IProps> {
           <div className="filter-item custom">
             <Input
               style={{ borderRadius: '10px' }}
-              placeholder="Search..."
+              placeholder=" Search for an artist..."
               onChange={(evt) => {
                 this.setState({ q: evt.target.value }) 
                 this.searchValueChange(evt.target.value)
               }}
               onPressEnter={this.handleSubmit.bind(this)}
             />
-            <Button className="sort-btn" onClick={() => this.setState({ showMore: !showMore })}>
+            {/* <Button className="sort-btn" onClick={() => this.setState({ showMore: !showMore })}>
               Sort
               {showMore ? <DownOutlined /> : <RightOutlined />}
-            </Button>
+            </Button> */}
           </div>
 
           <div className={!showMore ? 'filter-block hide' : 'filter-block custom drop-down'}>

@@ -1,15 +1,17 @@
+type Tokens__1 = record {e8s: nat64;};
 type Tokens = record {e8s: nat64;};
 type TippingParticipants = vec Participants;
 type Tipping = 
  service {
    accountIdentifierToBlob: (AccountIdentifier__1) ->
     (AccountIdentifierToBlobResult);
-   canisterAccount: () -> (AccountIdentifier) query;
-   canisterBTCAddress: () -> (text);
-   canisterBalance: () -> (Tokens);
+   addToReferralMap: (ArtistID__1, ArtistID__1) -> ();
+   canisterAccount: () -> (AccountIdentifier);
    changePlatformFee: (float64) -> ();
-   cyclesBalance: () -> (nat);
-   drainCanisterBalance: (nat64, principal) -> (bool);
+   ckbtcBalance: (principal) -> (nat);
+   ckbtcBalanceOfCanister: () -> (nat);
+   cyclesBalance: () -> (nat) query;
+   drainCanisterBalance: (nat64, principal, Ticker) -> (bool);
    getAllTippingTransactions: () ->
     (vec record {
            ArtistID__1;
@@ -18,38 +20,41 @@ type Tipping =
            nat;
            Ticker;
          }) query;
-   getBalanceBTC: (text) -> (nat64);
-   getTipDataArtist: (ArtistID__1) ->
-    (vec record {
-           FanID;
-           Timestamp;
-           nat;
-           Ticker;
-         }) query;
-   getTipDataFan: (FanID) ->
-    (vec record {
-           ArtistID__1;
-           Timestamp;
-           nat;
-           Ticker;
-         }) query;
-   getUserAddressBTC1: (principal) -> (text);
-   getUserAddressBTC2: (principal) -> (text);
+   getStatus: (opt StatusRequest) -> (opt StatusResponse);
+   icpBalance: (principal) -> (Tokens);
+   icpBalanceOfCanister: () -> (Tokens);
+   myAccountId: (principal) -> (AccountIdentifier);
    sendTip: (nat64, TippingParticipants, nat64, Ticker) -> ();
+   traxBalance: (principal) -> (nat);
+   traxBalanceOfCanister: () -> (nat);
  };
 type Timestamp = int;
 type Ticker = text;
+type StatusResponse = 
+ record {
+   ckbtc_balance: opt nat;
+   cycles: opt nat;
+   heap_memory_size: opt nat;
+   icp_balance: opt Tokens__1;
+   memory_size: opt nat;
+   trax_balance: opt nat;
+   version: opt nat;
+ };
+type StatusRequest = 
+ record {
+   ckbtc_balance: opt bool;
+   cycles: opt bool;
+   heap_memory_size: opt bool;
+   icp_balance: opt bool;
+   memory_size: opt bool;
+   trax_balance: opt bool;
+   version: opt bool;
+ };
 type Percentage = float64;
 type Participants = 
  record {
    participantID: ArtistID;
    participantPercentage: Percentage;
- };
-type Network = 
- variant {
-   Mainnet;
-   Regtest;
-   Testnet;
  };
 type FanID = principal;
 type ArtistID__1 = principal;
@@ -75,4 +80,4 @@ type AccountIdentifierToBlobErr =
    message: opt text;
  };
 type AccountIdentifier = blob;
-service : (Network) -> Tipping
+service : () -> Tipping

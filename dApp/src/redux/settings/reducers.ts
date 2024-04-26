@@ -10,7 +10,31 @@ const initialState = {
   googleClientId: '',
   tokenConversionRate: 1,
   stripePublishableKey: '',
-  paymentGateway: 'stripe'
+  paymentGateway: 'stripe',
+  identityOnfidoApiToken: '',
+  identityOnfidoSandbox: false,
+  identityOnfidoWorkflowId: '',
+  icNetwork: true,
+  icEnableIcStorage: '',
+  icHost: '',
+  icHostContentManager: '',
+  icXRC: '',
+  icLedger: '',
+  icCKBTCMinter: '',
+  icPPV: '',
+  icTipping: '',
+  icSubscriptions: '',
+  icContentManager: '',
+  icContentArtistAccount: '',
+  icContentArtistContent: '',
+  icNFT: '',
+  icIdentityProvider: '',
+  icTraxIdentity: '',
+  icAirdrop: '',
+  icTraxToken: '',
+  icTraxAccountPercentage: '',
+  icNFTTicket: '',
+  icNFTSong: ''
 };
 
 const settingReducers = [

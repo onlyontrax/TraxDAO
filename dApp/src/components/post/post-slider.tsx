@@ -3,7 +3,7 @@ import {
   Carousel, Spin, Image
 } from 'antd';
 import { VideoPlayer } from '@components/common/video-player';
-import { AudioPlayer } from '@components/common/audio-player';
+import { AudioPlayer_ } from '@components/common/audio-player';
 import { IFeed } from '@interfaces/feed';
 import styles from './index.module.scss';
 
@@ -80,7 +80,7 @@ export default class FeedSlider extends PureComponent<IProps> {
                 }}
               />
             ))}
-            {audios && audios.length > 0 && audios.map((audio) => <AudioPlayer key={audio._id} source={audio?.url} />)}
+            {audios && audios.length > 0 && audios.map((audio) => <AudioPlayer_ key={audio._id} source={audio?.url} stop={false} />)}
           </>
           )}
           {processing && (

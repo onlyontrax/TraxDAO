@@ -7,14 +7,13 @@ import {
   PictureOutlined, DeleteOutlined, OrderedListOutlined
 } from '@ant-design/icons';
 import { UploadList } from '@components/file/list-media';
-import { IFeed, IPerformer } from 'src/interfaces';
+import { IFeed, IPerformer, ISettings } from 'src/interfaces';
 import { performerService, feedService } from '@services/index';
+import { cryptoService } from '@services/crypto.service';
+import { connect } from 'react-redux';
 import { Actor, HttpAgent } from "@dfinity/agent";
-import {
-  createActor as createNftActor, canisterId as NftCanisterId
-} from 'src/smart-contracts/declarations/traxNFT';
-import { createActor as createSongActor, canisterId as SongCanisterId } from "src/smart-contracts/declarations/SongNFT";
-import { createActor as createTicketActor, canisterId as TicketCanisterId } from "src/smart-contracts/declarations/TicketNFT";
+import { idlFactory as idlFactoryTraxNFT } from '../../smart-contracts/declarations/traxNFT/traxNFT.did.js';
+import type { _SERVICE as _SERVICE_TRAX_NFT } from '../../smart-contracts/declarations/traxNFT/traxNFT2.did';
 import moment from 'moment';
 import { formatDate } from '@lib/date';
 import { Emotions } from '@components/messages/emotions';
@@ -41,9 +40,10 @@ interface IProps {
   discard?: Function;
   feed?: IFeed;
   performer: IPerformer;
+  settings: ISettings;
 }
 
-export default class CreateSongNftForm extends PureComponent<IProps> {
+class CreateSongNftForm extends PureComponent<IProps> {
   static defaultProps: Partial<IProps>;
 
   pollIds = [];
@@ -156,12 +156,13 @@ export default class CreateSongNftForm extends PureComponent<IProps> {
   }
 
   onsubmit = async (feed, values) => {
-    const { type } = this.props;
+    const { type, settings } = this.props;
     try {
       this.setState({ uploading: true });
 
 
-      let identity, host, agent, nftActor;
+      let identity, agent, nftActor;
+      const host = settings.icHost;
       const authClient = await AuthClient.create();
       if (this.state.fileList.length < 1) {
         this.setState({ uploading: false });
@@ -172,21 +173,21 @@ export default class CreateSongNftForm extends PureComponent<IProps> {
       const chunkCount = BigInt(Number(Math.ceil(file.size / MAX_CHUNK_SIZE)));
   
   
-      if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+      if (settings.icNetwork !== true) {
         await authClient.login({
-          identityProvider: process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string,
+          identityProvider: cryptoService.getIdentityProviderLink(),
           onSuccess: async () => {
             identity = authClient.getIdentity();
-            host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
             agent = new HttpAgent({
               identity,
               host
             });
       
             await agent.fetchRootKey();
-  
-            nftActor = createNftActor(NftCanisterId, {
-              agent
+
+            nftActor = Actor.createActor<_SERVICE_TRAX_NFT>(idlFactoryTraxNFT, {
+              agent,
+              canisterId: settings.icNFT
             });
 
             const params = {
@@ -219,15 +220,15 @@ export default class CreateSongNftForm extends PureComponent<IProps> {
       } else {
         await authClient.login({
           onSuccess: async () => {
-            host = process.env.NEXT_PUBLIC_HOST as string;
             identity = await authClient.getIdentity();
             agent = new HttpAgent({
               identity,
               host
             });
-  
-            nftActor = createNftActor(NftCanisterId, {
-              agent
+
+            nftActor = Actor.createActor<_SERVICE_TRAX_NFT>(idlFactoryTraxNFT, {
+              agent,
+              canisterId: settings.icNFT
             });
 
             const id = await nftActor.createSong(await nftActor.getCallerId(), {
@@ -658,3 +659,10 @@ CreateSongNftForm.defaultProps = {
   discard: () => {},
   feed: {} as IFeed
 } as Partial<IProps>;
+
+const mapStates = (state: any) => ({
+  settings: { ...state.settings }
+});
+
+const mapDispatch = {};
+export default connect(mapStates, mapDispatch)(CreateSongNftForm);

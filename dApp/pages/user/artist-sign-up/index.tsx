@@ -30,10 +30,10 @@ interface IProps {
 }
 
 const artists = [
-    {name: 'CHELJI', handle: 'trax.so/chelji', link: '/artist/profile/?id=chelji', img: '/static/Chelji-profile.jpeg'},
-    {name: 'MASTER PEACE', handle: 'trax.so/masterpeace', link: '/artist/profile/?id=masterpeace', img: '/static/MasterPeace.jpeg'},
-    {name: 'DEIJUVHS', handle: 'trax.so/deijuvhs', link: '/artist/profile/?id=deijuvhs', img: '/static/deijuvhs.jpeg'},
-    {name: 'SCRATCH CARD WED...', handle: 'trax.so/scratchcardwednesday', link: '/artist/profile/?id=scratchcardwednesday', img: '/static/scw-show.jpeg'},
+    {name: 'CHELJI', handle: 'trax.so/chelji', link: '/artist/profile?id=chelji', img: '/static/Chelji-profile.jpeg'},
+    {name: 'MASTER PEACE', handle: 'trax.so/masterpeace', link: '/artist/profile?id=masterpeace', img: '/static/MasterPeace.jpeg'},
+    {name: 'DEIJUVHS', handle: 'trax.so/deijuvhs', link: '/artist/profile?id=deijuvhs', img: '/static/deijuvhs.jpeg'},
+    {name: 'SCRATCH CARD WED...', handle: 'trax.so/scratchcardwednesday', link: '/artist/profile?id=scratchcardwednesday', img: '/static/scw-show.jpeg'},
 ]
 
 class RegisterPerformer extends PureComponent<IProps> {
@@ -160,73 +160,45 @@ class RegisterPerformer extends PureComponent<IProps> {
         <Head>
           <title>{`${ui?.siteName} | Become a creator`}</title>
         </Head>
-
+        
+        <div className="creator-sign-up-header-wrapper">
+      <img
+        src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=2970&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+        alt=""
+        className="creator-sign-up-header-img"
+      />
+      {/* <div
+        className="hidden sm:absolute sm:-top-10 sm:right-1/2 sm:-z-10 sm:mr-10 sm:block sm:transform-gpu sm:blur-3xl"
+        aria-hidden="true"
+      >
         <div
-          className=" "
+          className="aspect-[1097/845] w-[68.5625rem] bg-gradient-to-tr from-[#ff4694] to-[#776fff] opacity-20"
           style={{
-            margin: 0,
-            padding: 0,
-            width: '100%',
-            background: 'radial-gradient(circle at right, #0F0F0F, #000000)'
+            clipPath:
+              'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)',
           }}
-        >
-          
-          <div className='creator-banner'>
-          <div className='test-hue'>
-            <div className='banner-left'>
-            <div className='creator-sign-up-header-wrapper'>
-                    <span className='creator-sign-up-header'>Become a Creator <BadgeCheckIcon className="creator-badge" /></span>
-                    <span className='creator-sign-up-msg'>We&apos;re delighted that you&apos;re looking to become a creator on TRAX&#33; Please fill out the fields below to help us verify your identity and build your creator profile. We do this to protect TRAX from bots and fake accounts&#33;</span>
-                </div>
+        />
+      </div>
+      <div
+        className="absolute -top-52 left-1/2 -z-10 -translate-x-1/2 transform-gpu blur-3xl sm:top-[-28rem] sm:ml-16 sm:translate-x-0 sm:transform-gpu"
+        aria-hidden="true"
+      >
+        <div
+          className="aspect-[1097/845] w-[68.5625rem] bg-gradient-to-tr from-[#ff4694] to-[#776fff] opacity-20"
+          style={{
+            clipPath:
+              'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)',
+          }}
+        />
+      </div> */}
+      <div className="creator-sign-up-header-h1-wrapper">
+        <h2 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">Become a <b><i>TRAX</i></b> creator</h2>
+        <p className="mt-6 text-lg leading-8 text-gray-300">
+          Apply now and start connecting with your superfans. <b>Get verified in minutes.</b>
+        </p>
+      </div>
+    </div>
 
-                <div className='creator-learn-more'>
-                    <Link href="https://artists.trax.so" >
-                        <span>Learn more →</span>
-                    </Link>
-                </div>
-            </div>
-            <div className='banner-right'>
-              <div className='creator-grid-container'>
-                <div className='creator-grid-one'>
-                  <Link href="/artist/profile/?id=chelji">
-                    <div style={{backgroundImage: `url(/static/chelji-mirror.jpeg)`}} />
-                  </Link>
-                </div>
-                <div className='creator-grid-two'>
-                  <Link href="/artist/profile/?id=masterpeace">
-                    <div style={{backgroundImage: `url(/static/flower_mp.jpeg)`}} />
-                  </Link>
-                </div>
-                <div className='creator-grid-three'>
-                  <Link href="/artist/profile/?id=itsrosacecilia">
-                    <div style={{backgroundImage: `url(/static/rosa.jpeg)`}} />
-                  </Link>
-                </div>
-                <div className='creator-grid-four'>
-                  <Link href="/artist/profile/?id=lewisknaggsmusic">
-                    <div style={{backgroundImage: `url(/static/lewisKnaggs.jpeg)`}} />
-                  </Link>
-                </div>
-                <div className='creator-grid-five'>
-                  <Link href="/artist/profile/?id=lifeofthom">
-                    <div style={{backgroundImage: `url(/static/lifeofthom.jpeg)`}} />
-                  </Link>
-                </div>
-                <div className='creator-grid-six'>
-                  <Link href="/artist/profile/?id=taliwhoah">
-                    <div style={{backgroundImage: `url(/static/tali.jpeg)`}} />
-                  </Link>
-                </div>
-                <div className='creator-grid-seven'>
-                  <Link href="/artist/profile/?id=onoecaponoe">
-                    <div style={{backgroundImage: `url(/static/onoecaponoe.jpg)`}} />
-                  </Link>
-                </div>
-
-              </div>
-            </div>
-          </div>
-          </div>
           <Row >
             <Col
               xs={24}
@@ -250,60 +222,18 @@ class RegisterPerformer extends PureComponent<IProps> {
                   onFinish={this.register.bind(this)}
                   scrollToFirstError
                 >
-                          <div className='creator-sign-up-field-wrapper'>
-                            
-                              <div className="creator-field-name">
-                                <p>Name <span style={{color:'#BBE900'}}> *</span></p>
-                                
-                                
-                              </div>
-
-                              <Form.Item
-                              style={{width: '100%'}}
-                                name="firstName"
-                                validateTrigger={['onChange', 'onBlur']}
-                                rules={[
-                                  { required: true, message: 'Please input your first name.' },
-                                  {
-                                    pattern:
-                                      /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u,
-                                    message: 'First name can not contain number and special character'
-                                  }
-                                ]}
-                              >
-                                <Input className='register-creator-input' placeholder="e.g. Kendrick Lamar" onChange={(e)=> this.setState({name: e.target.value})} />
-                              </Form.Item>
-                          
+                          <div className='creator-sign-up-form-header-top'>
+                          <div className='creator-sign-up-form-header-wrapper'>
+                            <span>1</span>
+                            <h1>Create a username</h1>
+                           
                           </div>
-                          <div className='creator-sign-up-field-wrapper'>
-                            
-                            <div className="creator-field-name">
-                              <p>Email <span style={{color:'#BBE900'}}> *</span></p>
-                              <p className='field-info'>Must be different to your fan account</p>
-                            </div>
-                            <Form.Item
-                            style={{width: '100%'}}
-                              name="email"
-                              validateTrigger={['onChange', 'onBlur']}
-                              hasFeedback
-                              rules={[
-                                {
-                                  type: 'email',
-                                  message: 'The input is not valid E-mail!'
-                                },
-                                {
-                                  required: true,
-                                  message: 'Please input your E-mail!'
-                                }
-                              ]}
-                            >
-                              <Input type="email" className='register-creator-input' placeholder="e.g. email@domain.com" onChange={(e)=> this.setState({email: e.target.value})}/>
-                            </Form.Item>
+                          <p>Select a username and start building your profile</p>
                           </div>
                           <div className='creator-sign-up-field-wrapper'>
                             <div className="creator-field-name">
-                              <p>TRAX handle <span style={{color:'#BBE900'}}> *</span></p>
-                              <p className='field-info'>Shown as trax.so/handle</p>
+                              <p>Username</p>
+                             
                             </div>
                             <Form.Item
                               style={{width: '100%'}}
@@ -318,13 +248,13 @@ class RegisterPerformer extends PureComponent<IProps> {
                                 { min: 3, message: 'Username must contain at least 3 characters' }
                               ]}
                             >
-                              <Input className='register-creator-input' placeholder="e.g. kendricklamar" onChange={(e)=> this.setState({username: e.target.value})}/>
+                              <Input className='register-creator-input' prefix="@" onChange={(e)=> this.setState({username: e.target.value})}/>
                             </Form.Item>
                           </div>
                           <div className='creator-sign-up-field-wrapper'>
                             <div className="creator-field-name">
-                              <p>Display name <span style={{color:'#BBE900'}}> *</span></p>
-                              <p className='field-info'>As shown on your profile</p>
+                              <p>Display name </p>
+                              
                             </div>
                             <Form.Item
                               style={{width: '100%'}}
@@ -345,86 +275,44 @@ class RegisterPerformer extends PureComponent<IProps> {
                               <Input className='register-creator-input' placeholder="e.g. Kendrick Lamar" onChange={(e)=> this.setState({displayName: e.target.value})}/>
                             </Form.Item>
                           </div>
-                          <div className='creator-sign-up-field-wrapper'>
-                              <div className="creator-field-name">
-                                <p>Date of birth <span style={{color:'#BBE900'}}> *</span></p>
-                                <p className='field-info'>Not shown on your profile</p>
-                              </div>
-                              <Form.Item
-                              style={{width: '100%'}}
-                                name="dateOfBirth"
-                                validateTrigger={['onChange', 'onBlur']}
-                              >
-                                <div className='sign-up-date-picker'>
-                                <DatePicker
-                                className='registration-date-picker'
-                                  placeholder="2023-01-01"
-                                />
-                                </div>
-                              </Form.Item>
+                          <div className='creator-sign-up-form-header'>
+                            <div className='creator-sign-up-form-header-wrapper'>
+                            <span>2</span>
+                            <h1>Security</h1>
                             </div>
-                            
-                            <div className='creator-sign-up-field-wrapper'>
-                            <div className="creator-field-name">
-                                <p>Gender <span style={{color:'#BBE900'}}> *</span></p>
-                                
-                              </div>
-                              <Form.Item
-                                
-                                style={{width: '100%'}}
-                                name="gender"
-                                validateTrigger={['onChange', 'onBlur']}
-                                rules={[{ required: true, message: 'Please select your gender' }]}
-                              >
-                                <Select className='register-creator-switch'>
-                                  <Option value="male" key="male">
-                                    Male
-                                  </Option>
-                                  <Option value="female" key="female">
-                                    Female
-                                  </Option>
-                                  <Option value="transgender" key="trans">
-                                    Other
-                                  </Option>
-                                </Select>
-                              </Form.Item>
-                            </div>
+                            <p>Select an email and password</p>
+                          </div>
 
-                            <div className='creator-sign-up-field-wrapper'>
+                          
+                          <div className='creator-sign-up-field-wrapper'>
+                            
                             <div className="creator-field-name">
-                                <p>Country <span style={{color:'#BBE900'}}> *</span></p>
+                              <p>Email address </p>
+                              {/* <p className='field-info'>Must be different to your fan account</p> */}
                             </div>
-                            <Form.Item name="country" rules={[{ required: true }]} style={{width: '100%'}}>
-                              <Select optionFilterProp="label" className='register-creator-switch'>
-                                {countries.map((c) => (
-                                  <Option value={c.code} key={c.code} label={c.name}>
-                                    <Image alt="country_flag" src={c.flag} width="25px" />
-                                    {' '}
-                                    {c.name}
-                                  </Option>
-                                ))}
-                              </Select>
+                            <Form.Item
+                            style={{width: '100%'}}
+                              name="email"
+                              validateTrigger={['onChange', 'onBlur']}
+                              hasFeedback
+                              rules={[
+                                {
+                                  type: 'email',
+                                  message: 'The input is not valid E-mail!'
+                                },
+                                {
+                                  required: true,
+                                  message: 'Please input your E-mail!'
+                                }
+                              ]}
+                            >
+                              <Input type="email" className='register-creator-input' placeholder="e.g. email@domain.com" onChange={(e)=> this.setState({email: e.target.value})}/>
                             </Form.Item>
                           </div>
-                        <div className='creator-sign-up-field-wrapper'>
-                        <div className="creator-field-name">
-                                <p>Referral code </p>
-                              </div>
-                              <Form.Item
-                                style={{width: '100%'}}
-                                name="referralCode"
-                                rules={[
-                                  { required: false }
-                                ]}
-                              >
-                                <Input className='register-creator-input' placeholder="Referral code" onChange={(e)=> this.setState({_referralCode: e.target.value})}/>
-                              </Form.Item>
-                          </div>
-                  <Form.Item>
-                      <Row style={{ display: 'contents' }}>
+                          <Row style={{ display: 'contents' }}>
                       <div className='creator-sign-up-field-wrapper'>
                         <div className="creator-field-name">
-                              <p>Password <span style={{color:'#BBE900'}}> *</span></p>
+                              <p>Password </p>
                             </div>
                             <Form.Item
                             style={{width: '100%'}}
@@ -439,12 +327,12 @@ class RegisterPerformer extends PureComponent<IProps> {
                                 { required: true, message: 'Please input your password!' }
                               ]}
                             >
-                              <Input.Password className='register-creator-input' placeholder="Create a password" onChange={(e)=> this.setState({password: e.target.value})}/>
+                              <Input className='register-creator-input' placeholder="Create a password" onChange={(e)=> this.setState({password: e.target.value})}/>
                             </Form.Item>
                           </div>
                           <div className='creator-sign-up-field-wrapper'>
                           <div className="creator-field-name">
-                              <p>Confirm password <span style={{color:'#BBE900'}}> *</span></p>
+                              <p>Confirm password </p>
                               
                             </div>
                             <Form.Item
@@ -471,8 +359,116 @@ class RegisterPerformer extends PureComponent<IProps> {
                             </Form.Item>
                           </div>
                       </Row>
+                          <div className='creator-sign-up-form-header'>
+                            <h1>Personal information</h1>
+                            <p>This won't be shared publicly, we use this information to verify your identity.</p>
+                          </div>
+                          <div className='creator-sign-up-field-wrapper'>
+                            
+                              <div className="creator-field-name">
+                                <p>Name </p>
+                                
+                                
+                              </div>
+
+                              <Form.Item
+                              style={{width: '100%'}}
+                                name="firstName"
+                                validateTrigger={['onChange', 'onBlur']}
+                                rules={[
+                                  { required: true, message: 'Please input your first name.' },
+                                  {
+                                    pattern:
+                                      /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u,
+                                    message: 'First name can not contain number and special character'
+                                  }
+                                ]}
+                              >
+                                <Input className='register-creator-input' placeholder="e.g. Kendrick Lamar" onChange={(e)=> this.setState({name: e.target.value})} />
+                              </Form.Item>
+                          
+                          </div>
+                          
+                          <div className='creator-sign-up-field-wrapper'>
+                              <div className="creator-field-name">
+                                <p>Date of birth </p>
+                                
+                              </div>
+                              <Form.Item
+                              style={{width: '100%'}}
+                                name="dateOfBirth"
+                                validateTrigger={['onChange', 'onBlur']}
+                              >
+                                <div className='sign-up-date-picker'>
+                                <DatePicker
+                                className='registration-date-picker'
+                                  placeholder="2023-01-01"
+                                />
+                                </div>
+                              </Form.Item>
+                            </div>
+                            
+                            <div className='creator-sign-up-field-wrapper'>
+                            <div className="creator-field-name">
+                                <p>Gender </p>
+                                
+                              </div>
+                              <Form.Item
+                                
+                                style={{width: '100%'}}
+                                name="gender"
+                                validateTrigger={['onChange', 'onBlur']}
+                                rules={[{ required: true, message: 'Please select your gender' }]}
+                              >
+                                <Select className='register-creator-switch'>
+                                  <Option value="male" key="male">
+                                    Male
+                                  </Option>
+                                  <Option value="female" key="female">
+                                    Female
+                                  </Option>
+                                  <Option value="transgender" key="trans">
+                                    Other
+                                  </Option>
+                                </Select>
+                              </Form.Item>
+                            </div>
+
+                            <div className='creator-sign-up-field-wrapper'>
+                            <div className="creator-field-name">
+                                <p>Country </p>
+                            </div>
+                            <Form.Item name="country" rules={[{ required: true }]} style={{width: '100%'}}>
+                              <Select optionFilterProp="label" className='register-creator-switch'>
+                                {countries.map((c) => (
+                                  <Option value={c.code} key={c.code} label={c.name}>
+                                    <Image alt="country_flag" src={c.flag} width="25px" />
+                                    {' '}
+                                    {c.name}
+                                  </Option>
+                                ))}
+                              </Select>
+                            </Form.Item>
+                          </div>
+                        <div className='creator-sign-up-field-wrapper'>
+                          <div className="creator-field-name">
+                                <p>Referral code </p>
+                                <p className='field-info'>This field is optional</p>
+                              </div>
+                              <Form.Item
+                                style={{width: '100%'}}
+                                name="referralCode"
+                                rules={[
+                                  { required: false }
+                                ]}
+                              >
+                                <Input className='register-creator-input' placeholder="Referral code" onChange={(e)=> this.setState({_referralCode: e.target.value})}/>
+                              </Form.Item>
+                          </div>
+                  <Form.Item>
+                      
                         <div className='creator-docs-wrapper'>
-                            <span className='creator-docs-header'>Verify yourself <span style={{color:'#BBE900'}}> *</span></span>
+                            <span className='creator-docs-header'>Verify yourself </span>
                             <span className='creator-docs-msg'>Upload the following identification to verify your identity.</span>
 
                         </div>
@@ -532,7 +528,8 @@ class RegisterPerformer extends PureComponent<IProps> {
               md={12}
               lg={12} className="creator-right-col" style={{padding: 0}}>
               <div className='creators-cut-msg-wrapper'>
-                <p>Creators take <span className="creator-highlight-text">90&#37; of the revenue</span>  they earn on TRAX&#44; the rest get invested back into <span className="creator-highlight-text">building &#38; growing</span> TRAX.</p>
+                <h1>Earn more from your<span className="creator-highlight-text"> music.</span>  </h1>
+                <p>Creators receive 90% splits&#44; the rest gets invested back into building &#38; growing TRAX.</p>
                 <div className='creator-learn-more'>
                     <Link href="https://artists.trax.so" >
                         <span>Learn more →</span>
@@ -558,7 +555,7 @@ class RegisterPerformer extends PureComponent<IProps> {
               </div>
 
               <div className='creator-dao-wrapper'>
-                <h1>TRAX DAO?</h1>
+                <h1><b><i>TRAX</i></b> DAO</h1>
                 <p>A community of 5000&#43; artists&#44; fans &#43; music industry insiders governing the future of TRAX</p>
                 <div className='creator-learn-more'>
                     <Link href="https://artists.trax.so" >
@@ -569,7 +566,7 @@ class RegisterPerformer extends PureComponent<IProps> {
               </div>
             </Col>
           </Row>
-        </div>
+        
       </Layout>
     );
   }

@@ -3,6 +3,11 @@ import { createReducers } from '@lib/redux';
 import {
   getFeeds, getFeedsSuccess, getFeedsFail,
   moreFeeds, moreFeedsFail, moreFeedsSuccess,
+
+  getContentFeeds, getContentFeedsSuccess, getContentFeedsFail,
+  moreContentFeeds, moreContentFeedsFail, moreContentFeedsSuccess,
+
+
   removeFeedSuccess,
   getVideoFeeds,
   getVideoFeedsSuccess,
@@ -20,6 +25,12 @@ import {
 
 const initialState = {
   feeds: {
+    requesting: false,
+    error: null,
+    data: null,
+    success: false
+  },
+  contentFeeds: {
     requesting: false,
     error: null,
     data: null,
@@ -123,6 +134,98 @@ const feedReducers = [
       };
     }
   },
+
+
+
+
+  {
+    on: getContentFeeds,
+    reducer(prevState: any) {
+      return {
+        ...prevState,
+        contentFeeds: {
+          ...initialState.contentFeeds,
+          requesting: true
+        }
+      };
+    }
+  },
+  {
+    on: getContentFeedsSuccess,
+    reducer(prevState: any, data: any) {
+      return {
+        ...prevState,
+        contentFeeds: {
+          ...prevState.contentFeeds,
+          requesting: false,
+          items: data.payload.data,
+          total: data.payload.total,
+          success: true
+        }
+      };
+    }
+  },
+  {
+    on: getContentFeedsFail,
+    reducer(prevState: any, data: any) {
+      return {
+        ...prevState,
+        contentFeeds: {
+          ...prevState.contentFeeds,
+          requesting: false,
+          error: data.payload
+        }
+      };
+    }
+  },
+  {
+    on: moreContentFeeds,
+    reducer(prevState: any) {
+      return {
+        ...prevState,
+        contentFeeds: {
+          ...prevState.contentFeeds,
+          requesting: true,
+          error: null,
+          success: false
+        }
+      };
+    }
+  },
+  {
+    on: moreContentFeedsSuccess,
+    reducer(prevState: any, data: any) {
+      return {
+        ...prevState,
+        contentFeeds: {
+          ...prevState.contentFeeds,
+          requesting: false,
+          total: data.payload.total,
+          items: [...prevState.feeds.items, ...data.payload.data],
+          success: true
+        }
+      };
+    }
+  },
+  {
+    on: moreContentFeedsFail,
+    reducer(prevState: any, data: any) {
+      return {
+        ...prevState,
+        contentFeeds: {
+          ...prevState.contentFeeds,
+          requesting: false,
+          error: data.payload,
+          success: false
+        }
+      };
+    }
+  },
+
+
+
+
+
   {
     on: getVideoFeeds,
     reducer(prevState: any) {

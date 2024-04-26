@@ -1,0 +1,63 @@
+{
+  "short_name": "TRAX",
+  "name": "TRAX",
+  "icons": [
+    {
+      "src": "/static/logo_512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/static/logo_192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/static/logo_96x96.png",
+      "type": "image/png",
+      "sizes": "96x96"
+    },
+    {
+      "src": "/static/logo_48x48.png",
+      "type": "image/png",
+      "sizes": "48x48"
+    }
+  ],
+  "id": "/?source=pwa",
+  "start_url": "/?source=pwa",
+  "background_color": "#000000",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#000000",
+  "shortcuts": [
+    {
+      "name": "Home",
+      "short_name": "Home",
+      "description": "View artists that you liked",
+      "url": "/home?source=pwa",
+      "icons": [{ "src": "/static/logo_192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Explore",
+      "short_name": "Explore",
+      "description": "Discover new artists",
+      "url": "/explore?source=pwa",
+      "icons": [{ "src": "/static/logo_192x192.png", "sizes": "192x192" }]
+    }
+  ],
+  "description": "A decentralised music platform",
+  "screenshots": [
+    {
+      "src": "/static/pwa_540x720.jpg",
+      "type": "image/jpg",
+      "sizes": "540x720",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/static/pwa_720x540.jpg",
+      "type": "image/jpg",
+      "sizes": "720x540",
+      "form_factor": "wide"
+    }
+  ]
+}

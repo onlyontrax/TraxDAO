@@ -17,7 +17,7 @@ import { updateBalance } from '@redux/user/actions';
 import {
   IGallery, IUser, IUIConfig, ISettings
 } from 'src/interfaces';
-import { ConfirmSubscriptionPerformerForm } from '@components/performer';
+import ConfirmSubscriptionPerformerForm from '@components/performer/confirm-subscription';
 import { PurchaseGalleryForm } from '@components/gallery/confirm-purchase';
 import GalleryCard from '@components/gallery/gallery-card';
 import Router from 'next/router';
@@ -446,7 +446,6 @@ class GalleryViewPage extends PureComponent<IProps> {
             performer={gallery?.performer}
             submiting={submiting}
             onFinish={this.subscribe.bind(this)}
-            settings={settings}
             user={user}
           />
         </Modal>

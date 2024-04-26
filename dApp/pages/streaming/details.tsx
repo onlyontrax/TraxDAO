@@ -1,6 +1,6 @@
 /* eslint-disable dot-notation, react/sort-comp */
 import { ClockCircleOutlined, EyeOutlined } from '@ant-design/icons';
-import { TipPerformerForm } from '@components/performer';
+import TipPerformerForm from '@components/performer/tip-form';
 import ChatBox from '@components/stream-chat/chat-box';
 import { SubscriberProps } from '@components/streaming/agora/subscriber';
 import { PurchaseStreamForm } from '@components/streaming/confirm-purchase';
@@ -28,6 +28,7 @@ import {
 import {
   authService, messageService, performerService, streamService, tokenTransctionService
 } from 'src/services';
+import { cryptoService } from '@services/crypto.service';
 import { IResponse } from 'src/services/api-request';
 import { Event, SocketContext } from 'src/socket';
 
@@ -36,11 +37,11 @@ import { Actor, HttpAgent } from '@dfinity/agent';
 import { AuthClient } from '@dfinity/auth-client';
 import { AccountIdentifier } from '@dfinity/nns';
 import { AccountBalanceArgs } from '@dfinity/nns/dist/candid/ledger';
-import { idlFactory as idlFactoryLedger } from '../../src/smart-contracts/declarations/ledger';
-import { idlFactory as idlFactoryTipping } from '../../src/smart-contracts/declarations/tipping';
-import type { _SERVICE as _SERVICE_LEDGER } from '../../src/smart-contracts/declarations/ledger/ledger.did';
-import type { _SERVICE as _SERVICE_TIPPING, TippingParticipants, Participants } from '../../src/smart-contracts/declarations/tipping/tipping.did';
-import { TransferArgs, Tokens, TimeStamp } from '../../src/smart-contracts/declarations/ledger/ledger.did';
+import { idlFactory as idlFactoryLedger } from '../../src/smart-contracts/declarations/ledger/ledger.did.js';
+import { idlFactory as idlFactoryTipping } from '../../src/smart-contracts/declarations/tipping/tipping.did.js';
+import type { _SERVICE as _SERVICE_LEDGER } from '../../src/smart-contracts/declarations/ledger/ledger2.did';
+import type { _SERVICE as _SERVICE_TIPPING, TippingParticipants, Participants } from '../../src/smart-contracts/declarations/tipping/tipping2.did.js';
+import { TransferArgs, Tokens, TimeStamp } from '../../src/smart-contracts/declarations/ledger/ledger2.did';
 import styles from '../artist/live/index.module.scss';
 
 const AgoraProvider = dynamic(() => import('src/agora/AgoraProvider'), {
@@ -324,7 +325,6 @@ class LivePage extends PureComponent<IProps> {
       await this.sendTipFiat(price)
     }else{
       if(paymentOption === 'plug'){
-        console.log('plug payment option')
         await this.sendTipPlug(price, ticker)
       }else{
         await this.sendTipCrypto(price, ticker);
@@ -482,9 +482,9 @@ class LivePage extends PureComponent<IProps> {
 
 
 
-  async sendTipPlug(amount:number, ticker:string){
-    const { performer } = this.props;
-    let tippingCanID, ledgerCanID, ckBTCLedgerCanID, transfer;
+  async sendTipPlug(amount:number, ticker:string) {
+    const { performer, settings } = this.props;
+    let transfer;
     let amountToSend = BigInt(Math.trunc(Number(amount) * 100000000));
     this.setState({
       requesting: false,
@@ -493,31 +493,19 @@ class LivePage extends PureComponent<IProps> {
       tipProgress: 0
     });
 
-    if((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic'){
-      tippingCanID = process.env.NEXT_PUBLIC_TIPPING_CANISTER_ID_LOCAL as string;
-      ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID_LOCAL as string;
-      ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID_LOCAL as string;
-    }else{
-      tippingCanID = process.env.NEXT_PUBLIC_TIPPING_CANISTER_ID as string;
-      ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID as string;
-      ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID as string;
-    }
+    const tippingCanID = settings.icTipping;
+    const ledgerCanID = settings.icLedger;
+    const ckBTCLedgerCanID = settings.icCKBTCMinter;
 
-    // const identityCanisterId = (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? (process.env.NEXT_PUBLIC_IDENTITY_CANISTER as string) : (process.env.NEXT_PUBLIC_IDENTITY_CANISTER_LOCAL as string);
     const whitelist = [
-      // (process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic' && ledgerCanID, 
-      // (process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic' &&  ckBTCLedgerCanID, 
-      tippingCanID, 
+      tippingCanID,
     ];
-    console.log('whitelist: ', whitelist)
 
     if(typeof window !== 'undefined' && 'ic' in window){
       // @ts-ignore
       const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
         whitelist,
-        host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') 
-        ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) 
-        : (process.env.NEXT_PUBLIC_HOST as string)
+        host: settings.icHost
       }) : false;
 
       !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
@@ -526,11 +514,10 @@ class LivePage extends PureComponent<IProps> {
 
       // @ts-ignore
       if (!window?.ic?.plug?.agent && connected  ) {
-        console.log('creating agent')
         // @ts-ignore
         await window.ic.plug.createAgent({ 
           whitelist, 
-          host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) : (process.env.NEXT_PUBLIC_HOST as string) 
+          host: settings.icHost
         });
       }
       
@@ -538,9 +525,6 @@ class LivePage extends PureComponent<IProps> {
         agent: (window as any).ic.plug.agent,
         canisterId: tippingCanID
       });
-
-      // @ts-ignore
-      console.log(window.ic.plug.principalId); console.log(window.ic.plug.accountId); console.log("plug agent: ", window?.ic?.plug?.agent)
       const participants = [];
       
       if(connected){
@@ -548,9 +532,6 @@ class LivePage extends PureComponent<IProps> {
         const requestBalanceResponse = await window.ic?.plug?.requestBalance();
         const icp_balance = requestBalanceResponse[0]?.amount;
         const ckBTC_balance = requestBalanceResponse[1]?.amount;
-
-        console.log("icp balance: ", icp_balance);
-        console.log("ckbtc balance: ", ckBTC_balance);
 
         if(ticker === 'ckBTC'){
           if(ckBTC_balance >= amount){
@@ -641,6 +622,7 @@ class LivePage extends PureComponent<IProps> {
 
   async sendTipCrypto(amount: number, ticker: string) {
     const { performer } = this.state;
+    const { settings } = this.props;
     if (performer === null) return;
 
     if (!performer?.wallet_icp) {
@@ -668,20 +650,16 @@ class LivePage extends PureComponent<IProps> {
       let sender;
       let tippingActor;
       let agent;
-      let tippingCanID;
-      let ledgerCanID;
 
-      if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+      const tippingCanID = settings.icTipping;
+      const ledgerCanID = settings.icLedger;
+
+      if (settings.icNetwork !== true) {
         await authClient.login({
-          identityProvider: process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string,
+          identityProvider: cryptoService.getIdentityProviderLink(),
           onSuccess: async () => {
             identity = authClient.getIdentity();
-
-            tippingCanID = process.env.NEXT_PUBLIC_TIPPING_CANISTER_ID_LOCAL as string;
-            ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID_LOCAL as string;
-
-
-            const host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
+            const host = settings.icHost;
 
             agent = new HttpAgent({
               identity,
@@ -712,11 +690,7 @@ class LivePage extends PureComponent<IProps> {
           }
         });
       } else {
-
-        tippingCanID = process.env.NEXT_PUBLIC_TIPPING_CANISTER_ID as string;
-        ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID as string;
-
-        const host = process.env.NEXT_PUBLIC_HOST as string;
+        const host = settings.icHost;
 
         await authClient.login({
           onSuccess: async () => {
@@ -922,7 +896,8 @@ const mapStateToProps = (state) => ({
   ui: { ...state.ui },
   ...state.streaming,
   user: { ...state.user.current },
-  activeConversation: { ...state.streamMessage.activeConversation }
+  activeConversation: { ...state.streamMessage.activeConversation },
+  settings: { ...state.settings }
 });
 const mapDispatch = {
   updateBalance,

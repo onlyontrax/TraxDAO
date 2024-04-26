@@ -3,6 +3,7 @@ import { updateBalance } from '@redux/user/actions';
 import {
   reactionService, nftService
 } from '@services/index';
+import { cryptoService } from '@services/crypto.service';
 import {
   Avatar, Button, Image, Layout, Modal, Spin, Tooltip, message, Progress
 } from 'antd';
@@ -11,15 +12,15 @@ import Head from 'next/head';
 import { PureComponent } from 'react';
 import { connect } from 'react-redux';
 import {
-  IError, INft, IUIConfig, IUser
+  IError, INft, IUIConfig, IUser, ISettings
 } from 'src/interfaces';
 
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { AuthClient } from '@dfinity/auth-client';
-import { idlFactory as idlFactoryLedger } from '../../src/smart-contracts/declarations/ledger';
+import { idlFactory as idlFactoryLedger } from '../../src/smart-contracts/declarations/ledger/ledger.did.js';
 import { IcrcLedgerCanister, TransferParams } from "@dfinity/ledger";
-import type { _SERVICE as _SERVICE_LEDGER } from '../../src/smart-contracts/declarations/ledger/ledger.did';
-import { TransferArgs, Tokens, TimeStamp } from '../../src/smart-contracts/declarations/ledger/ledger.did';
+import type { _SERVICE as _SERVICE_LEDGER } from '../../src/smart-contracts/declarations/ledger/ledger2.did';
+import { TransferArgs, Tokens, TimeStamp } from '../../src/smart-contracts/declarations/ledger/ledger2.did';
 import { AccountIdentifier } from '@dfinity/nns';
 import { AccountBalanceArgs } from '@dfinity/nns/dist/candid/ledger';
 import { Principal } from '@dfinity/principal';
@@ -31,6 +32,7 @@ interface IProps {
   updateBalance: Function;
   nft: INft;
   image: string;
+  settings: ISettings;
 }
 
 interface IStates {
@@ -50,10 +52,11 @@ class NftViewPage extends PureComponent<IProps, IStates> {
   static noredirect = true;
 
   async getData() {
+    const { settings } = this.props;
     const url = new URL(window.location.href);
     const id = url.searchParams.get('id');
     try {
-      const nft: any = await nftService.getNft(id);
+      const nft: any = await nftService.getNft(id, settings);
       return {
         nft,
         image: nft?.logo ? URL.createObjectURL(new Blob([nft.logo], { type: 'image/png' })) : ''
@@ -195,7 +198,7 @@ class NftViewPage extends PureComponent<IProps, IStates> {
         progress: 10
       });
 
-    const { user } = this.props;
+    const { user, settings } = this.props;
     const { nft } = this.state;
     if (nft === null) return;
     let amountToSend = BigInt(Math.trunc((amount * 100000000) / 0.9));
@@ -206,16 +209,17 @@ class NftViewPage extends PureComponent<IProps, IStates> {
     const authClient = await AuthClient.create();
     let sender;
     let agent;
-    let ledgerCanID;
-    let ckBTCLedgerCanID;
     let transferArgs: TransferArgs;
     let transferParams: TransferParams;
     let transferArgsPlatform: TransferArgs;
     let transferParamsPlatform: TransferParams;
     const uuid = BigInt(Math.floor(Math.random() * 1000));
 
+    const ledgerCanID = settings.icLedger;
+    const ckBTCLedgerCanID = Principal.fromText(settings.icCKBTCMinter);
+
     const recipientAccountIdBlob = this.getRecipientAccountIdentity(nft?.owner)
-    const platformAccountIdBlob = this.getPlatformAccountIdentity(Principal.fromText(process.env.NEXT_PUBLIC_TRAX_ACCOUNT as string))
+    const platformAccountIdBlob = this.getPlatformAccountIdentity(Principal.fromText(settings.icTraxAccountPercentage))
     
     const fanAI = AccountIdentifier.fromPrincipal({
       principal: Principal.fromText(user.wallet_icp)
@@ -262,7 +266,7 @@ class NftViewPage extends PureComponent<IProps, IStates> {
         fee: BigInt(10),
         from_subaccount: null,
         to: {
-          owner: Principal.fromText(process.env.NEXT_PUBLIC_TRAX_ACCOUNT as string),
+          owner: Principal.fromText(settings.icTraxAccountPercentage),
           subaccount: [],
         },
         created_at_time: BigInt(Date.now() * 1000000)
@@ -272,15 +276,13 @@ class NftViewPage extends PureComponent<IProps, IStates> {
       return;
     }
 
-    if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+    if (settings.icNetwork !== true) {
       await authClient.login({
-        identityProvider: process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string,
+        identityProvider: cryptoService.getIdentityProviderLink(),
         onSuccess: async () => {
 
           identity = authClient.getIdentity();
-          ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID_LOCAL as string;
-          ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID_LOCAL as string;
-          const host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
+          const host = settings.icHost;
           agent = new HttpAgent({
             identity,
             host
@@ -365,9 +367,7 @@ class NftViewPage extends PureComponent<IProps, IStates> {
       });
 
     } else {
-      ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID as string;
-      ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID as string;
-      const host = process.env.NEXT_PUBLIC_HOST as string;
+      const host = settings.icHost;
 
       await authClient.login({
         onSuccess: async () => {
@@ -577,7 +577,8 @@ class NftViewPage extends PureComponent<IProps, IStates> {
 }
 const mapStates = (state: any) => ({
   user: state.user.current,
-  ui: { ...state.ui }
+  ui: { ...state.ui },
+  settings: { ...state.settings }
 });
 
 const mapDispatch = { updateBalance };

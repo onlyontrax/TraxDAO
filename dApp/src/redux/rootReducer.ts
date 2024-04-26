@@ -10,6 +10,7 @@ import performer from './performer/reducers';
 import video from './video/reducers';
 import gallery from './gallery/reducers';
 import product from './product/reducers';
+import ticket from './ticket/reducers';
 import comment from './comment/reducers';
 import cart from './cart/reducers';
 import message from './message/reducers';
@@ -27,6 +28,7 @@ const reducers = merge(
   gallery,
   video,
   product,
+  ticket,
   comment,
   cart,
   message,

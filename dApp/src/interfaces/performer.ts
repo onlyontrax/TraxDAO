@@ -97,6 +97,12 @@ export interface IPerformer {
   wallet_icp: string;
   userReferral: string;
   referredBy?: string;
+  identityVerificationStatus?: {
+    link: string,
+    lastStatus: string,
+    status: string,
+    reasons: string[]
+  };
 }
 
 export interface IBanking {
@@ -119,8 +125,14 @@ export interface IPerformerStats {
   totalSiteCommission: number;
   totalNetPrice: number;
   totalGrossPriceICP: number;
+  totalGrossPriceTRAX: number;
+  totalGrossPriceCKBTC: number;
   totalSiteCommissionICP: number;
+  totalSiteCommissionTRAX: number;
+  totalSiteCommissionCKBTC: number;
   totalNetPriceICP: number;
+  totalNetPriceCKBTC: number;
+  totalNetPriceTRAX: number;
 }
 
 export interface IBlockCountries {

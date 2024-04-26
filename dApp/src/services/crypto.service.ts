@@ -2,7 +2,10 @@ import { Actor, HttpAgent } from '@dfinity/agent';
 import { authService } from '@services/index';
 import * as crypto from 'crypto';
 import { message } from 'antd';
-import { idlFactory as identityIDL } from '../smart-contracts/declarations/identity';
+//import store from '../redux/store';
+import storeHolder from '@lib/storeHolder';
+
+import { idlFactory as identityIDL } from '../smart-contracts/declarations/identity/identity.did.js';
 
 export class CryptoService {
   public appName = 'Trax';
@@ -15,8 +18,12 @@ export class CryptoService {
   getNfidInternetIdentityProviderProps(
     onSuccess?: Function
   ) {
+    const store = storeHolder.getStore();
+    const state: any = store.getState();
+    const { settings } = state;
+
     const appLogoUrl = `${process.env.NEXT_PUBLIC_API_ENDPOINT}${this.appLogoUrl}`;
-    const appName = (process.env.NEXT_PUBLIC_DFX_NETWORK === 'ic' ? '' : 'local') + this.appName;
+    const appName = (settings.icNetwork === true ? '' : 'local') + this.appName;
     this.authPath = `/authenticate/?applicationName=${appName}&applicationLogo=${appLogoUrl}#authorize`;
 
     const nfidProvider: any = {
@@ -32,7 +39,7 @@ export class CryptoService {
       }
     };
 
-    if (process.env.NEXT_PUBLIC_DFX_NETWORK === 'ic') {
+    if (settings.icNetwork === true) {
       nfidProvider.authClientOptions.identityProvider = `https://nfid.one${this.authPath}`;
     }
 
@@ -40,17 +47,28 @@ export class CryptoService {
   }
 
   getIdentityProvider() {
+    const store = storeHolder.getStore();
+    const state: any = store.getState();
+    const { settings } = state;
+
     // needs to change to public
-    return (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? `https://nfid.one${this.authPath}` : process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string;
+    return settings.icNetwork === true ? 'https://identity.ic0.app' : this.getIdentityProviderLink();
   }
 
   getIDerivationOrigin() {
+    const store = storeHolder.getStore();
+    const state: any = store.getState();
+    const { settings } = state;
     // needs to change to public
-    return (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? 'https://o2kpe-tqaaa-aaaap-qb3ga-cai.ic0.app' : process.env.NEXT_PUBLIC_ASSET_CANISTER_ID_LOCAL as string;
+    return settings.icNetwork === true ? 'https://o2kpe-tqaaa-aaaap-qb3ga-cai.ic0.app' : process.env.NEXT_PUBLIC_ASSET_CANISTER_ID_LOCAL as string;
   }
 
-  async createBucketActor (idl, canisterId, host = '', identity = null) {
-    const agentHost = host ? host : (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? process.env.NEXT_PUBLIC_HOST as string : process.env.NEXT_PUBLIC_HOST_LOCAL as string;
+  async createBucketActor(idl, canisterId, host = '', identity = null) {
+    const store = storeHolder.getStore();
+    const state: any = store.getState();
+    const { settings } = state;
+
+    const agentHost = host || settings.icHost;
     const agent = new HttpAgent({
       host: agentHost,
       identity
@@ -64,8 +82,12 @@ export class CryptoService {
 
   async getCanisterHashToken(identity: any, hashKey: string) {
     try {
-      const host = (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? (process.env.NEXT_PUBLIC_HOST as string) : (process.env.NEXT_PUBLIC_HOST_BACKEND_LOCAL as string);
-      const canisterId = (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? (process.env.NEXT_PUBLIC_IDENTITY_CANISTER as string) : (process.env.NEXT_PUBLIC_IDENTITY_CANISTER_LOCAL as string);
+      const store = storeHolder.getStore();
+      const state: any = store.getState();
+      const { settings } = state;
+
+      const host = settings.icNetwork === true ? settings.icHost : settings.icHostContentManager;
+      const canisterId = settings.icTraxIdentity;
 
       const actor = await this.createBucketActor(
         identityIDL,
@@ -81,7 +103,13 @@ export class CryptoService {
 
   async getCanisterHashTokenwithPlugWallet(hashKey: string) {
     try {
-      const canisterId = (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? (process.env.NEXT_PUBLIC_IDENTITY_CANISTER as string) : (process.env.NEXT_PUBLIC_IDENTITY_CANISTER_LOCAL as string);
+      const store = storeHolder.getStore();
+    const state: any = store.getState();
+    const { settings } = state;
+
+      const canisterId = settings.icTraxIdentity;
+      // @ts-ignore
+      await window?.ic?.plug.requestConnect([canisterId]);
       // @ts-ignore
       const actor = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug.createActor({
         canisterId,
@@ -92,12 +120,12 @@ export class CryptoService {
         return canisterResponse;
       }
       return '';
-    } catch (e) {}
+    } catch (e) {console.log("error", e)}
 
     return '';
   }
 
-  async onNFIDLogin(resp: any, from: string, loginNfid: any) {
+  async onNFIDLogin(resp: any, from: string, loginNfid: any, onLoggedIn: any) {
     if (!resp?._delegation) {
       return;
     }
@@ -114,7 +142,8 @@ export class CryptoService {
         messageSigned: fetchedResult[0],
         publicKeyRaw: userKey,
         principalWallet: resp?.getPrincipal().toText(),
-        referralCode
+        referralCode,
+        walletType: 'nfid'
       };
 
       if (from === 'sign-up') {
@@ -122,14 +151,45 @@ export class CryptoService {
         payload.role = 'user';
       }
 
-      const response = await (await authService.loginNFID(payload)).data;
-      if (response.token) {
-        message.success('Login successfull. Please wait for redirect.');
-        await loginNfid({ token: response.token, principal: fetchedResult[1] });
+      try {
+        const responseService: any = await authService.loginNFID(payload);
+        const response = await responseService.data;
+
+        if (response.token) {
+          message.success('Login successful. Please wait for redirect.');
+          await loginNfid({ token: response.token, principal: fetchedResult[1] });
+          onLoggedIn(true);
+        } else {
+          message.error('There is a problem with authenticating your NFID. Please try again.');
+          onLoggedIn(false);
+        }
+      } catch (err) {
+        const error = await err;
+        if (error?.error === 'ENTITY_NOT_FOUND') {
+          message.error('User with this wallet principal was not found. Please register a new account or connect this principal to an existing account.');
+        } else {
+          message.error(error.message);
+        }
+        onLoggedIn(false);
       }
     } catch (e) {
       message.success('There is a problem with authenticating your NFID. Please try again.');
+      onLoggedIn(false);
     }
+  }
+
+  getIdentityProviderLink() {
+    const settings = this.getSettings();
+    //http://127.0.0.1:8006/?canisterId=br5f7-7uaaa-aaaaa-qaaca-cai 
+    return settings.icNetwork === true ? 'https://identity.ic0.app' : `${settings.icHost}/?canisterId=${settings.icIdentityProvider}`;
+  }
+
+  getSettings() {
+    const store = storeHolder.getStore();
+    const state: any = store.getState();
+    const { settings } = state;
+    //http://127.0.0.1:8006/?canisterId=br5f7-7uaaa-aaaaa-qaaca-cai 
+    return settings;
   }
 }
 

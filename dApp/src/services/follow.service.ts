@@ -1,4 +1,4 @@
-import { APIRequest } from './api-request';
+import { APIRequest } from "./api-request";
 
 class FollowService extends APIRequest {
   create(id: string) {
@@ -10,11 +10,15 @@ class FollowService extends APIRequest {
   }
 
   getFollowers(req) {
-    return this.get(this.buildUrl('/follows/followers', req));
+    return this.get(this.buildUrl("/follows/followers", req));
   }
 
   getFollowing(req) {
-    return this.get(this.buildUrl('/follows/following', req));
+    return this.get(this.buildUrl("/follows/following", req));
+  }
+
+  getFollowersByPerformerId(id: string) {
+    return this.get(`/follows/followers/${id}`);
   }
 }
 

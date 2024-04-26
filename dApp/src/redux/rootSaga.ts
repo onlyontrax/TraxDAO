@@ -5,6 +5,7 @@ import authSagas from './auth/sagas';
 import performerSagas from './performer/sagas';
 import videoSagas from './video/sagas';
 import productSagas from './product/sagas';
+import ticketSagas from './ticket/sagas';
 import commentSagas from './comment/sagas';
 import gallerySagas from './gallery/sagas';
 import messageSagas from './message/sagas';
@@ -19,6 +20,7 @@ function* rootSaga() {
       ...performerSagas,
       ...videoSagas,
       ...productSagas,
+      ...ticketSagas,
       ...commentSagas,
       ...gallerySagas,
       ...messageSagas,

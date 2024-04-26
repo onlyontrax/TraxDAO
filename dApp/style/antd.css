@@ -1,10 +1,10 @@
 /*!
- * 
+ *
  * antd v4.16.8
- * 
+ *
  * Copyright 2015-present, Alipay, Inc.
  * All rights reserved.
- *       
+ *
  */
 /* stylelint-disable at-rule-empty-line-before,at-rule-name-space-after,at-rule-no-unknown */
 /* stylelint-disable no-duplicate-selectors */
@@ -16773,14 +16773,14 @@ textarea.ant-input {
   content: " ";
 }
 .ant-checkbox-input {
-  position: absolute;
+  /* position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
   left: 0;
   z-index: 1;
   width: 100%;
-  height: 100%;
+  height: 100%; */
   cursor: pointer;
   opacity: 0;
 }
@@ -18337,6 +18337,7 @@ textarea.ant-input {
   display: flex;
   align-items: center;
   min-height: 32px;
+
 }
 .ant-form-item-control-input-content {
   flex: auto;
@@ -20681,7 +20682,8 @@ textarea.ant-mentions {
   position: relative;
   top: 100px;
   width: auto;
-  max-width: calc(100vw - 32px);
+  /* max-width: calc(100vw - 32px); */
+  /* min-width: 100vw; */
   margin: 0 auto;
   padding-bottom: 24px;
 }
@@ -20704,7 +20706,7 @@ textarea.ant-mentions {
   left: 0;
   z-index: 1000;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.45);
+  background-color: rgba(0, 0, 0, 1);
 }
 .ant-modal-mask-hidden {
   display: none;
@@ -22270,11 +22272,7 @@ textarea.ant-mentions {
   list-style: none;
   font-feature-settings: "tnum";
 }
-.ant-statistic-title {
-  margin-bottom: 4px;
-  color: rgba(0, 0, 0, 0.45);
-  font-size: 14px;
-}
+
 .ant-statistic-content {
   color: rgba(0, 0, 0, 0.85);
   font-size: 24px;

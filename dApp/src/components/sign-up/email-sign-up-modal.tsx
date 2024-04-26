@@ -57,6 +57,7 @@ class EmailSignUpModal extends PureComponent<IProps> {
     const { requesting: submiting } = registerFanData;
     const { isLoading } = this.state;
     const referralCode = typeof window !== 'undefined' ? localStorage.getItem('referralCode') : '';
+    
     return (
       <div className="email-sign-up-container">
         <div className='email-sign-up-logo'>
@@ -201,10 +202,11 @@ class EmailSignUpModal extends PureComponent<IProps> {
             </Form.Item>
         </div>
         </Form>
+        
         <div className='log-in-link'>
             <span className='new-to'>Already have a TRAX account? </span> <span onClick={()=> this.props.onClose(false, 'login')} className='get-started'>Log in →</span>
         </div>
-
+              
         <div className='email-sign-up-tc'>
             <span className='new-to'>By proceeding, you agree to the <Link href="/page?id=terms-of-service" target="_blank" className='get-started'>Terms and Conditions</Link> and <Link href="/page?id=privacy-policy" target="_blank" className='get-started'>Privacy Policy</Link></span> 
         </div>

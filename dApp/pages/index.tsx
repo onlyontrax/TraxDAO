@@ -1,5 +1,6 @@
 import { SearchOutlined } from '@ant-design/icons';
-import { Banner } from '@components/common';
+import { BannerNew } from '@components/common';
+import  Carousel  from '@components/common/banner-new-new';
 import ExploreListFeed from '@components/post/explore-list';
 import FeedCard from '@components/post/post-card';
 import { getContentFeeds, moreContentFeeds, removeFeedSuccess } from '@redux/feed/actions';
@@ -17,7 +18,9 @@ import {
   IBanner, ICountry, IFeed, IPerformer, ISettings, IStream, IUIConfig, IUser
 } from 'src/interfaces';
 import HotTracks from '@components/video/hot-track';
+import HotEvents from '@components/ticket/hot-events';
 import NewReleases from '@components/video/new-releases';
+import TrendingTracks from '@components/video/trending-tracks';
 
 interface IProps {
   countries: ICountry[];
@@ -31,6 +34,7 @@ interface IProps {
   moreContentFeeds: Function;
   feedState: any;
   removeFeedSuccess: Function;
+  from: String;
 }
 
 function isInViewport(el) {
@@ -175,14 +179,17 @@ class ExplorePage extends PureComponent<IProps> {
     const { items: feeds, total: totalFeeds, requesting: loadingFeed } = feedState;
     const topBanners = banners && banners.length > 0 && banners.filter((b) => b.position === 'top');
     const { openCardModal } = this.state;
+
     return (
       <Layout>
         <>
           <Head>
             <title>{`${ui?.siteName} | Explore`}</title>
           </Head>
-          <div className="home-page" style={{ background: '#00000000' }}>
-            <Banner banners={topBanners} />
+          <div className="home-page" style={{ background: '#00000000', maxWidth: '1400px', margin: 'auto', width: '100%'  }}>
+            {/* <Banner banners={topBanners} /> */}
+            <BannerNew banners={topBanners} />
+            {/* <Carousel/> */}
             <div className="feed-container main-container">
               <div className="home-container">
                 <div className="left-explore-container">
@@ -197,8 +204,21 @@ class ExplorePage extends PureComponent<IProps> {
                       />
                     </Link>
                   )}
-
-                  {!loadingFeed && !totalFeeds && (
+                  <HotEvents />
+                  <TrendingTracks />
+                  {/* <div className="header-explore">
+                    <span>What&apos;s Happening</span>
+                  </div>
+                  <ExploreListFeed
+                    items={feeds}
+                    canLoadmore={feeds && feeds.length < totalFeeds}
+                    loading={loadingFeed}
+                    onDelete={this.onDeleteFeed.bind(this)}
+                    loadMore={this.loadmoreFeeds.bind(this)}
+                    fromExplore
+                    isGrid
+                  /> */}
+                  {/* {!loadingFeed && !totalFeeds && (
                     <div className="main-container custom text-center" style={{ margin: 'auto' }}>
                       <Alert
                         type="warning"
@@ -212,19 +232,7 @@ class ExplorePage extends PureComponent<IProps> {
                         )}
                       />
                     </div>
-                  )}
-                  <div className="header-explore">
-                    <span>What&apos;s Happening</span>
-                  </div>
-                  <ExploreListFeed
-                    items={feeds}
-                    canLoadmore={feeds && feeds.length < totalFeeds}
-                    loading={loadingFeed}
-                    onDelete={this.onDeleteFeed.bind(this)}
-                    loadMore={this.loadmoreFeeds.bind(this)}
-                    fromExplore
-                    isGrid
-                  />
+                  )} */}
                 </div>
               </div>
             </div>

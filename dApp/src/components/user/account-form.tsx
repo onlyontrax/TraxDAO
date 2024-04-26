@@ -2,9 +2,10 @@
 import { GoogleOutlined, TwitterOutlined } from '@ant-design/icons';
 import { AvatarUpload } from '@components/user/avatar-upload';
 import { InternetIdentityProvider } from '@internet-identity-labs/react-ic-ii-auth';
-import { cryptoService } from '@services/crypto.service';
+import { userService, cryptoService } from '@services/index';
+import { connect } from 'react-redux';
 import {
-  Button, Col, Form, Input, Row, Select, Modal
+  Button, Col, Form, Input, Row, Select, Modal, Switch, message
 } from 'antd';
 import { useState } from 'react';
 import { ISettings, IUIConfig, IUser } from 'src/interfaces';
@@ -33,7 +34,7 @@ const layout = {
   wrapperCol: { span: 24 }
 };
 
-export function UserAccountForm({
+function UserAccountForm({
   updating, onFinish, user, options
 }: UserAccountFormIProps) {
   const [form] = Form.useForm();
@@ -45,6 +46,16 @@ export function UserAccountForm({
   const onNFIDCopy = (value) => {
     setWalletNFID(value);
     form.setFieldsValue({ wallet_icp: value });
+    setOpenConnectModal(false);
+  };
+
+  const disconnectWallet = (value: string) => {
+    userService.disconnectWalletPrincipal().then(val => {
+      message.success('Wallet Principal has been disconnected.');
+      setWalletNFID('');
+    }).catch(err => { message.error('There was a problem in disconnecting your wallet principal.'); });
+
+    form.setFieldsValue({ wallet_icp: '' });
   };
 
   return user && user?._id && (
@@ -202,6 +213,13 @@ export function UserAccountForm({
             </Select>
           </Form.Item>
         </Col>
+
+        <Col xs={24} sm={12} style={{marginBottom: '24px', maxWidth: '100%'}}>
+          <p className="account-form-item-tag">Email notifications</p>
+          <Form.Item name="unsubscribed" valuePropName="checked">
+            <Switch className="switch" checkedChildren="Off" unCheckedChildren="On" />
+          </Form.Item>
+        </Col>
       <Form.Item className="text-center">
         <Button
           htmlType="submit"
@@ -276,18 +294,20 @@ export function UserAccountForm({
             <Input
               className="account-form-input"
               value={walletNFID}
-              onChange={(e) => onNFIDCopy(e.target.value)}
               readOnly
             />
             <div style={{ marginTop: '10px'}} className='connect-wallet-btn-wrapper'>
                 <Button style={{marginLeft: '0px'}} className='connect-wallet-btn' onClick={()=> setOpenConnectModal(true)}>
                   Connect
                 </Button>
+                <Button style={{marginLeft: '0px'}} className='connect-wallet-btn' onClick={()=> disconnectWallet('')}>
+                  Disconnect
+                </Button>
             </div>
             <div className='sign-in-modal-wrapper'>
               <Modal
                 key="purchase_post"
-                className="sign-in-modal"
+                className="auth-modal"
                 title={null}
                 open={openConnectModal}
                 footer={null}
@@ -302,8 +322,8 @@ export function UserAccountForm({
                   <span style={{ fontSize: '14px', color: 'grey'}}>Select your preferred wallet to connect to TRAX</span>
                 </div>
                 <InternetIdentityProvider {...InternetIdentityProviderProps}>
-                        <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer oldWalletPrincipal={user.wallet_icp} />
-                      </InternetIdentityProvider>
+                  <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer={false} oldWalletPrincipal={walletNFID} />
+                </InternetIdentityProvider>
               </Modal>
             </div>
           </Form.Item>
@@ -321,3 +341,10 @@ export function UserAccountForm({
     </div>
   );
 }
+
+const mapStates = (state: any) => ({
+  settings: { ...state.settings }
+});
+
+const mapDispatch = {};
+export default connect(mapStates, mapDispatch)(UserAccountForm);

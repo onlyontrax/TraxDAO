@@ -80,16 +80,18 @@ const authSagas = [
     * worker(data: any) {
       try {
         const payload = data.payload as any;
-        const { token } = payload;
+        const { token, noRedirect } = payload;
         yield authService.setToken(token);
         const userResp = yield userService.me();
         yield put(updateCurrentUser(userResp.data));
         yield put(loginSuccess());
-        if (!userResp?.data?.isPerformer) {
-          Router.push((!userResp.data.email || !userResp.data.username) ? '/user/account' : '/home');
-        }
-        if (userResp?.data?.isPerformer) {
-          (!userResp.data.email || !userResp.data.username) ? Router.push('/artist/account') : Router.push({ pathname: `/artist/profile?id=${userResp.data.username || userResp.data._id}` }, `/artist/profile?id=${userResp.data.username || userResp.data._id}`);
+        if (noRedirect !== true) {
+          if (!userResp?.data?.isPerformer) {
+            Router.push((!userResp.data.email || !userResp.data.username) ? '/user/account' : '/home');
+          }
+          if (userResp?.data?.isPerformer) {
+            (!userResp.data.email || !userResp.data.username) ? Router.push('/artist/account') : Router.push({ pathname: `/artist/profile?id=${userResp.data.username || userResp.data._id}` }, `/artist/profile?id=${userResp.data.username || userResp.data._id}`);
+          }
         }
       } catch (e) {
         const error = yield Promise.resolve(e);
@@ -116,23 +118,24 @@ const authSagas = [
   },
   {
     on: registerPerformer,
-    * worker(data: any) {
+    async worker(data: any) {
       try {
-        const verificationFiles = [{
-          fieldname: 'idVerification',
-          file: data.payload.idVerificationFile
-        }, {
-          fieldname: 'documentVerification',
-          file: data.payload.documentVerificationFile
-        }];
-        const payload = pick(data.payload, ['name', 'username', 'password',
-          'gender', 'email', 'firstName', 'lastName', 'country', 'dateOfBirth', 'wallet_icp', 'referralCode']);
-        const resp = (yield authService.registerPerformer(verificationFiles, payload, () => {})).data;
-        yield put(registerPerformerSuccess(resp));
+        const firstName = 'John';
+        const lastName = 'Doe';
+        const payload = {
+          ...pick(data.payload, ['name', 'username', 'password', 'gender', 'email', 'country', 'dateOfBirth', 'wallet_icp', 'referralCode']),
+          firstName,
+          lastName
+        };
+        const resp = (await authService.registerPerformer(payload)).data;
+        if (resp.token) {
+          localStorage.setItem("tempToken", resp.token)
+        }
+        await put(registerPerformerSuccess(resp));
       } catch (e) {
-        const error = yield Promise.resolve(e);
+        const error = await Promise.resolve(e);
         message.error(error.message || 'An error occured, please try again later');
-        yield put(registerPerformerFail(error));
+        await put(registerPerformerFail(error));
       }
     }
   },

@@ -86,7 +86,7 @@ class PerformerGridCard extends PureComponent<IProps> {
         >
           <div className="grid-card" style={{ backgroundImage: `url(${performer?.avatar || '/static/no-avatar.png'})` }}>
             <div className="card-stat">
-            </div>
+          </div>
             <div className="artist-name-wrapper">
               <div className="artist-name">
                 {this.renderArtistName(performer?.name)}
@@ -101,7 +101,7 @@ class PerformerGridCard extends PureComponent<IProps> {
                 {performer?.username}
               </div>
 
-              <div className="genre-tags-wrapper" style={{ display: `${!performer?.genreOne && !performer?.genreTwo && !performer?.genreThree && !performer?.genreFour && !performer?.genreFive ? 'none' : 'flex'}` }}>
+              {/* <div className="genre-tags-wrapper" style={{ display: `${!performer?.genreOne && !performer?.genreTwo && !performer?.genreThree && !performer?.genreFour && !performer?.genreFive ? 'none' : 'flex'}` }}>
                 <div className="genre-tags">
                   <div className="genre-row">
                     <div className="genre-val" style={{ display: `${performer?.genreOne === 'Unset' || !performer.genreOne ? 'none' : 'block'}` }}>
@@ -126,7 +126,7 @@ class PerformerGridCard extends PureComponent<IProps> {
                   </div>
                 </div>
 
-              </div>
+              </div> */}
 
             </div>
 

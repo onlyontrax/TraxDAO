@@ -3,24 +3,18 @@
 /* eslint-disable react/sort-comp */
 import { PureComponent } from 'react';
 import { InternetIdentityProvider } from '@internet-identity-labs/react-ic-ii-auth';
-import { BadgeCheckIcon } from '@heroicons/react/solid';
-import { IPerformer } from '@interfaces/index';
-import { tokenTransctionService } from '@services/index';
 import { login, loginSocial, loginSuccess, loginNfid } from '@redux/auth/actions';
 import { updateCurrentUser } from '@redux/user/actions';
 import {
-  InputNumber, Button, Avatar, Select, Image, Input, Form, message
+  Button, Select, Input, Form, message
 } from 'antd';
 import { connect } from 'react-redux';
 import Link from 'next/link'
-import styles from './performer.module.scss';
-import { NFIDIcon } from '../../icons/index';
 import { Auth } from 'src/crypto/nfid/Auth';
 import { ISettings, IUIConfig } from 'src/interfaces';
 import { authService, userService, cryptoService } from '@services/index';
 import Router from 'next/router';
-
-const { Option } = Select;
+import AuthFrame from '../common/base/auth-frame'
 
 interface IProps {
     loginAuth: any;
@@ -45,7 +39,10 @@ class LogInModal extends PureComponent<IProps> {
     recaptchaSuccess: false,
     loginAs: 'user',
     isLoading: true,
-    welcomeMsg: 'Create an account'
+    welcomeMsg: 'Create an account',
+    passwordVisible: false,
+    usernameValue: '',
+    passwordValue: '',
   };
 
   async componentDidMount() {
@@ -55,8 +52,26 @@ class LogInModal extends PureComponent<IProps> {
 
   async handleLogin(values: any) {
     const { login: handleLogin, onFinish: loggedIn } = this.props;
-    loggedIn(false, true)
-    return handleLogin(values);
+    loggedIn(false, true);
+    try {
+      await handleLogin(values);
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        // Account not found
+        message.error('This account is not found, please sign up');
+      } else if (error.response && error.response.data && error.response.data.message) {
+        // Other specific error messages from the server
+        message.error(error.response.data.message);
+      } else {
+        // Generic error message
+        message.error('Login failed. Please try again.');
+      }
+    }
+  }
+
+  hasLoggedIn(logIn: boolean) {
+    const { onFinish: loggedIn } = this.props;
+    logIn && loggedIn(false, true);
   }
 
   async redirectLogin() {
@@ -80,7 +95,7 @@ class LogInModal extends PureComponent<IProps> {
           { pathname: `/artist/profile?id=${user.data.username || user.data._id}` },
           `/artist/profile?id=${user.data.username || user.data._id}`
         )
-        : Router.push('/home');
+        : Router.push('/');
     } catch {
       this.setState({ isLoading: false });
     }
@@ -106,88 +121,138 @@ class LogInModal extends PureComponent<IProps> {
     }
   }
 
+  handleInputChange = (event) => {
+    const { name, value } = event.target;
+    this.setState({
+      [name]: value,
+    });
+  }
+
   onNFIDLogin(resp: any) {
     const { loginNfid: loginNfidHandle } = this.props;
-    return cryptoService.onNFIDLogin(resp, 'log-in', loginNfidHandle);
+    return cryptoService.onNFIDLogin(resp, 'log-in', loginNfidHandle, this.hasLoggedIn.bind(this));
   }
 
   render() {
     const { ui, settings, loginAuth, store } = this.props;
-    const { isLoading, welcomeMsg } = this.state;
+    const { isLoading, welcomeMsg, passwordVisible, usernameValue, passwordValue} = this.state;
 
     return (
-      <div className="log-in-container">
-        <div className='log-in-logo'>
-            <img src="/static/LogoAlternate.png" width="100px" alt="Loading..."/>
-        </div>
+      <AuthFrame>
         <div className='log-in-header'>
-            <span>Log in</span>
-            <p>Continue to trax.so</p>
+            <h1 className='main-title'>Welcome back</h1>
+            <p className='main-subtitle'>Log in to TRAX</p>
         </div>
         <Form
           name="normal_login"
           initialValues={{ remember: true }}
           onFinish={this.handleLogin.bind(this)}
+          className='log-in-form'
         >
         <div className='email-wrapper'>
-            <span className='field-subheading'>Email or username</span>
             <Form.Item
               name="username"
               validateTrigger={['onChange', 'onBlur']}
-              rules={[{ required: true, message: 'Please enter your email or username!' }]}
+              rules={[{ required: true, message: 'Please enter your email or username!'}]}
+              // validateStatus={usernameValue.trim() ? 'success' : 'error'}
             >
-                <Input disabled={loginAuth.requesting || isLoading} type="text"/>
+              <div className="relative">
+                <Input
+                  onChange = {this.handleInputChange}
+                  name="usernameValue"
+                  type="text"
+                  id="usernameInput"
+                  disabled={loginAuth.requesting || isLoading}
+                />
+                <label
+                  htmlFor="usernameInput"
+                  className={`floating-label ${
+                    this.state.usernameValue ? 'label-transition-active' : 'label-transition-initial'
+                }`}
+                >
+                  Email or username
+                </label>
+              </div>
             </Form.Item>
         </div>
 
         <div className='email-wrapper'>
-            <span className='field-subheading'>Password</span>
             <Form.Item
               name="password"
               validateTrigger={['onChange', 'onBlur']}
               rules={[{ required: true, message: 'Please enter your password!' }]}
+              // validateStatus={usernameValue.trim() ? 'success' : 'error'}
             >
-                <Input.Password type="text"/>
+              <div className="relative">
+                <Input.Password
+                  onChange = {this.handleInputChange}
+                  name="passwordValue"
+                  type={passwordVisible ? 'text' : 'password'}
+                  id="passwordInput"
+                />
+                <label
+                  htmlFor="passwordInput"
+                  className={`floating-label ${
+                    this.state.passwordValue ? 'label-transition-active' : 'label-transition-initial'
+                }`}
+                >
+                  Password
+                </label>
+              </div>
             </Form.Item>
-            <p>
-              <Link
-                href={{
-                  pathname: '/auth/forgot-password'
-                }}
-                className="sub-text"
-              >
-                Forgot password
-              </Link>
-            </p>
+            <div className='forgot-links'>
+              <p>
+                <Link
+                  href={{
+                    pathname: '/auth/forgot-password'
+                  }}
+                  className="forgot-password"
+                >
+                  Forgot password?
+                </Link>
+              </p>
+              {/* <h3 className="forgot-password-dot">&#x2022;</h3>
+              <p>
+                <Link
+                  href={{
+                    pathname: '/auth/forgot-password'
+                  }}
+                  className="forgot-password"
+                >
+                  Forgot username?
+                </Link>
+              </p> */}
+            </div>
         </div>
 
         <div className='log-in-btn-wrapper'>
             <Form.Item style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-                <Button 
-                    disabled={loginAuth.requesting || isLoading}
+                <Button
+                    disabled={!usernameValue.trim() || !passwordValue.trim() || loginAuth.requesting || isLoading}
                     loading={loginAuth.requesting || isLoading}
-                    htmlType="submit" 
+                    htmlType="submit"
                     className='log-in-btn'
                 >
-                    Continue
+                    Log in
                 </Button>
             </Form.Item>
         </div>
-        
+
         <div className='divider'>
-           <div className='hr-line'/> <span>Or</span> <div className='hr-line'/>
+          OR
         </div>
           <InternetIdentityProvider
             {...cryptoService.getNfidInternetIdentityProviderProps(this.onNFIDLogin.bind(this))}
           >
-            <Auth from="log-in" />
+            <Auth from="log-in" onLoggedIn={this.hasLoggedIn.bind(this)} />
+            {/* onLoggedIn={()=> this.props.onFinish(false, true)} */}
           </InternetIdentityProvider>
 
         </Form>
-        <div className='sign-in-link'>
-            <span className='new-to'>New to TRAX?</span> <span onClick={()=> this.props.onFinish(false, false)} className='get-started'>Get started →</span>
+        <div className='sign-in-link pt-10 lg:pt-16'>
+            <span className='new-to'>Don’t have an account?</span> <span onClick={()=> this.props.onFinish(false, false)} className='get-started'>Sign up</span>
         </div>
-      </div>
+      </AuthFrame>
     );
   }
 }
@@ -198,7 +263,7 @@ const mapStatesToProps = (state: any) => ({
     loginAuth: { ...state.auth.loginAuth },
     store: { ...state }
   });
-  
+
   const mapDispatchToProps = {
     login,
     loginSocial,

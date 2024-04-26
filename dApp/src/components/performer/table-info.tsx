@@ -37,7 +37,7 @@ export class PerformerInfo extends PureComponent<IProps> {
         <div className="about-header-stats">
           <div className="about-stats">
             <span>{performer.score}</span>
-            <h3>Score</h3>
+            <h3>Artist score</h3>
           </div>
         </div>
         <div className="artist-info-links">

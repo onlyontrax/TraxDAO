@@ -1,9 +1,19 @@
 import { Actor, HttpAgent } from '@dfinity/agent';
+import storeHolder from '@lib/storeHolder';
 
 // Imports and re-exports candid interface
 import { idlFactory } from './artist-content-bucket.did.js';
 // CANISTER_ID is replaced by webpack based on node environment
-export const canisterId = process.env.ARTIST_CONTENT_BUCKET_CANISTER_ID;
+export const canisterId = () => {
+  const store = storeHolder.getStore();
+  if (!store) {
+    throw new Error('Redux store is not initialized');
+  }
+
+  const state = store.getState();
+  const { settings } = state;
+  return settings.icContentArtistContent;
+};
 
 /**
  * @deprecated since dfx 0.11.1
@@ -13,13 +23,20 @@ export const canisterId = process.env.ARTIST_CONTENT_BUCKET_CANISTER_ID;
  * @return {import("@dfinity/agent").ActorSubclass<import("./artist-content-bucket.did.js")._SERVICE>}
  */
 export const createActor = (canId, options = {}) => {
-  console.warn(`Deprecation warning: you are currently importing code from .dfx. Going forward, refactor to use the dfx generate command for JavaScript bindings.
+  const store = storeHolder.getStore();
+  if (!store) {
+    throw new Error('Redux store is not initialized');
+  }
 
-See https://internetcomputer.org/docs/current/developer-docs/updates/release-notes/ for migration instructions`);
-  const agent = options.agent || new HttpAgent({ ...options.agentOptions });
+  const state = store.getState();
+  const { settings } = state;
+
+  const agent = options.agent || new HttpAgent({
+    host: settings.icHost
+  });
 
   // Fetch root key for certificate validation during development
-  if (process.env.DFX_NETWORK !== 'ic') {
+  if (settings.icNetwork !== true) {
     agent.fetchRootKey().catch((err) => {
       console.warn('Unable to fetch root key. Check to ensure that your local replica is running');
       console.error(err);

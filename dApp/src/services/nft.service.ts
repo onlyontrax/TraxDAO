@@ -1,32 +1,45 @@
 
 import { Actor, HttpAgent } from "@dfinity/agent";
 import { AuthClient } from "@dfinity/auth-client";
-import {Principal} from '@dfinity/principal';
+import { Principal } from '@dfinity/principal';
 import {
   createActor as createNftActor, canisterId as NftCanisterId
 } from 'src/smart-contracts/declarations/traxNFT';
+import { idlFactory as idlFactoryTraxNFT } from '../smart-contracts/declarations/traxNFT/traxNFT.did.js';
+import type { _SERVICE as _SERVICE_TRAX_NFT } from '../smart-contracts/declarations/traxNFT/traxNFT2.did';
 
 export class NftService {
-  getArtistNfts(artist_nfid: string) {
+  getArtistNfts(artist_nfid: string, settings: any) {
     return new Promise(async (resolve) => {
-      let identity, host, agent, nftActor;
+      let identity, agent, nftActor;
+      const host = settings.icHost;
       const authClient = await AuthClient.create();
 
+      if (!artist_nfid || typeof artist_nfid === 'undefined') {
+        resolve([]);
+        return;
+      }
 
-      if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
-        host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
+      if (settings.icNetwork !== true) {
         agent = new HttpAgent({
           host
         });
   
         await agent.fetchRootKey();
-        nftActor = await createNftActor(process.env.NEXT_PUBLIC_NFT_CANISTER_ID, {
-          agent
-        });
 
-        let principal = Principal.fromText(artist_nfid);
-        let data = await nftActor.getArtistNfts(principal);
-        let nfts = [];
+        nftActor = Actor.createActor<_SERVICE_TRAX_NFT>(idlFactoryTraxNFT, {
+          agent,
+          canisterId: settings.icNFT
+        });
+        const principal = Principal.fromText(artist_nfid);
+
+        if (typeof principal === 'undefined') {
+          resolve([]);
+          return;
+        }
+
+        const data = await nftActor.getArtistNfts(principal);
+        const nfts = [];
         for (let item of data) {
           let id = item[0];
           let type = item[1];
@@ -41,31 +54,32 @@ export class NftService {
         }
         resolve(nfts);
       } else {
-        host = process.env.NEXT_PUBLIC_HOST as string;
         identity = await authClient.getIdentity();
         agent = new HttpAgent({
           identity,
           host
         });
 
-        nftActor = createNftActor(NftCanisterId, {
-          agent
+        nftActor = Actor.createActor<_SERVICE_TRAX_NFT>(idlFactoryTraxNFT, {
+          agent,
+          canisterId: settings.icNFT
         });
       }
     });
   }
-  getNft(nft_id: string) {
+  getNft(nft_id: string, settings: any) {
     return new Promise(async (resolve) => {
-      let identity, host, agent, nftActor;
+      let identity, agent, nftActor;
+      const host = settings.icHost;
 
-      if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
-        host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
+      if (settings.icNetwork !== true) {
         agent = new HttpAgent({
           host
         });
         await agent.fetchRootKey();
-        nftActor = await createNftActor(process.env.NEXT_PUBLIC_TRAXNFT_CANISTER_ID, {
-          agent
+        nftActor = Actor.createActor<_SERVICE_TRAX_NFT>(idlFactoryTraxNFT, {
+          agent,
+          canisterId: settings.icNFT
         });
         let data = await nftActor.getNFT(nft_id);
         let type = data[0].productType;
@@ -81,13 +95,13 @@ export class NftService {
           type
         });
       } else {
-        host = process.env.NEXT_PUBLIC_HOST as string;
         agent = new HttpAgent({
           host
         });
 
-        nftActor = createNftActor(NftCanisterId, {
-          agent
+        nftActor = Actor.createActor<_SERVICE_TRAX_NFT>(idlFactoryTraxNFT, {
+          agent,
+          canisterId: settings.icNFT
         });
       }
     });

@@ -64,9 +64,13 @@ export default function MappedElement (video) {
             <p className="h-track-title">
               {getTitle(video.video.title)}
             </p>
-            <p className="h-track-artist">
+            <Link 
+              href={`/artist/profile?id=${video.video?.performer?.username || video.video?.performer?._id}`}
+              as={`/artist/profile?id=${video.video?.performer?.username || video.video?.performer?._id}`} 
+              className="h-track-artist"
+            >
               {getArtist(video.video.performer.name)}
-            </p>
+            </Link>
           </div>
         </Link>
   </div>

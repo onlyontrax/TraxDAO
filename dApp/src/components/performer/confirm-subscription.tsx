@@ -11,15 +11,16 @@ import { BadgeCheckIcon } from '@heroicons/react/solid';
 import {
   Avatar, Button, Form, Image, Select, InputNumber, message
 } from 'antd';
+import { connect } from 'react-redux';
 import { IPerformer, ISettings, IUser } from 'src/interfaces';
 import { tokenTransctionService } from 'src/services';
-import { idlFactory as idlFactoryPPV } from '../../smart-contracts/declarations/ppv';
-import type { _SERVICE as _SERVICE_PPV } from '../../smart-contracts/declarations/ppv/ppv.did';
-import styles from './performer.module.scss';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCircleInfo, faXmark } from '@fortawesome/free-solid-svg-icons'
-import { paymentService } from '@services/index';
 import { getResponseError } from '@lib/utils';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleInfo, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { paymentService } from '@services/index';
+import { idlFactory as idlFactoryPPV } from '../../smart-contracts/declarations/ppv/ppv.did.js';
+import type { _SERVICE as _SERVICE_PPV } from '../../smart-contracts/declarations/ppv/ppv2.did';
+import styles from './performer.module.scss';
 
 const { Option } = Select;
 interface IProps {
@@ -31,7 +32,7 @@ interface IProps {
   user: IUser;
 }
 
-export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
+class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
   state = {
     price: '1',
     btnText: 'SEND TIP',
@@ -52,22 +53,19 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
   };
 
   async componentDidMount() {
-    const { performer } = this.props;
+    const { performer, settings } = this.props;
     await this.getData()
     this.setState({ price: (performer?.monthlyPrice || 0).toFixed(2) });
 
     let ppv;
     let identity;
     const authClient = await AuthClient.create();
-    let ppvCanID;
-    let host;
+    const ppvCanID = settings.icPPV;
+    const host = settings.icHost;
     let agent;
 
-    if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+    if (settings.icNetwork !== true) {
       identity = authClient.getIdentity();
-      ppvCanID = process.env.NEXT_PUBLIC_PPV_CANISTER_ID_LOCAL as string;
-
-      host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
       agent = new HttpAgent({
         identity,
         host
@@ -80,14 +78,11 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
         canisterId: ppvCanID
       });
     } else {
-      host = process.env.NEXT_PUBLIC_HOST as string;
       identity = authClient.getIdentity();
       agent = new HttpAgent({
         identity,
         host
       });
-
-      ppvCanID = process.env.NEXT_PUBLIC_PPV_CANISTER_ID as string;
 
       ppv = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
         agent,
@@ -181,10 +176,10 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
           </div>
 
           <div className='sub-type-togal-container'>
-            <div className='sub-type-togal-wrapper' style={{background: subscriptionType === 'monthly' ? '#353535' : '#232323'}} onClick={()=> this.setState({subscriptionType: 'monthly'})}>
+            <div className='sub-type-togal-wrapper' style={{background: subscriptionType === 'monthly' ? '#FFFFFF10' : '#0E0E0E25'}} onClick={()=> this.setState({subscriptionType: 'monthly'})}>
               <span>Pay monthly</span>
             </div>
-            <div className='sub-type-togal-wrapper' style={{background: subscriptionType === 'yearly' ? '#353535' : '#232323'}} onClick={()=> this.setState({subscriptionType: 'yearly'})}>
+            <div className='sub-type-togal-wrapper' style={{background: subscriptionType === 'yearly' ? '#FFFFFF10' : '#0E0E0E25'}} onClick={()=> this.setState({subscriptionType: 'yearly'})}>
               <span>Pay yearly</span>
             </div>
           </div>
@@ -197,7 +192,7 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
             <span className='sub-cancel-note'>Cancel at any time</span>
           </div>
           <div className='payment-details'>
-          <span>Payment details</span>
+         
           <div className='payment-recipient-wrapper'>
               <div className='payment-recipient-avatar-wrapper'>
                 <Avatar src={performer?.avatar || '/static/no-avatar.png'} />
@@ -205,7 +200,7 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
               <div className='payment-recipient-info'>
                 <p>Pay to</p>
                 <span>{performer?.name}</span>
-                  <p style={{color: '#c8ff02'}}>Verified Artist</p>
+                  <p style={{marginTop:'-0.125rem'}}>Verified Artist</p>
               </div>
               <a href={`/artist/profile?id=${performer?.username || performer?._id}`} className='info-icon-wrapper'>
                 <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
@@ -269,8 +264,8 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
                 <FontAwesomeIcon style={{width: 45, height: 45}} icon={faXmark} />
                 </div>
                 <div className='payment-type-info'>
-                  <span style={{}}>No Payment Method Connected</span>
-                    <p>Please visit settings to add a card <br /> or connect a wallet</p>
+                  <span style={{}}>Connect payment method</span>
+                    <p>Visit the Settings page to connect</p>
                     {/* <p>Click to add crypto wallet</p> */}
                 </div>
               </Option>
@@ -281,7 +276,7 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
             
           </div>
           <div className='currency-picker-btns-container'>
-            <span>Select a currency</span>
+           
             <div className='currency-picker-btns-wrapper'>
             {cards.length > 0 && (
               <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('USD')}>
@@ -300,7 +295,7 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
             </div>
           </div>
           <div className='tip-input-number-container'>
-            <span>Payment amount</span>
+            <span>Total</span>
             <div className='tip-input-number-wrapper'>
               {selectedCurrency === 'USD' && (
                 <p>$</p>
@@ -337,3 +332,9 @@ export class ConfirmSubscriptionPerformerForm extends PureComponent<IProps> {
     );
   }
 }
+
+const mapStates = (state) => ({
+  settings: { ...state.settings }
+});
+
+export default connect(mapStates)(ConfirmSubscriptionPerformerForm);

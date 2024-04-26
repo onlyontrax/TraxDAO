@@ -27,6 +27,19 @@ export class VideoPlayer extends PureComponent<any> {
     return () => window.removeEventListener('resize', this.updateMedia);
   }
 
+  componentDidUpdate() {
+    const { stop } = this.props;
+    if (stop) {
+      this.stopVideo();
+    }
+  }
+
+  stopVideo() {
+    if (this.player) {
+      this.player.pause();
+    }
+  }
+
   componentWillUnmount() {
     if (this.player) {
       this.player.dispose();
@@ -43,7 +56,7 @@ export class VideoPlayer extends PureComponent<any> {
 
     return (
       <div className="videojs-player">
-        <div data-vjs-player style={isDesktop ? { paddingTop: 'max(60vh)' } : null}>
+        <div data-vjs-player style={isDesktop ? { paddingTop: 'max(60vh)', borderRadius: '15px' } : null}>
           <video controlsList="nodownload" ref={(node) => { this.videoNode = node; }} className="video-js" />
         </div>
       </div>

@@ -1,10 +1,11 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions, jsx-a11y/interactive-supports-focus */
 import { Principal } from '@dfinity/principal';
-import { IUser } from '@interfaces/index';
+import { IUser, ISettings } from '@interfaces/index';
 import {
   Avatar, Divider, message, InputNumber, Select, Image, Input, Button, Progress, Modal
 } from 'antd';
 import { PureComponent } from 'react';
+import { connect } from 'react-redux';
 import { TickIcon } from 'src/icons';
 import { principalToAccountIdentifier } from '../../crypto/account_identifier';
 import { SelectorIcon } from '@heroicons/react/solid';
@@ -12,19 +13,17 @@ import { SelectorIcon } from '@heroicons/react/solid';
 import { AccountIdentifier } from '@dfinity/nns';
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { AuthClient } from '@dfinity/auth-client';
+import { cryptoService } from '@services/crypto.service';
 
-import { idlFactory as idlFactoryPPV } from '../../../src/smart-contracts/declarations/ppv';
-import type { _SERVICE as _SERVICE_PPV} from '../../../src/smart-contracts/declarations/ppv/ppv.did';
-
-import { idlFactory as idlFactoryLedger } from '../../../src/smart-contracts/declarations/ledger';
-import type { _SERVICE as _SERVICE_LEDGER } from '../../../src/smart-contracts/declarations/ledger/ledger.did';
+import { idlFactory as idlFactoryLedger } from '../../../src/smart-contracts/declarations/ledger/ledger.did.js';
+import type { _SERVICE as _SERVICE_LEDGER } from '../../../src/smart-contracts/declarations/ledger/ledger2.did';
 import {
   TransferArgs, Tokens, TimeStamp, AccountBalanceArgs
-} from '../../../src/smart-contracts/declarations/ledger/ledger.did';
+} from '../../../src/smart-contracts/declarations/ledger/ledger2.did';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faXmark, faBullhorn, faImage, faVideo, faSquarePollHorizontal, faCircleCheck } from '@fortawesome/free-solid-svg-icons';
-
 import { IcrcLedgerCanister, TransferParams } from "@dfinity/ledger";
+
 const { Option } = Select;
 
 interface IProps {
@@ -33,9 +32,10 @@ interface IProps {
   icpPrice: number;
   ckbtcBalance: number;
   ckbtcPrice: number;
+  settings: ISettings;
 }
 
-export class SendCrypto extends PureComponent<IProps> {
+class SendCrypto extends PureComponent<IProps> {
   state = {
     balanceICP: 0,
     amountToSend: null,
@@ -151,18 +151,12 @@ export class SendCrypto extends PureComponent<IProps> {
       !connected && message.error("Failed to connected to canister. Please try again later or contact us. ")
         
       this.setState({ progress: 20 });
-
-      // @ts-ignore
-      console.log(window.ic.plug.principalId); console.log(window.ic.plug.accountId); console.log("plug agent: ", window?.ic?.plug?.agent)
       
       if(connected){
         //@ts-ignore
         const requestBalanceResponse = await window.ic?.plug?.requestBalance();
         const icp_balance = requestBalanceResponse[0]?.amount;
         const ckBTC_balance = requestBalanceResponse[1]?.amount;
-
-        console.log("icp balance: ", icp_balance);
-        console.log("ckbtc balance: ", ckBTC_balance);
 
         if(selectedCurrency === 'ckBTC'){
           if(ckBTC_balance >= Number(amountToSend)){
@@ -203,8 +197,6 @@ export class SendCrypto extends PureComponent<IProps> {
           }
         }
 
-        console.log(transfer)
-
         this.setState({ progress: 50 });
 
         if(transfer){
@@ -224,29 +216,27 @@ export class SendCrypto extends PureComponent<IProps> {
 
 
 
-  async sendCrypto(){
-    const { selectedCurrency, addressType, destinationAddress, amountToSend} = this.state;
-    const { icpBalance, ckbtcBalance} = this.props;
+  async sendCrypto() {
+    const { selectedCurrency, addressType, destinationAddress, amountToSend } = this.state;
+    const { icpBalance, ckbtcBalance, settings } = this.props;
     this.setState({ requesting: true, submiting: true });
     try {
-      let ledgerCanID;
       let ledgerActor;
       let sender;
       let identity;
       let agent;
-      let ckBTCLedgerCanID;
+      const ledgerCanID = settings.icLedger;
+      const ckBTCLedgerCanID = Principal.fromText(settings.icCKBTCMinter);
       const authClient = await AuthClient.create();
       let amount = BigInt(amountToSend * 100000000);
 
-      if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+      if (settings.icNetwork !== true) {
         await authClient.login({
-          identityProvider: process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string,
+          identityProvider: cryptoService.getIdentityProviderLink(),
           onSuccess: async () => {
             if (await authClient.isAuthenticated()) {
               identity = authClient.getIdentity();
-              ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID_LOCAL as string;
-              ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID_LOCAL as string;
-              const host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
+              const host = settings.icHost;
               agent = new HttpAgent({   identity, host  });
 
               agent.fetchRootKey();
@@ -303,9 +293,7 @@ export class SendCrypto extends PureComponent<IProps> {
       } else {
         await authClient.login({
           onSuccess: async () => {
-            const host = process.env.NEXT_PUBLIC_HOST as string;
-            ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID as string;
-            ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID as string;
+            const host = settings.icHost;
             identity = authClient.getIdentity();
             agent = new HttpAgent({ identity, host });
             sender = await agent.getPrincipal();
@@ -545,3 +533,10 @@ export class SendCrypto extends PureComponent<IProps> {
     );
   }
 }
+
+const mapStates = (state: any) => ({
+  settings: { ...state.settings }
+});
+
+const mapDispatch = {};
+export default connect(mapStates, mapDispatch)(SendCrypto);

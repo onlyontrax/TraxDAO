@@ -12,8 +12,8 @@ import { logout } from '@redux/auth/actions';
 import {
   UserOutlined,
   VideoCameraOutlined, FireOutlined, FireFilled, PlusCircleOutlined,
-  DollarOutlined, HomeFilled,LogoutOutlined, TeamOutlined, WalletFilled, 
-  SettingOutlined, InfoCircleOutlined, TagsOutlined 
+  DollarOutlined, HomeFilled,LogoutOutlined, TeamOutlined, WalletFilled,
+  SettingOutlined, InfoCircleOutlined, TagsOutlined
 } from '@ant-design/icons';
 import { BiWalletAlt } from 'react-icons/bi';
 import { RiMoneyDollarCircleLine } from 'react-icons/ri';
@@ -38,10 +38,9 @@ import { BadgeCheckIcon } from '@heroicons/react/solid';
 import CopyReferralCode from 'src/components/common/referralCode';
 import HouseFill from '/static/house_fill.svg'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSquarePlus, faCompass, faComment, faCirclePlay, faBookmark } from '@fortawesome/free-regular-svg-icons'
-import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+import { faSquarePlus, faCompass, faComment, faCirclePlay, faBookmark, faNewspaper } from '@fortawesome/free-regular-svg-icons'
+import { faMagnifyingGlass, faBagShopping } from '@fortawesome/free-solid-svg-icons'
 
-import type { _SERVICE as _SERVICE_PPV } from '../../../smart-contracts/declarations/ppv/ppv.did';
 import styles from './sidebar.module.scss';
 
 interface IProps {
@@ -71,8 +70,18 @@ class Sidebar extends PureComponent<IProps> {
   };
 
   componentDidMount() {
+
     RouterEvent.events.on('routeChangeStart', this.handleChangeRoute);
-    const { user } = this.props;
+    const { user, router } = this.props;
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+    const currentPathCleaned = currentPath.replace(/^\/+|\/+$/g, '');
+    if (currentPathCleaned === 'login') {
+      this.setState({ openLogInModal: true });
+    }
+    if (currentPathCleaned === 'register') {
+      this.setState({ openSignUpModal: true });
+    }
+
     if (user._id) {
       this.handleCountNotificationMessage();
     }
@@ -91,8 +100,25 @@ class Sidebar extends PureComponent<IProps> {
 
   componentDidUpdate(prevProps: any) {
     const { user } = this.props;
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+    const currentPathCleaned = currentPath.replace(/^\/+|\/+$/g, '');
+
     if (user._id && prevProps.user._id !== user._id) {
       this.handleCountNotificationMessage();
+    }
+
+    // This method will activate login popup once per day if the user is not logged in
+    if (currentPathCleaned !== 'login' && currentPathCleaned !== 'register' && typeof window !== 'undefined') {
+      const loginPopupToday = localStorage.getItem('loginPopupToday');
+      const currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0);
+
+      if (user && !user._id && (loginPopupToday === '' || new Date(loginPopupToday) < currentDate)) {
+        localStorage.setItem('loginPopupToday', currentDate.toISOString());
+        setTimeout(() => {
+          this.setState({ openLogInModal: true });
+        }, 5000);
+      }
     }
   }
 
@@ -196,16 +222,23 @@ class Sidebar extends PureComponent<IProps> {
               <Layout.Header className="header" id="layoutHeader">
                 <a href="https://trax.so/">
                   <div className="trax-logo-wrapper-alternate">
-                    <img src={isTablet ? "/static/LogoAlternateCropped.png" : "/static/LogoAlternate.png"} width={isTablet ? "30px" : "85px"} alt="Loading..." />
+                    <img src={isTablet ? "/static/LogoAlternateCropped.png" : "/static/LogoAlternate.png"} width={isTablet ? "30px" : "100px"} alt="Loading..." />
                   </div>
                 </a>
+                {!isTablet && (
+                  <div className='beta-tag-wrapper'>
+                    <span>v2.7</span>
+                  </div>
+                )}
+
                 <div className="nav-bar">
                   <ul className={user._id ? 'nav-icons' : 'nav-icons custom'}>
                     <li className={router.pathname === '/home' ? 'active' : ''}>
                       <Link href="/home">
-                            <AiOutlineHome style={{fontSize: '24px', position: 'relative', top: '4px', marginTop: '-4px', left: '-2px'}} className={router.pathname === '/home' ? 'active-icon' : ''}/>
+                      <FontAwesomeIcon icon={faNewspaper} className={router.pathname === '/home' ? 'active-icon' : ''}/>
+                            {/* <AiOutlineHome style={{fontSize: '24px', position: 'relative', top: '4px', marginTop: '-4px', left: '-2px'}} /> */}
                            {!isTablet && (
-                            <span className={router.pathname === '/home' ? 'page-name-active' : 'page-name'}>Home</span>
+                            <span className={router.pathname === '/home' ? 'page-name-active' : 'page-name'}>Feed</span>
                            )}
                       </Link>
                     </li>
@@ -245,9 +278,9 @@ class Sidebar extends PureComponent<IProps> {
 
                       {user._id && !user.isPerformer && (
                         <li key="wallet_user" className={router.pathname === '/user/my-payments' ? 'active' : ''}>
-                          <Link href="/user/my-payments">
+                          <Link href="/user/my-payments" style={{display: 'flex'}}>
                             <>
-                            <BiWalletAlt style={{fontSize: '24px', position: 'relative', top: '4px', marginTop: '-4px', left: '1.5px'}} className={router.pathname === '/user/my-payments' ? 'active-icon' : ''} />
+                            <BiWalletAlt style={{fontSize: '18.5px', position: 'relative', top: '3px', marginTop: '-4px', left: '1.5px'}} className={router.pathname === '/user/my-payments' ? 'active-icon' : ''} />
                             {!isTablet && (
                             <span style={{marginLeft: '14px'}} className={router.pathname === '/user/my-payments' ? 'page-name-active' : 'page-name'} >Wallet</span>
                             )}
@@ -259,7 +292,7 @@ class Sidebar extends PureComponent<IProps> {
                       <>
                         <li key="login" className='logged-out-link-wrapper' onClick={()=> this.setState({openLogInModal: true})}>
                           <div className='logged-out-link'>
-                            Log in
+                            Sign in to <span className='logged-out-trax'>TRAX</span>
                           </div>
                         </li>
                       </>
@@ -290,10 +323,24 @@ class Sidebar extends PureComponent<IProps> {
                           </>
                         </Link>
                       </li>
+
+                      <li key="purchased" className={router.pathname === '/user/purchased' ? 'active' : ''}>
+                        <Link href="/user/purchased" as="/user/purchased">
+                            <>
+
+                            <FontAwesomeIcon icon={faBagShopping} className={router.pathname === '/user/purchased' ? 'active-icon' : ''} style={{marginLeft: 5}}/>
+                            {' '}
+                            {!isTablet && (
+                            <span className={router.pathname === '/user/purchased' ? 'page-name-active' : 'page-name'} style={{marginLeft: 12}}>Purchased</span>
+                            )}
+                          </>
+                        </Link>
+                      </li>
+
                     {user._id && !user.isPerformer &&(
                     <li key="avatar" aria-hidden className={router.pathname === '/user/account' ? 'active' : ''}>
                       <Link href="/user/account" as="/user/account">
-                      {user?.avatar ? <Avatar style={{marginLeft: '2px', minWidth: '25px', minHeight: '25px', height: '25px', width: '25px'}} src={user?.avatar || '/static/no-avatar.png'} /> : <UserIcon />}
+                      {user?.avatar ? <Avatar style={{marginLeft: '2px', minWidth: '21px', minHeight: '21px', height: '21px', width: '21px'}} src={user?.avatar || '/static/no-avatar.png'} /> : <UserIcon />}
                       {!isTablet && (
                           <span style={{marginLeft: '14px'}} className={router.pathname === '/user/account' ? 'page-name-active' : 'page-name'}>{user.name.length > 12 ? `${user.name.substring(0, 12)}...` : user.name }</span>
                       )}
@@ -336,9 +383,9 @@ class Sidebar extends PureComponent<IProps> {
                       <Divider /> */}
                       <li key="signOut" className='sign-out-btn-wrapper'>
                         <div className="menu-item sign-out-btn" aria-hidden onClick={() => this.beforeLogout()}>
-                          <LogoutOutlined />
+                          <LogoutOutlined style={{fontSize: '17px'}}/>
                           {!isTablet && (
-                          <span className="page-name">Sign Out</span>
+                          <span className="page-name">Sign out</span>
                           )}
                         </div>
                       </li>
@@ -350,8 +397,8 @@ class Sidebar extends PureComponent<IProps> {
                       <li className={router.pathname === '/artist/my-post/create' ? 'active' : ''}>
                         <Link href="/artist/my-post/create">
                         <>
-                          
-                          <FontAwesomeIcon icon={faSquarePlus} className={router.pathname === '/artist/my-post/create' ? 'active-icon' : ''} style={{marginLeft: 4}}/> 
+
+                          <FontAwesomeIcon icon={faSquarePlus} className={router.pathname === '/artist/my-post/create' ? 'active-icon' : ''} style={{marginLeft: 4}}/>
                           {!isTablet && (
                           <span className={router.pathname === '/artist/my-post/create' ? 'page-name-active' : 'page-name'} style={{marginLeft: 16}}>Create</span>
                           )}
@@ -361,8 +408,8 @@ class Sidebar extends PureComponent<IProps> {
                       <li key="content" className={router.pathname === '/artist/my-content' ? 'active' : ''}>
                       <Link href="/artist/my-content" as="/artist/my-content">
                         <>
-                          
-                          <FontAwesomeIcon icon={faCirclePlay} className={router.pathname === '/artist/my-content' ? 'active-icon' : ''} style={{marginLeft: 3}}/> 
+
+                          <FontAwesomeIcon icon={faCirclePlay} className={router.pathname === '/artist/my-content' ? 'active-icon' : ''} style={{marginLeft: 3}}/>
                           {!isTablet && (
                           <span className={router.pathname === '/artist/my-content' ? 'page-name-active' : 'page-name'} style={{marginLeft: 15.5}}>Content</span>
                           )}
@@ -370,11 +417,11 @@ class Sidebar extends PureComponent<IProps> {
                       </Link>
                       </li>
                       <li key="earnings" className={router.pathname === '/artist/earnings-page' ? 'active' : ''}>
-                      <Link href="/artist/earnings-page" as="/artist/earnings-page">
+                      <Link href="/artist/earnings-page" as="/artist/earnings-page" style={{display: 'flex'}}>
                         <>
                           {/* <DollarOutlined  /> */}
                           {/* <FontAwesomeIcon icon={faMoneyBillWave} /> */}
-                          <RiMoneyDollarCircleLine className={router.pathname === '/artist/earnings-page' ? 'active-icon' : ''} style={{fontSize: '25px', position: 'relative', top: '4px', marginTop: '-4px', left: '2px'}}/> 
+                          <RiMoneyDollarCircleLine className={router.pathname === '/artist/earnings-page' ? 'active-icon' : ''} style={{fontSize: '20px', position: 'relative', top: '3px', marginTop: '-4px', left: '2px'}}/>
                           {!isTablet && (
                           <span style={{marginLeft: '15px'}} className={router.pathname === '/artist/earnings-page' ? 'page-name-active' : 'page-name'}>Earnings</span>
                           )}
@@ -387,7 +434,7 @@ class Sidebar extends PureComponent<IProps> {
                         as={`/artist/profile?id=${user?.username || user?._id}`}
                       >
                         <>
-                        {user?.avatar ? <Avatar style={{marginLeft: '2px', minWidth: '25px', minHeight: '25px', height: '25px', width: '25px'}} src={user?.avatar || '/static/no-avatar.png'} /> : <UserIcon />}
+                        {user?.avatar ? <Avatar style={{marginLeft: '2px', minWidth: '21px', minHeight: '21px', height: '21px', width: '21px'}} src={user?.avatar || '/static/no-avatar.png'} /> : <UserIcon />}
                         {!isTablet && (
                           <span style={{marginLeft: '14px'}} className={router.pathname === '/artist/profile' ? 'page-name-active' : 'page-name'}>{user.name.length > 12 ? `${user.name.substring(0, 12)}...` : user.name }</span>
                         )}
@@ -422,19 +469,19 @@ class Sidebar extends PureComponent<IProps> {
                         </>
                       </Link>
                       </li> */}
-                      
-                    
+
+
                       {/* <Divider />
-                    
+
                       <CopyReferralCode referralCode={referralCode} />
-                    
+
                       <Divider /> */}
-                    
+
                       <li key="signOut" className='sign-out-btn-wrapper'>
                         <div className="menu-item sign-out-btn" aria-hidden onClick={() => this.beforeLogout()}>
-                          <LogoutOutlined />
+                          <LogoutOutlined style={{fontSize: '17px'}}/>
                           {!isTablet && (
-                          <span className="page-name ">Sign Out</span>
+                          <span className="page-name ">Sign out</span>
                           )}
                         </div>
                       </li>
@@ -460,7 +507,7 @@ class Sidebar extends PureComponent<IProps> {
                           {user?.earlyBird ? <Image preview={false} className="early-bird-icon" src="/static/traxXLogoGreen.svg" /> : ''}
                           {' '}
                         </span>
-                        
+
                       </span>
                     </div>
                     <div className="sub-info">
@@ -492,11 +539,12 @@ class Sidebar extends PureComponent<IProps> {
               <div className='log-in-modal-wrapper'>
                 <Modal
                   key="purchase_post"
-                  className="log-in-modal"
+                  className="auth-modal"
                   title={null}
                   open={openLogInModal}
                   footer={null}
-                  width={600}
+                  // width={600}
+                  style={{minWidth: '100vw'}}
                   destroyOnClose
                   onCancel={() => this.setState({ openLogInModal: false })}
                 >
@@ -507,31 +555,33 @@ class Sidebar extends PureComponent<IProps> {
               <div className='sign-in-modal-wrapper'>
                 <Modal
                   key="purchase_post"
-                  className="sign-in-modal"
+                  className="auth-modal"
                   title={null}
                   open={openSignUpModal}
                   footer={null}
-                  width={600}
+                  // width={600}
+                  style={{minWidth: '100vw'}}
                   destroyOnClose
                   onCancel={() => this.setState({ openSignUpModal: false })}
                 >
-                  <SignUpModal onFinish={this.handleOpenModal.bind(this)}/>
+                  <SignUpModal onFinish={this.handleOpenModal.bind(this)} />
                 </Modal>
               </div>
-              <div className='email-sign-up-modal-wrapper'>
+              {/* <div className='email-sign-up-modal-wrapper'>
                 <Modal
                   key="purchase_post"
                   className="email-sign-up-modal"
                   title={null}
                   open={openEmailSignUpModal}
                   footer={null}
-                  width={600}
+                  // width={600}
+                  style={{minWidth: '100vw'}}
                   destroyOnClose
                   onCancel={() => this.setState({ openEmailSignUpModal: false })}
                 >
                   <EmailSignUpModal onClose={this.handleOpenModal.bind(this)}/>
                 </Modal>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

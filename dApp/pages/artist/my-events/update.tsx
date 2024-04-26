@@ -6,7 +6,7 @@ import { ShopOutlined } from '@ant-design/icons';
 import PageHeading from '@components/common/page-heading';
 import { productService } from '@services/product.service';
 import { IProduct, IUIConfig } from 'src/interfaces';
-import { FormTicket } from '@components/product/form-ticket';
+import { FormTicket } from '@components/ticket/form-ticket';
 import Router from 'next/router';
 import { getResponseError } from '@lib/utils';
 

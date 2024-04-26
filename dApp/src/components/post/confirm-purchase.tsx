@@ -1,7 +1,8 @@
-import { IFeed } from '@interfaces/index';
+import { IFeed, ISettings } from '@interfaces/index';
 import {
   Avatar, Button, Form, Select, InputNumber, Input, message
 } from 'antd';
+import { connect } from 'react-redux';
 import {
   LoadingOutlined
 } from '@ant-design/icons';
@@ -21,11 +22,12 @@ const { Option } = Select;
 
 interface IProps {
   feed: IFeed;
+  settings: ISettings;
   onFinish: Function;
   submiting: boolean;
 }
 
-export class PurchaseFeedForm extends PureComponent<IProps> {
+class PurchaseFeedForm extends PureComponent<IProps> {
   state = {
     price: 0,
     // currency: 'fiat',
@@ -51,17 +53,15 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
   }
 
   async componentDidMount() {
-    const { feed } = this.props;
+    const { feed, settings } = this.props;
     await this.getData()
     let identity;
     const authClient = await AuthClient.create();
-    let host;
+    const host = settings.icHost;
     let agent;
 
-    if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+    if (settings.icNetwork !== true) {
       identity = authClient.getIdentity();
-
-      host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
       agent = new HttpAgent({
         identity,
         host
@@ -69,7 +69,6 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
 
       await agent.fetchRootKey();
     } else {
-      host = process.env.NEXT_PUBLIC_HOST as string;
       identity = await authClient.getIdentity();
       agent = new HttpAgent({
         identity,
@@ -163,7 +162,7 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
           </div>
           
           <div className='payment-details'>
-          <span>Payment details</span>
+          
           <div className='payment-recipient-wrapper'>
               <div className='payment-recipient-avatar-wrapper'>
                 <Avatar src={feed?.performer?.avatar || '/static/no-avatar.png'} />
@@ -229,11 +228,11 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
             {paymentOption === "noPayment" && (
               <Option value="noPayment" key="noPayment" className="payment-type-option-content">
                 <div className='payment-type-img-wrapper'>
-                <FontAwesomeIcon style={{width: 45, height: 45}} icon={faXmark} />
+                <FontAwesomeIcon style={{width: 40, height: 40}} icon={faXmark} />
                 </div>
                 <div className='payment-type-info'>
-                  <span style={{}}>No Payment Method Connected</span>
-                    <p>Please visit settings to add a card <br /> or connect a wallet</p>
+                  <span style={{}}>Connect payment method</span>
+                    <p>Visit the Settings page to connect</p>
                     {/* <p>Click to add crypto wallet</p> */}
                 </div>
               </Option>
@@ -243,7 +242,7 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
             
           </div>
           <div className='currency-picker-btns-container'>
-            <span>Select a currency</span>
+            
             <div className='currency-picker-btns-wrapper'>
             {cards.length > 0 && (
               <div className='currency-picker-btn-wrapper' onClick={()=> this.changeTicker('USD')}>
@@ -263,7 +262,7 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
           </div>
 
           <div className='tip-input-number-container'>
-            <span>Payment amount</span>
+            <span>Total</span>
             <div className='tip-input-number-wrapper'>
               {selectedCurrency === 'USD' && (
                 <p>$</p>
@@ -300,3 +299,10 @@ export class PurchaseFeedForm extends PureComponent<IProps> {
     );
   }
 }
+
+const mapStates = (state: any) => ({
+  settings: { ...state.settings }
+});
+
+const mapDispatch = {};
+export default connect(mapStates, mapDispatch)(PurchaseFeedForm);

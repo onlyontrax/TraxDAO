@@ -76,14 +76,12 @@ export class AuthService extends APIRequest {
     return this.post('/auth/users/register', data);
   }
 
-  registerPerformer(documents: {
-    file: File;
-    fieldname: string;
-  }[], data: any, onProgress?: Function) {
-    return this.upload('/auth/performers/register', documents, {
-      onProgress,
-      customData: data
-    });
+  registerPerformer(data: any) {
+    return this.post('/auth/performers/register', data);
+  }
+
+  registerCheckField(data: any) {
+    return this.post('/auth/performers/check-field', data);
   }
 
   userSwitchToPerformer(userId: string) {

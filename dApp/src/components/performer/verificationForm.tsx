@@ -11,6 +11,7 @@ import {
 import NextImage from 'next/image';
 import { PureComponent } from 'react';
 import { IPerformer } from 'src/interfaces';
+import { Button } from 'antd';
 import styles from './performer.module.scss';
 
 const layout = {
@@ -20,132 +21,77 @@ const layout = {
 
 interface IProps {
   user: IPerformer;
+  registeredUser?: IPerformer;
+  signUp?: boolean;
 }
 
 export class PerformerVerificationForm extends PureComponent<IProps> {
   state = {
-    idImage: '',
-    idVerificationFileId: '',
-    documentVerificationFileId: '',
-    documentImage: ''
+    currentUser: null,
   }
-
   componentDidMount() {
-    const { user } = this.props;
-    if (user.documentVerification) {
-      this.setState((state) => ({
-        ...state,
-        documentVerificationFileId: user?.documentVerification?._id,
-        documentImage: user?.documentVerification?.url
-      }));
-    }
-    if (user.idVerification) {
-      this.setState((state) => ({
-        ...state,
-        idVerificationFileId: user?.documentVerification?._id,
-        idImage: user?.documentVerification?.url
-      }));
+    const { user, registeredUser } = this.props;
+    if (registeredUser) {
+      this.setState({currentUser: registeredUser});
+
+    } else if (user) {
+      this.setState({currentUser: user});
     }
   }
 
-  onFileUploaded(type, file) {
-    if (file && type === 'idFile') {
-      this.setState((state) => ({
-        ...state,
-        idVerificationFileId: file?.response.data?._id,
-        idImage: file?.response.data?.url
-      }));
-    }
-    if (file && type === 'documentFile') {
-      this.setState((state) => ({
-        ...state,
-        documentVerificationFileId: file?.response.data?._id,
-        documentImage: file?.response.data?.url
-      }));
-    }
-    message.success('Photo has been uploaded!');
-  }
 
   render() {
-    const {
-      idImage, documentImage
-    } = this.state;
-    const documentUploadUrl = performerService.getDocumentUploadUrl();
-    const headers = {
-      authorization: authService.getToken() || ''
-    };
+    const { currentUser } = this.state;
+
+    const user = currentUser
+
+    if (!user) {
+      return <div>Loading...</div>;
+    }
+
     return (
       <div className={styles.componentsPerformerVerificationFormModule} style={{ display: 'flex', flexDirection: 'column' }}>
-        <Form
-          {...layout}
-          name="nest-messages"
-          labelAlign="left"
-          className="account-form"
-        >
-          <div style={{ width: '100%' }}>
-            <h1 className="profile-page-heading">Document identification</h1>
-          </div>
-            <Col xs={24} sm={24} md={24}>
-              <p className="account-form-item-tag">Upload photo</p>
-              <Form.Item
-                labelCol={{ span: 24 }}
-                className="artist-photo-verification"
-              >
-                <div className="document-upload">
-                  <ImageUpload accept="image/*" headers={headers} uploadUrl={`${documentUploadUrl}/idVerificationId`} onUploaded={this.onFileUploaded.bind(this, 'idFile')} />
-                  {idImage ? (
-                    <Image alt="id-img" src={idImage} style={{ height: '150px' }} />
-                  ) : <NextImage src="/static/front-id.png" style={{ height: '250px', width:'250px' }} width="250" height="250" alt="id-img" objectFit="cover" />}
+        {this.props.signUp ? (
+            <div>
+              <p className="text-trax-gray-500 text-base py-6 text-left">To verify your account, click on the button below.</p>
+              <div className='log-in-btn-wrapper'>
+                <Form.Item style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                  <Button
+                    className="log-in-btn sign-up place-content-center"
+                    href={user ? user.identityVerificationStatus.link : ''}
+                    target="_blank"
+                  >
+                    Verify your identity
+                  </Button>
+                </Form.Item>
+              </div>
+            </div>
+          ) : (
+            <div className="account-form" >
+              <div style={{ width: '100%' }}>
+                <h1 className="profile-page-heading">Identity verification</h1>
+              </div>
+              {user.verifiedDocument && (
+                <div>
+                  Your identification has been verified. Thank you.
+                </div>)}
+              {!user.verifiedDocument && (
+                <div>
+                  <p className="account-form-item-tag">Your identity verification status is: {user.identityVerificationStatus.status}</p>
+                  {user.identityVerificationStatus.lastStatus !== '' && <p className="account-form-item-tag">Your last identity verification status was: {user.identityVerificationStatus.lastStatus}</p>}
+                  {user.identityVerificationStatus.reasons.length > 0 && user.identityVerificationStatus.reasons.map((reason) => (
+                  <p className="account-form-item-tag">
+                    {reason}
+                  </p>
+                  ))}
+                  <p className="account-form-item-tag">Use this button to verify your identity.</p>
+
+                  <a target='_blank' href={user ? user.identityVerificationStatus.link : ''}>Verify your identity</a>
                 </div>
-                <div className="ant-form-item-explain" style={{ textAlign: 'left' }}>
-                  <ul className="list-issued-id">
-                    <div>
-                      <InformationCircleIcon style={{ height: '1.5rem', marginRight: '1rem' }} />
-                    </div>
-                    <p style={{ fontSize: '1rem', marginTop: '-0.25rem', color: '' }}>
-                      Please upload a valid form of identification.
-                      <br />
-                      {' '}
-                      Accepted formats include driving licenses, passports and government-issued identification.
-                    </p>
-                  </ul>
-                </div>
-              </Form.Item>
-            </Col>
-        </Form>
-        <Form
-          {...layout}
-          name="nest-messages"
-          labelAlign="left"
-          className="account-form"
-        >
-          <div style={{ width: '100%' }}>
-            <h1 className="profile-page-heading">Photo verification</h1>
-          </div>
-            <Col xs={24} sm={24} md={24}>
-              <p className="account-form-item-tag">Upload photo</p>
-              <Form.Item
-                labelCol={{ span: 24 }}
-                className="artist-photo-verification"
-              >
-                <div className="document-upload">
-                  <ImageUpload accept="image/*" headers={headers} uploadUrl={`${documentUploadUrl}/documentVerificationId`} onUploaded={this.onFileUploaded.bind(this, 'documentFile')} />
-                  {documentImage ? (
-                    <Image alt="id-img" src={documentImage} style={{ height: '150px' }} />
-                  ) : <NextImage src="/static/holding-id.jpg" style={{ height: '150px' }} width="150" height="150" alt="holding-id" />}
-                </div>
-                <div className="ant-form-item-explain" style={{ textAlign: 'left' }}>
-                  <ul className="list-issued-id">
-                    <div>
-                      <InformationCircleIcon style={{ height: '1.5rem', marginRight: '1rem' }} />
-                    </div>
-                    <p style={{ fontSize: '1rem', marginTop: '-0.25rem' }}>Take a selfie of you holding your ID. Both your face and your ID must be clearly visible without copying or editing</p>
-                  </ul>
-                </div>
-              </Form.Item>
-            </Col>
-        </Form>
-      </div>
+              )}
+            </div>
+          )}
+        </div>
     );
   }
 }

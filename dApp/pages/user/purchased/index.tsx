@@ -1,6 +1,7 @@
 import ScrollListFeed from '@components/post/scroll-list';
 import { ScrollListProduct } from '@components/product/scroll-list-item';
 import { ScrollListVideo } from '@components/video/scroll-list-item';
+import {PurchasedScrollListTicket} from '@components/ticket/purchased-scroll-list-item';
 import { Layout, message, Tabs } from 'antd';
 import Head from 'next/head';
 import { PureComponent } from 'react';
@@ -13,7 +14,8 @@ import {
   galleryService,
   productService,
   utilsService,
-  videoService
+  videoService,
+  ticketService
 } from 'src/services';
 import styles from '../index.module.scss';
 
@@ -39,6 +41,8 @@ interface IStates {
   totalGalleries: number;
   products: any[];
   totalProducts: number;
+  tickets: any[],
+  totalTickets: number;
   tab: string;
   countries: any;
 }
@@ -60,7 +64,9 @@ const initialState = {
   totalGalleries: 0,
   products: [],
   totalProducts: 0,
-  tab: 'products',
+  tickets: [],
+  totalTickets: 0,
+  tab: 'videos',
   countries: null
 };
 
@@ -86,7 +92,6 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
     const { countries } = this.state;
     if (countries === null) {
       const data = await this.getData();
-
       this.setState({ countries: data.countries }, () => this.updateDataDependencies());
     } else {
       this.updateDataDependencies();
@@ -94,10 +99,10 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
   }
 
   updateDataDependencies() {
-    this.getPurchasedProducts();
+    this.getPurchasedVideos();
   }
 
-  async handlePagechange(key: 'feeds' | 'videos' | 'galleries' | 'products') {
+  async handlePagechange(key: 'feeds' | 'videos' | 'galleries' | 'products' | 'tickets') {
     const { currentPage } = this.state;
     this.setState({
       currentPage: { ...currentPage, [key]: currentPage[key] + 1 }
@@ -114,6 +119,9 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
     }
     if (key === 'products') {
       this.getPurchasedProducts();
+    }
+    if(key === 'tickets'){
+      this.getPurchasedTickets();
     }
   }
 
@@ -198,6 +206,25 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
     }
   }
 
+  async getPurchasedTickets() {
+    const { currentPage, limit, tickets } = this.state;
+    try {
+      await this.setState({ loading: true });
+      const resp = await ticketService.getPurchased({
+        limit,
+        offset: currentPage.product * limit
+      });
+      this.setState({
+        tickets: [...tickets, ...resp.data.data],
+        totalTickets: resp.data.total
+      });
+    } catch (error) {
+      message.error('Server error');
+    } finally {
+      this.setState({ loading: false });
+    }
+  }
+
   async loadData(key: string) {
     if (key === 'feeds' || undefined) {
       await this.getPurchasedPosts();
@@ -211,6 +238,9 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
     if (key === 'products') {
       await this.getPurchasedProducts();
     }
+    if (key === 'tickets') {
+      await this.getPurchasedTickets();
+    }
   }
 
   render() {
@@ -222,6 +252,8 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
       totalVideos,
       products,
       totalProducts,
+      tickets,
+      totalTickets,
       tab,
       countries 
     } = this.state;
@@ -232,7 +264,7 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
           <title>{`${ui?.siteName} | Purchased`}</title>
         </Head>
         <div className="main-container">
-          <h1 className="library-page-heading">Purchased</h1>
+          <h1 className="library-page-heading" style={{marginBottom: '2rem'}}>Purchased</h1>
           <div className="user-account">
             <Tabs defaultActiveKey={tab || 'products'} size="large" onChange={this.onTabsChange.bind(this)}>
               <Tabs.TabPane tab="Posts" key="feeds">
@@ -249,7 +281,7 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
                   loading={loading}
                   canLoadmore={totalFeeds > feeds.length}
                   loadMore={this.handlePagechange.bind(this, 'feeds')}
-                  notFoundText="No Purchased posts found"
+                  notFoundText="No purchased posts found"
                 />
               </Tabs.TabPane>
               <Tabs.TabPane tab="Tracks" key="videos">
@@ -265,7 +297,7 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
                   loading={loading}
                   canLoadmore={totalVideos > videos.length}
                   loadMore={this.handlePagechange.bind(this, 'videos')}
-                  notFoundText="No Purchased videos found"
+                  notFoundText="No purchased videos found"
                 />
               </Tabs.TabPane>
               <Tabs.TabPane tab="Products" key="products">
@@ -281,7 +313,23 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
                   items={products.map((p) => p)}
                   canLoadmore={totalProducts > products.length}
                   loadMore={this.handlePagechange.bind(this, 'products')}
-                  notFoundText="No Purchased products found"
+                  notFoundText="No purchased products found"
+                />
+              </Tabs.TabPane>
+              <Tabs.TabPane tab="Tickets" key="tickets">
+                <div className="heading-tab">
+                  <h4>
+                    {totalTickets > 0 && totalTickets}
+                    {' '}
+                    {totalTickets > 1 ? 'TICKETS' : 'TICKET'}
+                  </h4>
+                </div>
+                <PurchasedScrollListTicket
+                  loading={loading}
+                  items={tickets.map((p) => p)}
+                  canLoadmore={totalTickets > tickets.length}
+                  loadMore={this.handlePagechange.bind(this, 'tickets')}
+                  notFoundText="No purchased tickets found"
                 />
               </Tabs.TabPane>
             </Tabs>
