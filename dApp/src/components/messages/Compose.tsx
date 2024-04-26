@@ -1,28 +1,29 @@
 /* eslint-disable react/sort-comp */
 import { SendOutlined, SmileOutlined } from '@ant-design/icons';
 import { ImageMessageUpload } from '@components/messages/uploadPhoto';
-import { TipPerformerForm } from '@components/performer/tip-form';
+import TipPerformerForm from '@components/performer/tip-form';
 import { BadgeCheckIcon } from '@heroicons/react/solid';
 import { sendMessage, sentFileSuccess } from '@redux/message/actions';
 import { updateBalance } from '@redux/user/actions';
 import { authService, messageService, tokenTransctionService } from '@services/index';
+import { cryptoService } from '@services/crypto.service';
 import {
   Avatar, Modal, Popover, Progress, message
 } from 'antd';
 import Router from 'next/router';
 import { PureComponent, createRef } from 'react';
 import { connect } from 'react-redux';
-import { IUIConfig } from 'src/interfaces';
+import { IUIConfig, ISettings } from 'src/interfaces';
 import { Principal } from '@dfinity/principal';
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { AuthClient } from '@dfinity/auth-client';
 import { AccountIdentifier } from '@dfinity/nns';
 import { AccountBalanceArgs } from '@dfinity/nns/dist/candid/ledger';
-import type { _SERVICE as _SERVICE_LEDGER } from '../../smart-contracts/declarations/ledger/ledger.did';
-import type { _SERVICE as _SERVICE_TIPPING, TippingParticipants, Participants } from '../../smart-contracts/declarations/tipping/tipping.did';
-import { TransferArgs, Tokens, TimeStamp } from '../../smart-contracts/declarations/ledger/ledger.did';
-import { idlFactory as idlFactoryLedger } from '../../smart-contracts/declarations/ledger';
-import { idlFactory as idlFactoryTipping } from '../../smart-contracts/declarations/tipping';
+import type { _SERVICE as _SERVICE_LEDGER } from '../../smart-contracts/declarations/ledger/ledger2.did';
+import type { _SERVICE as _SERVICE_TIPPING, TippingParticipants, Participants } from '../../smart-contracts/declarations/tipping/tipping2.did';
+import { TransferArgs, Tokens, TimeStamp } from '../../smart-contracts/declarations/ledger/ledger2.did';
+import { idlFactory as idlFactoryLedger } from '../../smart-contracts/declarations/ledger/ledger.did.js';
+import { idlFactory as idlFactoryTipping } from '../../smart-contracts/declarations/tipping/tipping.did.js';
 import styles from './Compose.module.scss';
 import { Emotions } from './emotions';
 
@@ -35,6 +36,7 @@ interface IProps {
   conversation: any;
   currentUser: any;
   disabled?: boolean;
+  settings: ISettings;
 }
 
 class Compose extends PureComponent<IProps> {
@@ -105,7 +107,6 @@ class Compose extends PureComponent<IProps> {
       await this.sendTipFiat(price)
     }else{
       if(paymentOption === 'plug'){
-        console.log('plug payment option')
         await this.sendTipPlug(price, ticker)
       }else{
         await this.sendTipCrypto(price, ticker);
@@ -223,10 +224,14 @@ class Compose extends PureComponent<IProps> {
 
 
 
-  async sendTipPlug(amount:number, ticker:string){
-    const { conversation } = this.props;
-    let tippingCanID, ledgerCanID, ckBTCLedgerCanID, transfer;
+  async sendTipPlug(amount:number, ticker:string) {
+    const { conversation, settings } = this.props;
+    let transfer;
     let amountToSend = BigInt(Math.trunc(Number(amount) * 100000000));
+
+    const tippingCanID = settings.icTipping;
+    const ledgerCanID = settings.icLedger;
+    const ckBTCLedgerCanID = settings.icCKBTCMinter;
     this.setState({
       requesting: false,
       submiting: false,
@@ -234,31 +239,15 @@ class Compose extends PureComponent<IProps> {
       tipProgress: 0
     });
 
-    if((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic'){
-      tippingCanID = process.env.NEXT_PUBLIC_TIPPING_CANISTER_ID_LOCAL as string;
-      ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID_LOCAL as string;
-      ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID_LOCAL as string;
-    }else{
-      tippingCanID = process.env.NEXT_PUBLIC_TIPPING_CANISTER_ID as string;
-      ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID as string;
-      ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID as string;
-    }
-
-    // const identityCanisterId = (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? (process.env.NEXT_PUBLIC_IDENTITY_CANISTER as string) : (process.env.NEXT_PUBLIC_IDENTITY_CANISTER_LOCAL as string);
     const whitelist = [
-      // (process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic' && ledgerCanID, 
-      // (process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic' &&  ckBTCLedgerCanID, 
-      tippingCanID, 
+      tippingCanID,
     ];
-    console.log('whitelist: ', whitelist)
 
     if(typeof window !== 'undefined' && 'ic' in window){
       // @ts-ignore
       const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
         whitelist,
-        host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') 
-        ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) 
-        : (process.env.NEXT_PUBLIC_HOST as string)
+        host: settings.icHost
       }) : false;
 
       !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
@@ -267,11 +256,10 @@ class Compose extends PureComponent<IProps> {
 
       // @ts-ignore
       if (!window?.ic?.plug?.agent && connected  ) {
-        console.log('creating agent')
         // @ts-ignore
         await window.ic.plug.createAgent({ 
-          whitelist, 
-          host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) : (process.env.NEXT_PUBLIC_HOST as string) 
+          whitelist,
+          host: settings.icHost
         });
       }
       
@@ -280,8 +268,6 @@ class Compose extends PureComponent<IProps> {
         canisterId: tippingCanID
       });
 
-      // @ts-ignore
-      console.log(window.ic.plug.principalId); console.log(window.ic.plug.accountId); console.log("plug agent: ", window?.ic?.plug?.agent)
       const participants = [];
       
       if(connected){
@@ -289,9 +275,6 @@ class Compose extends PureComponent<IProps> {
         const requestBalanceResponse = await window.ic?.plug?.requestBalance();
         const icp_balance = requestBalanceResponse[0]?.amount;
         const ckBTC_balance = requestBalanceResponse[1]?.amount;
-
-        console.log("icp balance: ", icp_balance);
-        console.log("ckbtc balance: ", ckBTC_balance);
 
         if(ticker === 'ckBTC'){
           if(ckBTC_balance >= amount){
@@ -381,7 +364,7 @@ class Compose extends PureComponent<IProps> {
 
 
   async sendTipCrypto(amount: number, ticker: string) {
-    const { conversation } = this.props;
+    const { conversation, settings } = this.props;
 
     if (!conversation?.recipientInfo?.wallet_icp) {
       this.setState({
@@ -408,18 +391,17 @@ class Compose extends PureComponent<IProps> {
       let sender;
       let tippingActor;
       let agent;
-      let tippingCanID;
-      let ledgerCanID;
-      if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+
+      const tippingCanID = settings.icTipping;
+      const ledgerCanID = settings.icLedger;
+
+      if (settings.icNetwork !== true) {
         await authClient.login({
-          identityProvider: process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string,
+          identityProvider: cryptoService.getIdentityProviderLink(),
           onSuccess: async () => {
             identity = authClient.getIdentity();
 
-            tippingCanID = process.env.NEXT_PUBLIC_TIPPING_CANISTER_ID_LOCAL as string;
-            ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID_LOCAL as string;
-
-            const host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
+            const host = settings.icHost;
 
             agent = new HttpAgent({
               identity,
@@ -450,10 +432,7 @@ class Compose extends PureComponent<IProps> {
           }
         });
       } else {
-        tippingCanID = process.env.NEXT_PUBLIC_TIPPING_CANISTER_ID as string;
-        ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID as string;
-
-        const host = process.env.NEXT_PUBLIC_HOST as string;
+        const host = settings.icHost;
 
         await authClient.login({
           onSuccess: async () => {
@@ -598,7 +577,8 @@ Compose.defaultProps = {
 const mapStates = (state: any) => ({
   sendMessageStatus: state.message.sendMessage,
   currentUser: state.user.current,
-  ui: state.ui
+  ui: state.ui,
+  settings: { ...state.settings }
 });
 
 const mapDispatch = { sendMessage, sentFileSuccess, updateBalance };

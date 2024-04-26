@@ -1,0 +1,20 @@
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="20" height="20" fill="#1E1E1E"/>
+<g id="Desktop - 6" clip-path="url(#clip0_0_1)">
+<rect width="1440" height="1024" transform="translate(-191 -136)" fill="white"/>
+<rect id="Rectangle 4" x="-191" y="-136" width="956" height="1024" fill="#1E1E1E"/>
+<rect id="Rectangle 10" x="-196" y="-161" width="956" height="1049" fill="url(#paint0_angular_0_1)"/>
+<g id="Frame">
+<path id="Vector" d="M13.125 16.25L6.875 10L13.125 3.75" stroke="#E5FF89" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</g>
+<defs>
+<radialGradient id="paint0_angular_0_1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(282 313.304) rotate(90) scale(574.696 523.746)">
+<stop offset="0.501509"/>
+<stop offset="1" stop-color="#141414"/>
+</radialGradient>
+<clipPath id="clip0_0_1">
+<rect width="1440" height="1024" fill="white" transform="translate(-191 -136)"/>
+</clipPath>
+</defs>
+</svg>

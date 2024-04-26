@@ -8,18 +8,20 @@ type StatusResponse =
    ckbtc_balance: opt nat;
    cycles: opt nat;
    heap_memory_size: opt nat;
-   icp_balance: opt Tokens;
+   icp_balance: opt Tokens__1;
    memory_size: opt nat;
+   trax_balance: opt nat;
    version: opt nat;
  };
 type StatusRequest = 
  record {
-   ckbtc_balance: bool;
-   cycles: bool;
-   heap_memory_size: bool;
-   icp_balance: bool;
-   memory_size: bool;
-   version: bool;
+   ckbtc_balance: opt bool;
+   cycles: opt bool;
+   heap_memory_size: opt bool;
+   icp_balance: opt bool;
+   memory_size: opt bool;
+   trax_balance: opt bool;
+   version: opt bool;
  };
 type Percentage = float64;
 type Participants = 
@@ -29,13 +31,13 @@ type Participants =
  };
 type PPV = 
  service {
-   accountBalance: (principal) -> (Tokens__1);
+   accountBalance: (principal) -> (Tokens);
    accountIdentifierToBlob: (AccountIdentifier__2) ->
     (AccountIdentifierToBlobResult);
    addPPVContent: (ContentID, Content) -> ();
    canisterAccount: () -> (AccountIdentifier__1) query;
-   canisterBalance: () -> (Tokens__1);
    changePlatformFee: (float64) -> ();
+   ckbtcBalanceOfCanister: () -> (nat);
    cyclesBalance: () -> (nat);
    drainCanisterBalance: (nat64, principal, Ticker) -> (bool);
    fanHasPaid: (ContentID, FanID) -> (bool) query;
@@ -71,12 +73,14 @@ type PPV =
    getStatus: (opt StatusRequest) -> (opt StatusResponse);
    get_account_identifier: (GetAccountIdentifierArgs) ->
     (GetAccountIdentifierResult) query;
+   icpBalanceOfCanister: () -> (Tokens);
    purchaseContent: (nat64, ContentID, text, nat64) -> ();
    removeContent: (ContentID) -> ();
    showEntriesOfContentMap: () -> (vec record {
                                          ContentID;
                                          Content;
                                        });
+   traxBalanceOfCanister: () -> (nat);
    updatePPVContent: (ContentID, Content) -> ();
  };
 type GetAccountIdentifierSuccess = record {

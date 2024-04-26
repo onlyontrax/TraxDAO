@@ -8,7 +8,7 @@ import {
   moreFeeds, moreFeedsSuccess, moreFeedsFail,
   getVideoFeeds, getVideoFeedsFail, getVideoFeedsSuccess,
   getPhotoFeeds, getPhotoFeedsFail, getPhotoFeedsSuccess, moreVideoFeeds, morePhotoFeeds, morePhotoFeedsSuccess, morePhotoFeedsFail,
-  getContentFeeds, moreContentFeeds
+  getContentFeeds, moreContentFeeds, getContentFeedsSuccess, getContentFeedsFail, moreContentFeedsSuccess, moreContentFeedsFail
 } from './actions';
 
 const performerSagas = [
@@ -41,10 +41,10 @@ const performerSagas = [
     * worker(data: IReduxAction<any>) {
       try {
         const resp = yield feedService.userSearchContentFeeds(data.payload);
-        yield put(getFeedsSuccess(resp.data));
+        yield put(getContentFeedsSuccess(resp.data));
       } catch (e) {
         const error = yield Promise.resolve(e);
-        yield put(getFeedsFail(error));
+        yield put(getContentFeedsFail(error));
       }
     }
   },
@@ -53,10 +53,10 @@ const performerSagas = [
     * worker(data: IReduxAction<any>) {
       try {
         const resp = yield feedService.userSearchContentFeeds(data.payload);
-        yield put(moreFeedsSuccess(resp.data));
+        yield put(moreContentFeedsSuccess(resp.data));
       } catch (e) {
         const error = yield Promise.resolve(e);
-        yield put(moreFeedsFail(error));
+        yield put(moreContentFeedsFail(error));
       }
     }
   },

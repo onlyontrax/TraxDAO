@@ -1,8 +1,8 @@
 import { connect } from 'react-redux';
 import { SearchFilter } from '@components/common/search-filter';
-import { TableListProduct } from '@components/product/table-list-product';
+import { TableListTicket } from '@components/ticket/table-list-ticket';
 import { IPerformer, IUIConfig } from '@interfaces/index';
-import { productService } from '@services/product.service';
+import { ticketService } from '@services/ticket.service';
 import {
   Button,
   Col, Layout,
@@ -66,7 +66,7 @@ class Tickets extends PureComponent<IProps> {
         filter, limit, sort, sortBy, pagination
       } = this.state;
       await this.setState({ searching: true });
-      const resp = await productService.search({
+      const resp = await ticketService.search({
         ...filter,
         limit,
         offset: (page - 1) * limit,
@@ -95,7 +95,7 @@ class Tickets extends PureComponent<IProps> {
     }
     try {
       const { pagination } = this.state;
-      await productService.delete(id);
+      await ticketService.delete(id);
       message.success('Deleted successfully');
       await this.search(pagination.current);
     } catch (e) {
@@ -148,7 +148,7 @@ class Tickets extends PureComponent<IProps> {
             </Row>
           </div>
           <div className="table-responsive">
-            <TableListProduct
+            <TableListTicket
               dataSource={list}
               rowKey="_id"
               loading={searching}

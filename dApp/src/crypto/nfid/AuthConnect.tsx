@@ -16,6 +16,10 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
   const [isAuthenticatedPlug, setIsAuthenticatedPlug] = useState(false);
   const [principalIdPlug, setPrincipalIdPlug] = useState('');
   const [principalId, setPrincipalId] = useState('');
+  const [plugLoading, setPlugLoading] = useState(false);
+  const [nfidLoading, setNFIDLoading] = useState(false);
+  const [iiLoading, setIILoading] = useState(false);
+  const [nfidAuthenticateInnitiated, setNfidAuthenticateInnitiated] = useState(false);
 
   const verifyPlugWalletConnection = async () => {
     // @ts-ignore
@@ -26,10 +30,6 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
     const principalIdPlug2 = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.agent?.getPrincipal() : '';
     setPrincipalIdPlug(principalIdPlug2);
   };
-
-  useEffect(() => {
-    verifyPlugWalletConnection();
-  }, []);
 
   const handleNFIDConnect = async () => {
     const userKey = crypto.randomBytes(64).toString('hex');
@@ -43,7 +43,8 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
       messageSigned: fetchedResult[0],
       publicKeyRaw: userKey,
       principalWallet: identity?.getPrincipal().toText(),
-      referralCode
+      referralCode,
+      walletType: 'nfid'
     };
     if (payload.principal === oldWalletPrincipal) {
       message.success('Wallet Principal you are trying to set is the same.');
@@ -64,6 +65,8 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
   };
 
   const handlePlugWalletConnect = async () => {
+    setPlugLoading(true);
+    await verifyPlugWalletConnection();
     const userKey = crypto.randomBytes(64).toString('hex');
     const fetchedResult = await cryptoService.getCanisterHashTokenwithPlugWallet(userKey);
     const referralCode = typeof window !== 'undefined' ? localStorage.getItem('referralCode') : '';
@@ -75,27 +78,36 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
       messageSigned: fetchedResult[0],
       publicKeyRaw: userKey,
       principalWallet: principalIdPlug || 'x',
-      referralCode
+      referralCode,
+      walletType: 'plugWallet'
     };
     if (payload.principal === oldWalletPrincipal) {
       message.success('Wallet Principal you are trying to set is the same.');
       return;
     }
-
     if (isPerformer) {
       performerService.setWalletPrincipal(payload).then(val => {
         message.success('Wallet Principal has been set.');
         onNFIDConnect(payload.principal);
-      }).catch(err => { message.error('There was a problem in updating your wallet principal.'); });
+        setPlugLoading(false);
+      }).catch(err => { 
+        setPlugLoading(false);
+        message.error('There was a problem in updating your wallet principal.'); 
+      });
     } else {
       userService.setWalletPrincipal(payload).then(val => {
         message.success('Wallet Principal has been set.');
         onNFIDConnect(payload.principal);
-      }).catch(err => { message.error('There was a problem in updating your wallet principal.'); });
+        setPlugLoading(false);
+      }).catch(err => { 
+        setPlugLoading(false);
+        message.error('There was a problem in updating your wallet principal.'); 
+      });
     }
   };
 
   const handleInternetIdentityConnect = async (internetIdentity) => {
+    setIILoading(true);
     const userKey = crypto.randomBytes(64).toString('hex');
     const fetchedResult = await cryptoService.getCanisterHashToken(internetIdentity, userKey);
     const referralCode = typeof window !== 'undefined' ? localStorage.getItem('referralCode') : '';
@@ -107,7 +119,8 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
       messageSigned: fetchedResult[0],
       publicKeyRaw: userKey,
       principalWallet: principalIdPlug || 'x',
-      referralCode
+      referralCode,
+      walletType: 'internetIdentity'
     };
     if (payload.principal === oldWalletPrincipal) {
       message.success('Wallet Principal you are trying to set is the same.');
@@ -118,17 +131,31 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
       performerService.setWalletPrincipal(payload).then(val => {
         message.success('Wallet Principal has been set.');
         onNFIDConnect(payload.principal);
-      }).catch(err => { message.error('There was a problem in updating your wallet principal.'); });
+        setIILoading(false);
+      }).catch(err => { message.error('There was a problem in updating your wallet principal.'); setIILoading(false); });
     } else {
       userService.setWalletPrincipal(payload).then(val => {
         message.success('Wallet Principal has been set.');
         onNFIDConnect(payload.principal);
-      }).catch(err => { message.error('There was a problem in updating your wallet principal.'); });
+        setIILoading(false);
+      }).catch(err => { message.error('There was a problem in updating your wallet principal.'); setIILoading(false); });
     }
   };
 
+  useEffect(() => {
+    // This effect will run whenever isAuthenticated changes
+    if (isAuthenticated && nfidAuthenticateInnitiated) {
+      handleNFIDConnect();
+    }
+  }, [isAuthenticated]);
+
   const handleAuthenticate = () => {
-    authenticate();
+    if (isAuthenticated) {
+      handleNFIDConnect();
+    } else {
+      authenticate();
+      setNfidAuthenticateInnitiated(true);
+    }
   };
 
   const handleSignOut = () => {
@@ -137,31 +164,19 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
 
   return (
     <div style={{display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', marginTop: '0.2rem', gap: '10px'}}>
-      {isAuthenticated && (
-      <div>
-        <div className="NFIDConnect">
-          <Button onClick={handleNFIDConnect} htmlType="button" type="primary" className="nfid-connect-button">
-            <span>Set NFID Principal</span>
-&nbsp;
-            <CopyOutlined className="nfid-icon" />
-          </Button>
-        </div>
+      <div className="NFIDAuth">
+        <AuthButton from="sign-up" onSignOut={handleSignOut} onAuthenticate={handleAuthenticate} />
       </div>
-      )}
-      {!isAuthenticated && (
-        <div className="NFIDAuth">
-          <AuthButton from={"sign-up"} onSignOut={handleSignOut} onAuthenticate={handleAuthenticate} />
-        </div>
-      )}
       <div className="NFIDAuth">
         <AuthPlugWallet
           isAuthenticated={isAuthenticatedPlug}
           handlePlugWalletConnect={handlePlugWalletConnect}
           currentPrincipal={principalIdPlug}
+          plugLoading={plugLoading}
           onSignOut={() => {}}
-          onConnect={() => {}}
+          onConnect={handlePlugWalletConnect}
           isLogin={false}
-          from={"sign-up"}
+          from="sign-up"
         />
       </div>
       <div className="NFIDAuth">
@@ -169,10 +184,11 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
           isAuthenticated={false}
           handleConnect={handleInternetIdentityConnect}
           principalId={principalId}
+          iiLoading={iiLoading}
           onSignOut={() => {}}
           onConnect={() => {}}
           isLogin={false}
-          from={"sign-up"}
+          from="sign-up"
         />
       </div>
     </div>

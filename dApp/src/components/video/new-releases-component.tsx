@@ -23,7 +23,12 @@ export default function MappedElement (video) {
         </div>
         <div className="track-info-wrapper">
           <p className="track-title">{ video.video.title }</p>
-          <p className="track-artist">{ video.video.performer.name }</p>
+          <Link 
+              href={`/artist/profile?id=${video.video?.performer?.username || video.video?.performer?._id}`}
+              as={`/artist/profile?id=${video.video?.performer?.username || video.video?.performer?._id}`} 
+              className="track-artist">
+            {video.video.performer.name }
+          </Link>
         </div>
       </Link>
     </div>

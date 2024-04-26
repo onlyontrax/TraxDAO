@@ -327,7 +327,7 @@ class FavouriteVideoPage extends PureComponent<IProps, IStates> {
                   loading={loading}
                   canLoadmore={totalVideos > videos.length}
                   loadMore={this.handlePagechange.bind(this, 'videos')}
-                  notFoundText="No bookmarked videos found"
+                  notFoundText="No bookmarked music found"
                 />
               </Tabs.TabPane>
               {/* <Tabs.TabPane tab="Albums" key="galleries">

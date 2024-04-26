@@ -28,9 +28,7 @@ export default function HotTracks() {
     <div className="hot-tracks-container">
       <p className="hot-tracks-header">Hot Tracks</p>
       <div className="hot-tracks-wrapper">
-        {videos.map((video) => (
-          <MappedElement key={video._id} video={video} />
-        ))}
+      {videos.map((video, index) => <MappedElement key={video._id} video={video} idValue={index}/> )}
       </div>
     </div>
   );

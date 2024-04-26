@@ -1,6 +1,12 @@
 import { APIRequest } from './api-request';
 
 export class ReactionService extends APIRequest {
+  postReactions(
+    id: string
+  ) {
+    return this.get(`/reactions/likes/${id}`);
+  }
+
   create(payload: any) {
     return this.post('/reactions', payload);
   }

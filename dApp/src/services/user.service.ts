@@ -27,6 +27,14 @@ export class UserService extends APIRequest {
   setWalletPrincipal(data: any) {
     return this.put('/users/setICPWallet', data);
   }
+
+  disconnectWalletPrincipal() {
+    return this.put('/users/disconnectICPWallet');
+  }
+
+  unsubscribe(data: any) {
+    return this.put('/auth/unsubscribe', data);
+  }
 }
 
 export const userService = new UserService();

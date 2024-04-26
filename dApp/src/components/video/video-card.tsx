@@ -23,6 +23,7 @@ export class VideoCard extends PureComponent<IProps> {
       || '/static/no-image.jpg';
     return (
       <div className="tracks-wrapper">
+        <div className='tracks-wrapper-overlay'>
         <Link
           href={`/video?id=${video.slug || video._id}`}
           as={`/video?id=${video.slug || video._id}`}
@@ -48,6 +49,7 @@ export class VideoCard extends PureComponent<IProps> {
             {/* )} */}
           </div>
         </Link>
+        </div>
       </div>
     );
   }

@@ -1,12 +1,13 @@
 /* eslint-disable react/require-default-props */
 import { InternetIdentityProvider } from '@internet-identity-labs/react-ic-ii-auth';
-import { cryptoService } from '@services/crypto.service';
+import { performerService, cryptoService } from '@services/index';
 import {
   Button,
   Col,
   Form, Input,
   Row,
-  Modal
+  Modal,
+  message
 } from 'antd';
 import { useState } from 'react';
 import { IPerformer } from 'src/interfaces';
@@ -37,11 +38,19 @@ export function PerformerWalletForm({ onFinish, user, updating }: IProps) {
   const InternetIdentityProviderProps:any = cryptoService.getNfidInternetIdentityProviderProps();
   const [openConnectModal, setOpenConnectModal] = useState<boolean>(false);
 
-  
-
   const onNFIDCopy = (value: string) => {
     setWalletNFID(value);
     form.setFieldsValue({ wallet_icp: value });
+    setOpenConnectModal(false);
+  };
+
+  const disconnectWallet = (value: string) => {
+    performerService.disconnectWalletPrincipal().then(val => {
+      message.success('Wallet Principal has been disconnected.');
+      setWalletNFID('');
+    }).catch(err => { message.error('There was a problem in disconnecting your wallet principal.'); });
+
+    form.setFieldsValue({ wallet_icp: '' });
   };
 
   const onFinishWrapper = (values: any) => {
@@ -75,23 +84,24 @@ export function PerformerWalletForm({ onFinish, user, updating }: IProps) {
                   { required: false, message: 'Please input your NFID principal address!' }
                 ]}
               >
-                <Input className="account-form-input" value={walletNFID} onChange={(e) => onNFIDCopy(e.target.value)} readOnly />
+                <Input className="account-form-input" value={walletNFID} readOnly />
               </Form.Item>
 
               <div style={{marginTop: '10px'}} className='connect-wallet-btn-wrapper'>
                 <Button style={{marginLeft: '0px'}} className='connect-wallet-btn' onClick={()=> setOpenConnectModal(true)}>
                   Connect
                 </Button>
+                <Button style={{marginLeft: '0px'}} className='connect-wallet-btn' onClick={()=> disconnectWallet('')}>
+                  Disconnect
+                </Button>
               </div>
-
-              
             </Col>
         </div>
       </div>
       <div className='sign-in-modal-wrapper'>
       <Modal
         key="purchase_post"
-        className="sign-in-modal"
+        className="auth-modal"
         title={null}
         open={openConnectModal}
         footer={null}
@@ -100,18 +110,18 @@ export function PerformerWalletForm({ onFinish, user, updating }: IProps) {
         onCancel={() => setOpenConnectModal(false)}
       >
         <div style={{marginBottom: '15px'}}>
-          
+
           <span style={{fontSize: '23px', fontWeight: '600', color: 'white'}}>Connect </span>
           <br />
           <span style={{ fontSize: '14px', color: 'grey'}}>Select your preferred wallet to connect to TRAX</span>
         </div>
         <InternetIdentityProvider {...InternetIdentityProviderProps}>
-                <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer oldWalletPrincipal={user.wallet_icp} />
-              </InternetIdentityProvider>
+          <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer oldWalletPrincipal={user.wallet_icp} />
+        </InternetIdentityProvider>
       </Modal>
     </div>
     </Form>
-    
+
   </>
   );
 }

@@ -6,6 +6,10 @@ export class PerformerService extends APIRequest {
     return this.get(this.buildUrl('/performers/user/search', query));
   }
 
+  searchGenre(query?: { [key: string]: any }) {
+    return this.get(this.buildUrl('/performers/user/searchGenre', query));
+  }
+
   randomSearch(query?: { [key: string]: any }) {
     return this.get(this.buildUrl('/performers/search/random', query));
   }
@@ -65,6 +69,10 @@ export class PerformerService extends APIRequest {
 
   setWalletPrincipal(data: any) {
     return this.put('/performers/setICPWallet', data);
+  }
+
+  disconnectWalletPrincipal() {
+    return this.put('/performers/disconnectICPWallet');
   }
 }
 

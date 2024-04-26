@@ -60,7 +60,31 @@ export const SETTING_KEYS = {
   STRIPE_SECRET_KEY: 'stripeSecretKey',
   AGORA_APPID: 'agoraAppId',
   AGORA_ENABLE: 'agoraEnable',
-  PAYMENT_GATEWAY: 'paymentGateway'
+  PAYMENT_GATEWAY: 'paymentGateway',
+  IDENTITY_ONFIDO_API_TOKEN: 'identityOnfidoApiToken',
+  IDENTITY_ONFIDO_SANDBOX: 'identityOnfidoSandbox',
+  IDENTITY_ONFIDO_WORKFLOW_ID: 'identityOnfidoWorkflowId',
+  IC_NETWORK: 'icNetwork',
+  IC_ENABLE_IC_STORAGE: 'icEnableIcStorage',
+  IC_HOST: 'icHost',
+  IC_HOST_CONTENT_MANAGER: 'icHostContentManager',
+  IC_CANISTERS_XRC: 'icXRC',
+  IC_CANISTERS_LEDGER: 'icLedger',
+  IC_CANISTERS_CKBTC_MINTER: 'icCKBTCMinter',
+  IC_CANISTERS_PPV: 'icPPV',
+  IC_CANISTERS_TIPPING: 'icTipping',
+  IC_CANISTERS_SUBSCRIPTIONS: 'icSubscriptions',
+  IC_CANISTERS_CONTENT_MANAGER: 'icContentManager',
+  IC_CANISTERS_CONTENT_ARTIST_ACCOUNT: 'icContentArtistAccount',
+  IC_CANISTERS_CONTENT_ARTIST_CONTENT: 'icContentArtistContent',
+  IC_CANISTERS_NFT: 'icNFT',
+  IC_CANISTERS_IC_IDENTITY_PROVIDER: 'icIdentityProvider',
+  IC_CANISTERS_TRAX_IDENTITY: 'icTraxIdentity',
+  IC_CANISTERS_AIRDROP: 'icAirdrop',
+  IC_CANISTERS_TRAX_TOKEN: 'icTraxToken',
+  IC_CANISTERS_TRAX_ACCOUNT_PERCENTAGE: 'icTraxAccountPercentage',
+  IC_CANISTERS_NFT_TICKET: 'icNFTTicket',
+  IC_CANISTERS_NFT_SONG: 'icNFTSong'
 };
 
 export const MENU_SECTION = {

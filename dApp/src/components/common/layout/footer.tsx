@@ -42,7 +42,7 @@ class Footer extends PureComponent<IProps> {
                     </Link>
                   </li>
                   <li key="signup">
-                    <Link className="button-alternate" href="/auth/register">
+                    <Link className="button-alternate" href="/register">
                       Sign up
                     </Link>
                   </li>

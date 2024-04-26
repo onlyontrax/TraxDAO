@@ -11,10 +11,11 @@ import {
 import {
   IPerformer, IUser, ISettings, IVideo
 } from 'src/interfaces';
+import { connect } from 'react-redux';
 import { BadgeCheckIcon } from '@heroicons/react/solid';
 import styles from './performer.module.scss';
-import { idlFactory as idlFactoryPPV } from '../../smart-contracts/declarations/ppv';
-import type { _SERVICE as _SERVICE_PPV, Content } from '../../smart-contracts/declarations/ppv/ppv.did';
+import { idlFactory as idlFactoryPPV } from '../../smart-contracts/declarations/ppv/ppv.did.js';
+import type { _SERVICE as _SERVICE_PPV, Content } from '../../smart-contracts/declarations/ppv/ppv2.did';
 import { Principal } from '@dfinity/principal';
 import { AccountIdentifier } from '@dfinity/nns';
 import { Actor, HttpAgent } from '@dfinity/agent';
@@ -35,10 +36,11 @@ interface IProps {
   video: IVideo;
   contentPriceICP: string;
   contentPriceCKBTC: string;
+  contentPriceTRAX: string;
   isPriceICPLoading: boolean;
 }
 
-export class PPVPurchaseModal extends PureComponent<IProps> {
+class PPVPurchaseModal extends PureComponent<IProps> {
   state = {
     price: 0,
     btnText: 'SEND TIP',
@@ -97,46 +99,38 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
   }
 
   async checkContentExistsICP(){
-    const { video } = this.props;
-
+    const { video, settings } = this.props;
     let identity;
     const authClient = await AuthClient.create();
-    let ppvCanID;
-    let host;
+    const ppvCanID = settings.icPPV;
+    const host = settings.icHost;
     let agent;
     let ppvActor;
 
-    if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+    if (settings.icNetwork !== true) {
       identity = authClient.getIdentity();
-      ppvCanID = process.env.NEXT_PUBLIC_PPV_CANISTER_ID_LOCAL as string;
-
-      host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
       agent = new HttpAgent({
         identity,
         host
       });
 
       await agent.fetchRootKey();
-
       ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
         agent,
         canisterId: ppvCanID
       });
-      let result: Content = await ppvActor.getContent(video?._id);
-      if(result[0].price){
+      let result: Array<Content> = await ppvActor.getContent(video?._id);
+      if (result.length > 0 && result[0].price) {
         // message.error('This content has not been registered on-chain. Crypto purchases for this content are not available. Purchase with USD instead.');
         this.setState({ isContentICP: true });
       }
 
     } else {
-      host = process.env.NEXT_PUBLIC_HOST as string;
       identity = authClient.getIdentity();
       agent = new HttpAgent({
         identity,
         host
       });
-
-      ppvCanID = process.env.NEXT_PUBLIC_PPV_CANISTER_ID as string;
 
       ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
         agent,
@@ -155,7 +149,7 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
 
   changeTicker(val: string){
     const {isContentICP} = this.state;
-    const { video, contentPriceICP, contentPriceCKBTC } = this.props;
+    const { video, contentPriceICP, contentPriceCKBTC, contentPriceTRAX } = this.props;
 
     this.setState({selectedCurrency: val})
     val !== 'USD' ? this.setState({paymentOption: 'plug'}) : this.setState({paymentOption: 'card'});
@@ -174,6 +168,11 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
         message.info("This artist has disabled crypto payments for this piece of content.")
       } 
       this.setState({ price: contentPriceCKBTC });
+    } else if (val === 'TRAX') {
+      if(!isContentICP){
+        message.info("This artist has disabled crypto payments for this piece of content.")
+      } 
+      this.setState({ price: contentPriceTRAX });
     }
   }
 
@@ -202,11 +201,11 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
 
         <div className='send-tip-container'>
           <div className='tip-header-wrapper'>
-            <span>Unlock this content</span>
+            <span>Unlock content</span>
           </div>
           
           <div className='payment-details'>
-          <span>Payment details</span>
+         
           <div className='payment-recipient-wrapper'>
               <div className='payment-recipient-avatar-wrapper'>
                 <Avatar src={performer?.avatar || '/static/no-avatar.png'} />
@@ -214,7 +213,7 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
               <div className='payment-recipient-info'>
                 <p>Pay to</p>
                 <span>{performer?.name}</span>
-                  <p style={{color: '#c8ff02'}}>Verified Artist</p>
+                  <p style={{color: '#FFFFFF50', marginTop:'-0.125rem'}}>Verified Artist</p>
               </div>
               <a href={`/artist/profile?id=${performer?.username || performer?._id}`} className='info-icon-wrapper'>
                 <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
@@ -276,11 +275,11 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
             {paymentOption === "noPayment" && (
               <Option value="noPayment" key="noPayment" className="payment-type-option-content">
                 <div className='payment-type-img-wrapper'>
-                <FontAwesomeIcon style={{width: 45, height: 45}} icon={faXmark} />
+                <FontAwesomeIcon style={{width: '2.5rem', height: '2.5rem', color:'orangered'}} icon={faXmark} />
                 </div>
                 <div className='payment-type-info'>
-                  <span style={{}}>No Payment Method Connected</span>
-                    <p>Please visit settings to add a card <br /> or connect a wallet</p>
+                  <span style={{marginTop: '0.125rem'}}>Connect payment method</span>
+                    <p>Visit the <a style={{color:'#FFF'}}>Settings</a> page to connect</p>
                     {/* <p>Click to add crypto wallet</p> */}
                 </div>
               </Option>
@@ -290,7 +289,7 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
             
           </div>
           <div className='currency-picker-btns-container'>
-            <span>Select a currency</span>
+            
             <div className='currency-picker-btns-wrapper'>
             {cards.length > 0 && (
               <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('USD')}>
@@ -307,8 +306,8 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
                   <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('ckBTC')}>
                     <img src='/static/ckbtc_nobackground.png' width={40} height={40} style={{border: selectedCurrency === 'ckBTC' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
                   </div>
-                  <div className='currency-picker-btn-wrapper-disabled' >
-                    <img src='/static/trax-token.png' width={40} height={40} />
+                  <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('TRAX')}>
+                    <img src='/static/trax-token.png' width={40} height={40} style={{border: selectedCurrency === 'TRAX' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
                   </div>
                 </>
               )}
@@ -316,7 +315,7 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
             </div>
           </div>
           <div className='tip-input-number-container'>
-            <span>Payment amount</span>
+            <span>Total</span>
             <div className='tip-input-number-wrapper'>
               {selectedCurrency === 'USD' && (
                 <p>$</p>
@@ -331,7 +330,6 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
               <InputNumber 
                 disabled={true} 
                 type="number"
-                min={0.000001}
                 stringMode
                 step="0.01"
                 value={price}
@@ -353,3 +351,10 @@ export class PPVPurchaseModal extends PureComponent<IProps> {
     );
   }
 }
+
+const mapStates = (state: any) => ({
+  settings: { ...state.settings }
+});
+
+const mapDispatch = {};
+export default connect(mapStates, mapDispatch)(PPVPurchaseModal);

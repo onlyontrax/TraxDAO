@@ -1,5 +1,5 @@
 export const idlFactory = ({ IDL }) => {
-  const Tokens__1 = IDL.Record({ 'e8s' : IDL.Nat64 });
+  const Tokens = IDL.Record({ 'e8s' : IDL.Nat64 });
   const AccountIdentifier__2 = IDL.Variant({
     'principal' : IDL.Principal,
     'blob' : IDL.Vec(IDL.Nat8),
@@ -39,21 +39,23 @@ export const idlFactory = ({ IDL }) => {
   const Timestamp = IDL.Int;
   const ContentType__1 = IDL.Text;
   const StatusRequest = IDL.Record({
-    'memory_size' : IDL.Bool,
-    'version' : IDL.Bool,
-    'cycles' : IDL.Bool,
-    'heap_memory_size' : IDL.Bool,
-    'ckbtc_balance' : IDL.Bool,
-    'icp_balance' : IDL.Bool,
+    'memory_size' : IDL.Opt(IDL.Bool),
+    'trax_balance' : IDL.Opt(IDL.Bool),
+    'version' : IDL.Opt(IDL.Bool),
+    'cycles' : IDL.Opt(IDL.Bool),
+    'heap_memory_size' : IDL.Opt(IDL.Bool),
+    'ckbtc_balance' : IDL.Opt(IDL.Bool),
+    'icp_balance' : IDL.Opt(IDL.Bool),
   });
-  const Tokens = IDL.Record({ 'e8s' : IDL.Nat64 });
+  const Tokens__1 = IDL.Record({ 'e8s' : IDL.Nat64 });
   const StatusResponse = IDL.Record({
     'memory_size' : IDL.Opt(IDL.Nat),
+    'trax_balance' : IDL.Opt(IDL.Nat),
     'version' : IDL.Opt(IDL.Nat),
     'cycles' : IDL.Opt(IDL.Nat),
     'heap_memory_size' : IDL.Opt(IDL.Nat),
     'ckbtc_balance' : IDL.Opt(IDL.Nat),
-    'icp_balance' : IDL.Opt(Tokens),
+    'icp_balance' : IDL.Opt(Tokens__1),
   });
   const Token = IDL.Record({ 'symbol' : IDL.Text });
   const GetAccountIdentifierArgs = IDL.Record({
@@ -77,7 +79,7 @@ export const idlFactory = ({ IDL }) => {
     'err' : GetAccountIdentifierErr,
   });
   const PPV = IDL.Service({
-    'accountBalance' : IDL.Func([IDL.Principal], [Tokens__1], []),
+    'accountBalance' : IDL.Func([IDL.Principal], [Tokens], []),
     'accountIdentifierToBlob' : IDL.Func(
         [AccountIdentifier__2],
         [AccountIdentifierToBlobResult],
@@ -85,8 +87,8 @@ export const idlFactory = ({ IDL }) => {
       ),
     'addPPVContent' : IDL.Func([ContentID, Content], [], []),
     'canisterAccount' : IDL.Func([], [AccountIdentifier__1], ['query']),
-    'canisterBalance' : IDL.Func([], [Tokens__1], []),
     'changePlatformFee' : IDL.Func([IDL.Float64], [], []),
+    'ckbtcBalanceOfCanister' : IDL.Func([], [IDL.Nat], []),
     'cyclesBalance' : IDL.Func([], [IDL.Nat], []),
     'drainCanisterBalance' : IDL.Func(
         [IDL.Nat64, IDL.Principal, Ticker],
@@ -138,6 +140,7 @@ export const idlFactory = ({ IDL }) => {
         [GetAccountIdentifierResult],
         ['query'],
       ),
+    'icpBalanceOfCanister' : IDL.Func([], [Tokens], []),
     'purchaseContent' : IDL.Func(
         [IDL.Nat64, ContentID, IDL.Text, IDL.Nat64],
         [],
@@ -149,6 +152,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(IDL.Tuple(ContentID, Content))],
         [],
       ),
+    'traxBalanceOfCanister' : IDL.Func([], [IDL.Nat], []),
     'updatePPVContent' : IDL.Func([ContentID, Content], [], []),
   });
   return PPV;

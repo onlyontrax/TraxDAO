@@ -241,7 +241,6 @@ export class FormProduct extends PureComponent<IProps> {
                 </div>
               </div>
               <div className='form-middle-wrapper' style={{width: '100%', borderBottom: 'none'}}>
-                
                 <div className='form-access-wrapper' style={{width: '100%'}}>
                 <div  className='form-upload-wrapper'>
                 <Form.Item
@@ -326,7 +325,7 @@ export class FormProduct extends PureComponent<IProps> {
                       loading={uploading}
                       disabled={uploading}
                       style={{ marginRight: 10, marginTop: 3 }}
-                      onClick={() => this.setState({ stage: 2 })}
+                      // onClick={() => this.setState({ stage: 2 })}
                     >
                       {haveProduct ? 'Update' : 'Upload'}
                     </Button>
@@ -371,7 +370,7 @@ export class FormProduct extends PureComponent<IProps> {
                        Set whether this post is visible or not
                       </p>
                 </div>
-                <Form.Item name="status">
+                <Form.Item name="active">
                     <Switch
                       checkedChildren=""
                       unCheckedChildren=""

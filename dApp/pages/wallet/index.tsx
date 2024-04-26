@@ -4,7 +4,8 @@ import {
 } from 'antd';
 
 import { DepositICP } from '@components/user/deposit-icp';
-import { SendCrypto } from '@components/user/send-crypto';
+import { IcrcLedgerCanister, TransferParams } from "@dfinity/ledger";
+import SendCrypto from '@components/user/send-crypto';
 import {
   LoadingOutlined
 } from '@ant-design/icons';
@@ -24,9 +25,8 @@ import { Principal } from '@dfinity/principal';
 import { AccountIdentifier } from '@dfinity/nns';
 import { AccountBalanceArgs } from '@dfinity/nns/dist/candid/ledger';
 import { createLedgerActor } from '../../src/crypto/ledgerActor';
-import { Tokens } from '../../src/smart-contracts/declarations/ledger/ledger.did';
+import { Tokens } from '../../src/smart-contracts/declarations/ledger/ledger2.did';
 import styles from './index.module.scss';
-import { IcrcLedgerCanister, TransferParams } from "@dfinity/ledger";
 
 interface IProps {
   ui: IUIConfig;
@@ -62,13 +62,14 @@ class TokenPackages extends PureComponent<IProps> {
   };
 
   async componentDidMount() {
-    const { user } = this.props;
+    const { user, settings } = this.props;
     let ledgerActor;
-    let ledgerCanID;
-    let ckBTCLedgerCanID;
     let ledgerActorCKBTC;
-    let host;
     let agent;
+
+    const host = settings.icHost;
+    const ledgerCanID = settings.icLedger;
+    const ckBTCLedgerCanID = Principal.fromText(settings.icCKBTCMinter);
 
     const icpPrice = (await tokenTransctionService.getExchangeRate()).data.rate;
     const ckbtcPrice = (await tokenTransctionService.getExchangeRateBTC()).data.rate;
@@ -88,12 +89,7 @@ class TokenPackages extends PureComponent<IProps> {
       // message.info('You do not have a NFID connected. Therefore, you cannot deposit ICP.');
 
     } else {
-      if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
-    
-        ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID_LOCAL as string;
-        ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID_LOCAL as string;
-
-        host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
+      if (settings.icNetwork !== true) {
         agent = new HttpAgent({
           host
         });
@@ -107,11 +103,6 @@ class TokenPackages extends PureComponent<IProps> {
         });
      
       } else {
-
-        ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID as string;
-        ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID as string;
- 
-        host = process.env.NEXT_PUBLIC_HOST as string;
         agent = new HttpAgent({
           host
         });
@@ -346,7 +337,7 @@ class TokenPackages extends PureComponent<IProps> {
               >
                 <Form.Item
                   name="amount"
-                  label="Enter Amount"
+                  label="Enter amount"
                   rules={[{ required: true, message: 'Amount is required!' }]}
                 >
                   <InputNumber onChange={(val) => this.setState({ amount: val })} style={{ width: '100%' }} min={1} />

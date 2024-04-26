@@ -17,27 +17,32 @@ interface IAuthButton {
   isLogin: boolean,
   principalId?: string,
   state: any,
-  from: string
+  from: string,
+  iiLoading: boolean
 }
 
-function InternetIdentity({ onSignOut, onConnect, isAuthenticated, handleConnect, isLogin, principalId, from }: IAuthButton) {
+function InternetIdentity({ onSignOut, onConnect, isAuthenticated, handleConnect, isLogin, principalId, from, iiLoading }: IAuthButton) {
   let authClient = null;
   const [loading, setLoading] = useState(false);
 
   const connectInternetIdentity = () => {
-    setLoading(true)
+    setLoading(true);
     const identity = authClient.getIdentity();
     handleConnect(identity);
-    setLoading(false)
+
+    //setLoading(false);
   };
 
   const authenticateNow = async () => {
-    setLoading(true)
+    setLoading(true);
     authClient = await AuthClient.create();
     await new Promise(() => {
       authClient.login({
         identityProvider: cryptoService.getIdentityProvider(),
-        onSuccess: () => connectInternetIdentity()
+        onSuccess: () => {
+          connectInternetIdentity();
+          //setLoading(false);
+        }
       });
     });
   };
@@ -47,21 +52,21 @@ function InternetIdentity({ onSignOut, onConnect, isAuthenticated, handleConnect
   return (
     <div>
       {!isAuthenticated ? (
-        <Button onClick={authenticateNow} htmlType="button" className={from === 'sign-up' ? "nfid-button-wrapper-sign-up" : "nfid-button-wrapper"}>
-            {from === 'sign-up' ? (
+        <Button onClick={authenticateNow} htmlType="button" className="nfid-button-wrapper">
+            {from === 'sign-up' || 'log-in' ? (
               <>
-                {loading ? (
+                {loading || iiLoading ? (
                   <LoadingOutlined style={{color: '#c8ff00', fontSize: 17, marginRight: '0.5rem'}}/>
                 ):(
                   <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
                 )}
-                <span>Internet Identity</span>
+                <span>{from === 'sign-up' ? 'Sign up with Internet Identity' : 'Continue with Internet Identity'}</span>
               </>
           )
           :
           (
             <>
-              {loading ? (
+              {loading || iiLoading ? (
                 <LoadingOutlined style={{color: '#c8ff00', fontSize: 23, marginTop: 2}}/>
               ):(
                 <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
@@ -72,26 +77,25 @@ function InternetIdentity({ onSignOut, onConnect, isAuthenticated, handleConnect
       ) : (
         <div>
           <Button onClick={handleConnectUp} htmlType="button" type="primary" className={from === 'sign-up' ? "nfid-button-wrapper-sign-up" : "nfid-button-wrapper"}>
-            {from === 'sign-up' ? (
+            {from === 'sign-up' || 'log-in' ? (
             <>
-              {loading ? (
+              {loading || iiLoading ? (
                 <LoadingOutlined style={{color: '#c8ff00', fontSize: 17, marginRight: '0.5rem'}}/>
               ):(
                 <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
               )}
-              <span>Internet Identity</span>
+              <p className='internet-identity-span'>Internet Identity</p>
             </>
           )
           :
           (
             <>
-             {loading ? (
-                <LoadingOutlined style={{color: '#c8ff00', fontSize: 23, marginTop: 2}}/>
-              ):(
-                <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
-              )}
-              
-            </>
+              {loading || iiLoading ? (
+                  <LoadingOutlined style={{color: '#c8ff00', fontSize: 23, marginTop: 2}}/>
+                ):(
+                  <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
+                )}
+              </>
           )}
           </Button>
         </div>

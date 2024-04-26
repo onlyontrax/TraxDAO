@@ -10,6 +10,7 @@ import {
 import Feeds from '../my-post';
 import Products from '../my-store';
 import Tracks from '../my-video';
+import Tickets from '../my-events';
 
 interface IProps {
   currentUser: IUser;
@@ -43,7 +44,7 @@ class MyContentPage extends PureComponent<IProps> {
 
           <div className="tab-bar">
             <div onClick={() => this.changeStage(0)} className="tab-btn-wrapper">
-              <h1 className={`${stage === 0 ? 'selected-btn' : ''}`}>Feeds</h1>
+              <h1 className={`${stage === 0 ? 'selected-btn' : ''}`}>Feed</h1>
               <div className={`${stage === 0 ? 'active' : ''} tab-btn`} />
             </div>
 
@@ -56,11 +57,17 @@ class MyContentPage extends PureComponent<IProps> {
               <h1 className={`${stage === 2 ? 'selected-btn' : ''}`}>Products</h1>
               <div className={`${stage === 2 ? 'active' : ''} tab-btn`} />
             </div>
+
+            <div onClick={() => this.changeStage(3)} className="tab-btn-wrapper">
+              <h1 className={`${stage === 3 ? 'selected-btn' : ''}`}>Events</h1>
+              <div className={`${stage === 3 ? 'active' : ''} tab-btn`} />
+            </div>
           </div>
 
           {stage === 0 && <Feeds />}
           {stage === 1 && <Tracks />}
           {stage === 2 && <Products user={user} />}
+          {stage === 3 && <Tickets user={user} />}
         </div>
       </Layout>
     );

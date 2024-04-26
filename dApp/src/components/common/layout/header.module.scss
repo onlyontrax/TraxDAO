@@ -1,4 +1,4 @@
-@import '../../../../style/vars.scss';
+@import '../../../../styles/vars.scss';
 .headerModule {
   :global {
   .main-header {
@@ -71,7 +71,7 @@
       padding: 10px;
       width: 80%;
     }
-  
+
     .sign-up-btn-mobile{
       display: flex;
       justify-content: center;
@@ -350,9 +350,9 @@
         font-size: 11px;
         box-shadow: none;
         padding: 0 5px;
-        line-height: 20px;
-        min-width: 20px;
-        height: 20px;
+        line-height: 17px;
+        min-width: 18px;
+        height: 18px;
       }
 
       a {
@@ -637,8 +637,8 @@
           }
 
           .cart-total {
-            top: 3px;
-            right: 12px;
+            top: -11px;
+            right: 6px;
           }
         }
 

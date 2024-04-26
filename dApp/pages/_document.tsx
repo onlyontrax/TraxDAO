@@ -61,6 +61,7 @@ class CustomDocument extends Document {
             `}
           </Script>
           <link rel="icon" href={settings?.favicon || '/static/favicon.ico'} sizes="64x64" />
+          <link rel="manifest" href="/manifest.json" />
           <meta httpEquiv="X-UA-Compatible" content="IE=edge,chrome=1" />
           <meta charSet="utf-8" />
         </Head>

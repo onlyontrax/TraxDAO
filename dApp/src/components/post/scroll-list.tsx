@@ -41,6 +41,7 @@ export default class ScrollListFeed extends PureComponent<IProps> {
         next={loadMore}
         endMessage={null}
         scrollThreshold={0.8}
+        style={{maxWidth: '850px', margin: 'auto'}}
       >
 
         <div className={isGrid ? 'grid-view' : 'fixed-scroll'}>

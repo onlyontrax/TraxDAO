@@ -29,8 +29,14 @@ const initialState = {
     totalSiteCommission: 0,
     totalNetPrice: 0,
     totalGrossPriceICP: 0,
+    totalGrossPriceTRAX: 0,
+    totalGrossPriceCKBTC: 0,
     totalSiteCommissionICP: 0,
+    totalSiteCommissionTRAX: 0,
+    totalSiteCommissionCKBTC: 0,
     totalNetPriceICP: 0,
+    totalNetPriceTRAX: 0,
+    totalNetPriceCKBTC: 0,
     totalReferralCommission: 0,
     totalAgentCommission: 0
   },
@@ -104,28 +110,27 @@ class EarningPage extends PureComponent<IProps, IStates> {
                         </div>
                     </div>
                 </div>
-                <div className='tokens-wrapper greyed'>
+                <div className='tokens-wrapper'>
                     <img src="/static/ckbtc_nobackground.svg" alt="ckbtc" className='tokens-img' />
                     <div className='tokens-split'>
                         <div className='tokens-data'>
                             <span className='tokens-symbol'>ckBTC</span>
-                            <span className='tokens-balance'>0.00000 ckBTC</span>
+                            <span className='tokens-balance'>{stats?.totalSiteCommissionCKBTC.toFixed(3) || 0} ckBTC</span>
                         </div>
                         <div className='tokens-ex-rate'>
-                            <span>$0</span>
+                            <span>${stats?.totalNetPriceCKBTC.toFixed(2) || 0}</span>
                         </div>
                     </div>
-
                 </div>
-                <div className='tokens-wrapper greyed'>
+                <div className='tokens-wrapper'>
                     <img src="/static/trax-token.png" alt="trax" className='tokens-img' />
                     <div className='tokens-split'>
                         <div className='tokens-data'>
                             <span className='tokens-symbol'>TRAX</span>
-                            <span className='tokens-balance'>0.00 TRAX</span>
+                            <span className='tokens-balance'>{stats?.totalSiteCommissionTRAX.toFixed(3) || 0} TRAX</span>
                         </div>
                         <div className='tokens-ex-rate'>
-                            <span>$0</span>
+                            <span>${stats?.totalNetPriceTRAX.toFixed(2) || 0}</span>
                         </div>
                     </div>
 

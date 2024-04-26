@@ -12,9 +12,6 @@ import {
 import { earningService } from 'src/services';
 // import styles from './index.module.scss';
 import { DepositICP } from '@components/user/deposit-icp';
-
-
-
 import {
   LoadingOutlined
 } from '@ant-design/icons';
@@ -29,7 +26,7 @@ import { Principal } from '@dfinity/principal';
 import { AccountIdentifier } from '@dfinity/nns';
 import { AccountBalanceArgs } from '@dfinity/nns/dist/candid/ledger';
 import { createLedgerActor } from '../../../src/crypto/ledgerActor';
-import { Tokens } from '../../../src/smart-contracts/declarations/ledger/ledger.did';
+import { Tokens } from '../../../src/smart-contracts/declarations/ledger/ledger2.did';
 import styles from './index.module.scss';
 import { IcrcLedgerCanister, TransferParams } from "@dfinity/ledger";
 interface IProps {
@@ -38,20 +35,21 @@ interface IProps {
   balanceCKBTCUSD: number;
   balanceICP: number;
   balanceCKBTC: number;
+  balanceTRAX: number;
+  balanceTRAXUSD: number;
   settings: ISettings;
-};
+}
 
 const layout = {
-    labelCol: { span: 24 },
-    wrapperCol: { span: 24 }
-  };
-
+  labelCol: { span: 24 },
+  wrapperCol: { span: 24 }
+};
 
 const currencies = [
-    { name: 'USD', imgSrc: '/static/usd-logo.png', symbol: 'USD' },
-    { name: 'ICP', imgSrc: '/static/icp-logo.png', symbol: 'ICP' },
-    { name: 'ckBTC', imgSrc: '/static/ckbtc_nobackground.svg', symbol: 'ckBTC' }
-  ]
+  { name: 'USD', imgSrc: '/static/usd-logo.png', symbol: 'USD' },
+  { name: 'ICP', imgSrc: '/static/icp-logo.png', symbol: 'ICP' },
+  { name: 'ckBTC', imgSrc: '/static/ckbtc_nobackground.svg', symbol: 'ckBTC' }
+]
 
 class MyTokens extends PureComponent<IProps> {
   static authenticate = true;
@@ -63,124 +61,21 @@ class MyTokens extends PureComponent<IProps> {
     amount: 10,
     openTopupModal: false,
     openDepositICPModal: false,
-    balanceICP: 0,
-    balanceICPUSD: 0,
-    balanceCKBTC: 0,
-    balanceCKBTCUSD: 0,
     totalWalletBalance: 0,
     isBalanceLoading: true,
     icpPrice: 0,
     ckbtcPrice: 0,
+    traxPrice: 0,
     openTipProgressModal: false
 
   };
 
   async componentDidMount() {
-    const { user } = this.props;
-    let ledgerActor;
-    let ledgerCanID;
-    let ckBTCLedgerCanID;
-    let ledgerActorCKBTC;
-    let host;
-    let agent;
-
-    const icpPrice = (await tokenTransctionService.getExchangeRate()).data.rate;
-    const ckbtcPrice = (await tokenTransctionService.getExchangeRateBTC()).data.rate;
-
-    
-    this.setState({ icpPrice: icpPrice, ckbtcPrice: ckbtcPrice})
-
-    if (user && !user.wallet_icp) {
-      this.setState({
-        balanceICP: 0,
-        isBalanceLoading: false,
-        balanceICPUSD: 0,
-        totalWalletBalance: (user && user.balance) || 0,
-        balanceCKBTC: 0,
-        balanceCKBTCUSD: 0
-       });
-
-
-    } else {
-      if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
-    
-        ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID_LOCAL as string;
-        ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID_LOCAL as string;
-
-        host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
-        agent = new HttpAgent({
-          host
-        });
-
-        await agent.fetchRootKey();
-
-        ledgerActor = await createLedgerActor(agent, ledgerCanID);
-        ledgerActorCKBTC = IcrcLedgerCanister.create({
-          agent,
-          canisterId: ckBTCLedgerCanID
-        });
-     
-      } else {
-
-        ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID as string;
-        ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID as string;
- 
-        host = process.env.NEXT_PUBLIC_HOST as string;
-        agent = new HttpAgent({
-          host
-        });
-      
-        ledgerActor = await createLedgerActor(agent, ledgerCanID);
-        ledgerActorCKBTC = IcrcLedgerCanister.create({
-          agent,
-          canisterId: ckBTCLedgerCanID
-        });
-      }
-
-
-      console.log(user.wallet_icp)
-
-      const fanAI = AccountIdentifier.fromPrincipal({
-        principal: Principal.fromText(user && user.wallet_icp)
-      });
-
-      // @ts-ignore
-      const fanBytes = fanAI.bytes;
-
-      const balArgs: AccountBalanceArgs = {
-        account: fanBytes
-      };
-
-      const bal: Tokens = await ledgerActor.account_balance(balArgs);
-      const ckbtcBal = await await ledgerActorCKBTC.balance({
-        owner: Principal.fromText(user && user.wallet_icp),
-        certified: false,
-      });
-      const formattedBalance = Number(bal.e8s) / 100000000;
-      const ckbtcFormattedBalance = Number(ckbtcBal) / 100000000;
-
-      console.log("ICP Balance: ", formattedBalance)
-
-      const amountICPUSD = icpPrice * formattedBalance;
-      const amountCKBTCUSD = ckbtcPrice * ckbtcFormattedBalance;
-      const total = amountCKBTCUSD + amountICPUSD + ((user && user.balance) || 0);
-
-      this.setState({ 
-        balanceICPUSD: amountICPUSD,
-        balanceCKBTCUSD: amountCKBTCUSD,
-        balanceICP: formattedBalance,
-        balanceCKBTC: ckbtcFormattedBalance,
-        totalWalletBalance: total,
-        isBalanceLoading: false
-      });
-    }
   }
 
   addFund = async ({ amount }) => {
     const { user, settings } = this.props;
-    const {
-      couponCode, coupon
-    } = this.state;
+    const { couponCode, coupon  } = this.state;
     if (settings.paymentGateway === 'stripe' && !user?.stripeCardIds?.length) {
       message.error('Please add a payment card to complete your purchase');
       Router.push('/user/account');
@@ -221,7 +116,7 @@ class MyTokens extends PureComponent<IProps> {
   }
 
   render() {
-    const { user, balanceICPUSD, balanceCKBTCUSD, balanceICP, balanceCKBTC  } = this.props;
+    const { user, balanceICPUSD, balanceCKBTCUSD, balanceTRAXUSD,  balanceTRAX, balanceICP, balanceCKBTC  } = this.props;
     const {submiting, couponCode, coupon, amount, openTopupModal, openDepositICPModal, icpPrice, ckbtcPrice, openTipProgressModal} = this.state;
     const couponAmount = (amount - (amount * (coupon?.value || 0)));
     return (
@@ -279,19 +174,19 @@ class MyTokens extends PureComponent<IProps> {
                         Deposit
                     </Button>
                 </div>
-                <div className='tokens-wrapper greyed'>
+                <div className='tokens-wrapper'>
                     <img src="/static/trax-token.png" alt="trax" className='tokens-img' />
                     <div className='tokens-split'>
                         <div className='tokens-data'>
                             <span className='tokens-symbol'>TRAX</span>
-                            <span className='tokens-balance'>0.00 TRAX</span>
+                            <span className='tokens-balance'>{balanceTRAX.toFixed(3) || 0} TRAX</span>
                         </div>
                         <div className='tokens-ex-rate'>
-                            <span>$0</span>
+                            <span>${(balanceTRAXUSD && balanceTRAXUSD.toFixed(2)) || 0}</span>
                         </div>
                         
                     </div>
-                    <Button className="withdraw-button" disabled={true} onClick={() => this.setState({ openDepositICPModal: true })}>
+                    <Button className="withdraw-button" onClick={() => this.setState({ openDepositICPModal: true })}>
                         Deposit
                     </Button>
                 </div>
@@ -324,12 +219,14 @@ class MyTokens extends PureComponent<IProps> {
                 }}
                 {...layout}
               >
+                <h1>Purchase credit</h1>
+                <p>The payment will be taken from your connected payment method via Stripe.</p>
                 <Form.Item
                   name="amount"
-                  label="Enter Amount"
-                  rules={[{ required: true, message: 'Amount is required!' }]}
+                  label="Amount"
+                  rules={[{ required: false, message: 'Amount is required!' }]}
                 >
-                  <InputNumber onChange={(val) => this.setState({ amount: val })} style={{ width: '100%' }} min={1} />
+                  <InputNumber placeholder='$0.00' prefix='$' onChange={(val) => this.setState({ amount: val })} style={{ width: '100%' }} min={1} />
                 </Form.Item>
                 <Form.Item help={coupon && (
                 <small style={{ color: 'red' }}>
@@ -347,6 +244,7 @@ class MyTokens extends PureComponent<IProps> {
 
                   </Button.Group>
                 </Form.Item>
+                <div className='flexbox-2'>
                 <Form.Item className="total-price">
                   Total:
                   <span className="amount">
@@ -355,10 +253,11 @@ class MyTokens extends PureComponent<IProps> {
                   </span>
                 </Form.Item>
                 <Form.Item className="text-center">
-                  <Button htmlType="submit" className="primary" disabled={submiting} loading={submiting}>
-                    BUY NOW
+                  <Button htmlType="submit" className="form-bottom-right-button" disabled={submiting} loading={submiting}>
+                    Purchase
                   </Button>
                 </Form.Item>
+                </div>
               </Form>
             </Modal>
         <Modal
@@ -387,6 +286,7 @@ class MyTokens extends PureComponent<IProps> {
 }
 
 const mapStates = (state) => ({
-  performer: { ...state.user.current }
+  performer: { ...state.user.current },
+  settings: { ...state.settings }
 });
 export default connect(mapStates)(MyTokens);

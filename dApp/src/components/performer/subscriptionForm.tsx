@@ -58,7 +58,7 @@ export class PerformerSubscriptionForm extends PureComponent<IProps> {
       >
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ width: '100%' }}>
-            <h1 style={{ fontSize: '1.25rem', color: 'white' }}>Subscriptions</h1>
+            <h1 className='subs-form-header'>Subscriptions</h1>
               <Col xl={12} md={12} xs={24} style={{marginBottom: '24px', maxWidth: '100%'}}>
                 <p className="account-form-item-tag">Monthly price ($)</p>
                 <Form.Item

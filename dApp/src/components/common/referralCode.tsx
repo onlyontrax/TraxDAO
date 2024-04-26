@@ -12,7 +12,7 @@ function CopyReferralCode({ referralCode }) {
   const handleCopyClick = () => {
     const { protocol, hostname, port } = window.location;
     const baseUrl = `${protocol}//${hostname}${port ? `:${port}` : ''}`;
-    const referralLink = `${baseUrl}/auth/register?referralCode=${referralCode}`;
+    const referralLink = `${baseUrl}/register?referralCode=${referralCode}`;
 
     const textArea = document.createElement('textarea');
     textArea.value = referralLink;

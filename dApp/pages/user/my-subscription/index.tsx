@@ -1,5 +1,5 @@
 import Loader from '@components/common/base/loader';
-import { ConfirmSubscriptionPerformerForm } from '@components/performer';
+import ConfirmSubscriptionPerformerForm from '@components/performer/confirm-subscription';
 import { TableListSubscription } from '@components/subscription/table-list-subscription';
 import { getResponseError } from '@lib/utils';
 import { paymentService, subscriptionService } from '@services/index';
@@ -12,8 +12,8 @@ import {
   ISettings, ISubscription, IUIConfig, IUser
 } from 'src/interfaces';
 import { Principal } from '@dfinity/principal';
-import { subscriptions } from '../../../src/smart-contracts/declarations/subscriptions';
-import { SubType } from '../../../src/smart-contracts/declarations/subscriptions/subscriptions.did';
+/*import { subscriptions } from '../../../src/smart-contracts/declarations/subscriptions';
+import { SubType } from '../../../src/smart-contracts/declarations/subscriptions/subscriptions.did';*/
 
 interface IProps {
   currentUser: IUser;
@@ -97,7 +97,7 @@ class SubscriptionPage extends PureComponent<IProps> {
   }
 
   async subscribe(currency: string, subType: string) {
-    currency === 'USD' ? await this.subscribeFiat(subType) : await this.subscribeCrypto(currency, subType);
+    currency === 'USD' ? await this.subscribeFiat(subType) : await this.subscribeFiat(subType); //await this.subscribeCrypto(currency, subType);
   }
 
   async subscribeFiat(subType: string) {
@@ -136,7 +136,7 @@ class SubscriptionPage extends PureComponent<IProps> {
     }
   }
 
-  async subscribeCrypto(currency: string, subType: string) {
+  /*async subscribeCrypto(currency: string, subType: string) {
     const { selectedSubscription } = this.state;
     const { performerInfo: performer } = selectedSubscription;
     const { currentUser } = this.props;
@@ -178,7 +178,7 @@ class SubscriptionPage extends PureComponent<IProps> {
     } finally {
       this.setState({ submiting: false });
     }
-  }
+  }*/
 
   render() {
     const {
@@ -219,7 +219,6 @@ class SubscriptionPage extends PureComponent<IProps> {
               performer={selectedSubscription?.performerInfo}
               submiting={submiting}
               onFinish={this.subscribe.bind(this)}
-              settings={settings}
               user={user}
             />
           </Modal>

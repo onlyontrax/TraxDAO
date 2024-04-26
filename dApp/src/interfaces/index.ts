@@ -22,3 +22,4 @@ export * from './user';
 export * from './utils';
 export * from './video';
 export * from './nft';
+export * from './ticket';

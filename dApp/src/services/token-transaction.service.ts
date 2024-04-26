@@ -9,6 +9,10 @@ export class TokenTransctionService extends APIRequest {
     return this.get('/wallet/charges/ratebtc');
   }
 
+  getExchangeRateTRAX() {
+    return this.get('/wallet/charges/ratetrax');
+  }
+
   sendTip(performerId: string, payload: any) {
     return this.post(`/wallet/charges/tip/${performerId}`, payload);
   }
@@ -21,12 +25,24 @@ export class TokenTransctionService extends APIRequest {
     return this.post(`/wallet/charges/crypto-ppv/${performerId}`, payload);
   }
 
+  purchaseTicketCrypto(performerId: string, payload: any) {
+    return this.post(`/wallet/charges/crypto-ticket/${performerId}`, payload);
+  }
+
+  purchaseProductCrypto(performerId: string, payload: any) {
+    return this.post(`/wallet/charges/crypto-ticket/${performerId}`, payload);
+  }
+
   purchaseFeed(id, payload) {
     return this.post(`/wallet/charges/feed/${id}`, payload);
   }
 
   purchaseProduct(id, payload) {
     return this.post(`/wallet/charges/product/${id}`, payload);
+  }
+
+  purchaseTicket(id, payload) {
+    return this.post(`/wallet/charges/ticket/${id}`, payload);
   }
 
   purchaseVideo(id, payload) {

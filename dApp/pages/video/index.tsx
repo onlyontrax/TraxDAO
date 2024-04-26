@@ -6,27 +6,30 @@ import {
 } from 'antd';
 import { BsCheckCircleFill } from 'react-icons/bs';
 import {
-  PlusOutlined, FireOutlined, FireFilled, CommentOutlined
+  PlusOutlined, FireOutlined, FireFilled, CommentOutlined, LoadingOutlined
 } from '@ant-design/icons';
 import { BadgeCheckIcon } from '@heroicons/react/solid';
 
 import { PureComponent } from 'react';
 import { connect } from 'react-redux';
-import Head from 'next/head';
-import {
-  authService, videoService, reactionService, tokenTransctionService, paymentService
-} from '@services/index';
 import {
   getComments, moreComment, createComment, deleteComment
 } from 'src/redux/comment/actions';
 import { updateBalance } from '@redux/user/actions';
 import { getRelated } from 'src/redux/video/actions';
+import Head from 'next/head';
+import { motion } from 'framer-motion';
+import {
+  authService, videoService, reactionService, tokenTransctionService, paymentService
+} from '@services/index';
+import { cryptoService } from '@services/crypto.service';
 import { RelatedListVideo } from '@components/video';
 import { VideoPlayer } from '@components/common/video-player';
-import { AudioPlayer } from '@components/common/audio-player';
+import { AudioPlayer_ } from '@components/common/audio-player';
 
 import { ListComments, CommentForm } from '@components/comment';
-import { ConfirmSubscriptionPerformerForm, PPVPurchaseModal } from '@components/performer';
+import ConfirmSubscriptionPerformerForm from '@components/performer/confirm-subscription';
+import { PPVPurchaseModal } from '@components/performer';
 import { shortenLargeNumber, formatDate } from '@lib/index';
 import {
   IVideo, IUser, IUIConfig, IPerformer, ISettings
@@ -41,20 +44,25 @@ import { AuthClient } from '@dfinity/auth-client';
 import Link from 'next/link';
 import Router, { useRouter } from 'next/router';
 import Error from 'next/error';
-import { subscriptions } from '../../src/smart-contracts/declarations/subscriptions';
-import { SubType } from '../../src/smart-contracts/declarations/subscriptions/subscriptions.did';
+/*import { subscriptions } from '../../src/smart-contracts/declarations/subscriptions';
+import { SubType } from '../../src/smart-contracts/declarations/subscriptions/subscriptions.did';*/
 
-import { idlFactory as idlFactoryPPV } from '../../src/smart-contracts/declarations/ppv';
-import type { _SERVICE as _SERVICE_PPV, Content } from '../../src/smart-contracts/declarations/ppv/ppv.did';
+import { idlFactory as idlFactoryPPV } from '../../src/smart-contracts/declarations/ppv/ppv.did.js';
+import type { _SERVICE as _SERVICE_PPV, Content } from '../../src/smart-contracts/declarations/ppv/ppv2.did';
 
-import { idlFactory as idlFactoryLedger } from '../../src/smart-contracts/declarations/ledger';
-import type { _SERVICE as _SERVICE_LEDGER } from '../../src/smart-contracts/declarations/ledger/ledger.did';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faEllipsis } from '@fortawesome/free-solid-svg-icons'
+
+import { idlFactory as idlFactoryLedger } from '../../src/smart-contracts/declarations/ledger/ledger.did.js';
+import type { _SERVICE as _SERVICE_LEDGER } from '../../src/smart-contracts/declarations/ledger/ledger2.did';
 import {
   TransferArgs, Tokens, TimeStamp, AccountBalanceArgs
-} from '../../src/smart-contracts/declarations/ledger/ledger.did';
+} from '../../src/smart-contracts/declarations/ledger/ledger2.did';
 import { IcrcLedgerCanister, TransferParams } from "@dfinity/ledger";
-
+import { faInstagram, faSoundcloud, faXTwitter, faSpotify } from '@fortawesome/free-brands-svg-icons'
+import { faCheck } from '@fortawesome/free-solid-svg-icons'
 import styles from './index.module.scss';
+import PaymentProgress from '../../src/components/user/payment-progress';
 
 const { TabPane } = Tabs;
 
@@ -74,6 +82,11 @@ interface IProps {
   deleteComment: Function;
   updateBalance: Function;
   settings: ISettings;
+}
+
+const variants = {
+  isPlaying: { scale: 1, type: 'spring'},
+  isPaused: { scale: 0.8, type: 'spring'},
 }
 
 class VideoViewPage extends PureComponent<IProps> {
@@ -111,7 +124,7 @@ class VideoViewPage extends PureComponent<IProps> {
     totalComment: 0,
     submiting: false,
     requesting: false,
-    activeTab: 'description',
+    activeTab: 'comment',
     openSubscriptionModal: false,
     subscriptionType: 'monthly',
     priceICP: 0,
@@ -119,10 +132,16 @@ class VideoViewPage extends PureComponent<IProps> {
     amountICP: '',
     amountCKBTCToDisplay: '',
     amountCKBTC: '',
+    amountTRAXToDisplay: '',
+    amountTRAX: '',
     openPPVProgressModal: false,
     ppvProgress: 0,
     isPriceICPLoading: true,
-    video: null
+    video: null,
+    openInfoModal: false,
+    isPlaying: false,
+    openTeaserModal: false,
+    stopTeaser: false
   };
 
   async componentDidMount() {
@@ -134,18 +153,30 @@ class VideoViewPage extends PureComponent<IProps> {
     } else {
       await this.updateDataDependencies();
     }
+
+    Router.events.on('routeChangeComplete', this.onRouteChangeComplete);
   }
 
+  componentWillUnmount() {
+    Router.events.off('routeChangeComplete', this.onRouteChangeComplete);
+  }
+
+  onRouteChangeComplete = async (url) => {
+    const data = await this.getData();
+
+    this.setState({ video: data.video }, () => this.updateDataDependencies());
+  };
+
   async updateDataDependencies() {
+    const { settings } = this.props;
     let identity;
     const authClient = await AuthClient.create();
-    let host;
+    const host = settings.icHost;
     let agent;
 
-    if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+    if (settings.icNetwork !== true) {
       identity = authClient.getIdentity();
 
-      host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
       agent = new HttpAgent({
         identity,
         host
@@ -153,29 +184,36 @@ class VideoViewPage extends PureComponent<IProps> {
 
       await agent.fetchRootKey();
     } else {
-      host = process.env.NEXT_PUBLIC_HOST as string;
       identity = await authClient.getIdentity();
       agent = new HttpAgent({
         identity,
         host
       });
     }
-    const { video } = this.state;
+
+    const { video, activeTab } = this.state;
+
     if (video === null) {
       return;
     }
+
     const icp = (await tokenTransctionService.getExchangeRate()).data.rate;
     const ckbtc = (await tokenTransctionService.getExchangeRateBTC()).data.rate;
-    // const icp = '20';
-    // const ckbtc = '30000';
+    const trax = (await tokenTransctionService.getExchangeRateTRAX()).data.rate;
+
+    // const icp   = '14.50';
+    // const ckbtc = '70000';
+    // const trax  = '0.0285';
 
     const amountToSendICP = video.price / parseFloat(icp);
     const amountToSendCKBTC = video.price / parseFloat(ckbtc);
+    const amountToSendTRAX = video.price / parseFloat(trax);
 
     this.setState({
       priceICP: icp,
-      amountICPToDisplay: amountToSendICP.toFixed(3).toString(),
-      amountCKBTCToDisplay: amountToSendCKBTC.toString(),
+      amountICPToDisplay: amountToSendICP.toFixed(4).toString(),
+      amountCKBTCToDisplay: amountToSendCKBTC.toFixed(8).toString(),
+      amountTRAXToDisplay: amountToSendTRAX.toFixed(3).toString(),
       amountICP: amountToSendICP,
       amountCKBTC: amountToSendCKBTC,
       isPriceICPLoading: false
@@ -186,13 +224,17 @@ class VideoViewPage extends PureComponent<IProps> {
     });
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps, prevState) {
     const {
       commentMapping, comment
     } = this.props;
     const { video } = this.state;
     if (video === null) return;
     const { totalComment } = this.state;
+
+    if (prevState.video && prevState.video._id !== video._id) {
+      this.onShallowRouteChange();
+    }
     if (
       (!prevProps.comment.data
         && comment.data
@@ -209,7 +251,8 @@ class VideoViewPage extends PureComponent<IProps> {
     const {
       getRelated: handleGetRelated
     } = this.props;
-    const { video } = this.state;
+    const { getComments: handleGetComments } = this.props;
+    const { video, itemPerPage } = this.state;
     if (video === null) return;
     this.setState({
       videoStats: video.stats,
@@ -225,6 +268,12 @@ class VideoViewPage extends PureComponent<IProps> {
       performerId: video.performerId,
       excludedId: video._id,
       limit: 24
+    });
+    handleGetComments({
+      objectId: video._id,
+      objectType: 'video',
+      limit: itemPerPage,
+      offset: 0
     });
   }
 
@@ -324,8 +373,6 @@ class VideoViewPage extends PureComponent<IProps> {
   }
 
   beforePurchase(ticker: string, paymentOption: string) {
-    console.log("in here")
-    console.log(paymentOption)
     if(paymentOption == 'card'){
       this.purchaseVideo()
     }else if(paymentOption === 'plug'){
@@ -336,85 +383,81 @@ class VideoViewPage extends PureComponent<IProps> {
   }
 
   async purchaseVideoPlug(ticker){
-    console.log("in here plug")
     const { video } = this.state;
-    const { amountICP, amountCKBTC } = this.state;
+    const { amountICP, amountCKBTC, amountTRAX } = this.state;
+    const { settings } = this.props;
 
     this.setState({ openPPVProgressModal: true, openPPVModal: false, ppvProgress: 20 });
 
     let amountToSendICP = Math.trunc(Number(amountICP) * 100000000)
     let amountToSendCKBTC = Math.trunc(Number(amountCKBTC) * 100000000)
 
-    let ppvCanID, ledgerCanID, ckBTCLedgerCanID, transfer;
+    let transfer;
+
+    const ledgerCanID = settings.icLedger;
+    const ckBTCLedgerCanID = settings.icCKBTCMinter;
+    const ppvCanID = settings.icPPV;
 
     this.setState({
       requesting: false,
       submiting: false,
       openPPVProgressModal: false,
       openPPVModal: false,
-      ppvProgress: 10
+      ppvProgress: 0
     });
 
-    if((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic'){
-      ppvCanID = process.env.NEXT_PUBLIC_PPV_CANISTER_ID_LOCAL as string;
-      ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID_LOCAL as string;
-      ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID_LOCAL as string;
-    }else{
-      ppvCanID = process.env.NEXT_PUBLIC_PPV_CANISTER_ID as string;
-      ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID as string;
-      ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID as string;
-    }
-
-    // const identityCanisterId = (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? (process.env.NEXT_PUBLIC_IDENTITY_CANISTER as string) : (process.env.NEXT_PUBLIC_IDENTITY_CANISTER_LOCAL as string);
     const whitelist = [
       ppvCanID, 
     ];
-    console.log('whitelist: ', whitelist);
 
     if(typeof window !== 'undefined' && 'ic' in window){
       // @ts-ignore
       const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
         whitelist,
-        host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') 
-        ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) 
-        : (process.env.NEXT_PUBLIC_HOST as string)
+        host: settings.icHost
       }) : false;
 
       !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
         
-      this.setState({ openPPVProgressModal: true, openPPVModal: false, ppvProgress: 20 });
+      
 
       // @ts-ignore
       if (!window?.ic?.plug?.agent && connected  ) {
-        console.log('creating agent');
         // @ts-ignore
         await window.ic.plug.createAgent({ 
           whitelist, 
-          host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) : (process.env.NEXT_PUBLIC_HOST as string) 
+          host: settings.icHost
         });
       }
-      
       let ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
         agent: (window as any).ic.plug.agent,
         canisterId: ppvCanID
       });
       
-
-      // @ts-ignore
-      console.log(window.ic.plug.principalId); console.log(window.ic.plug.accountId); console.log("plug agent: ", window?.ic?.plug?.agent)
-      
       if(connected){
+        this.setState({ openPPVProgressModal: true, openPPVModal: false, ppvProgress: 25 });
         //@ts-ignore
         const requestBalanceResponse = await window.ic?.plug?.requestBalance();
-        const icp_balance = requestBalanceResponse[0]?.amount;
-        const ckBTC_balance = requestBalanceResponse[1]?.amount;
+        let icp_balance;
+        let ckBTC_balance;
+        let TRAX_balance;
 
-        console.log("icp balance: ", icp_balance);
-        console.log("ckbtc balance: ", ckBTC_balance);
+        for(let i = 0; i < requestBalanceResponse.length; i++){
+          if(requestBalanceResponse[i]?.symbol === 'ICP'){
+            icp_balance = requestBalanceResponse[i]?.amount;
+          }
+          if(requestBalanceResponse[i]?.symbol === 'ckBTC'){
+            ckBTC_balance = requestBalanceResponse[i]?.amount;
+          }
+          if(requestBalanceResponse[i]?.symbol === 'TRAX'){
+            TRAX_balance = requestBalanceResponse[i]?.amount;
+          }
+
+        };
 
         if(ticker === 'ckBTC'){
           if(ckBTC_balance >= Number(amountCKBTC)){
-            this.setState({ ppvProgress: 30 });
+            this.setState({ ppvProgress: 50 });
             const params = {
               to: ppvCanID,
               strAmount: amountCKBTC,
@@ -431,9 +474,29 @@ class VideoViewPage extends PureComponent<IProps> {
             message.error('Insufficient balance, please top up your wallet and try again.');
           }
         }
+
+        if(ticker === 'TRAX'){
+          if(ckBTC_balance >= Number(amountTRAX)){
+            this.setState({ ppvProgress: 50 });
+            const params = {
+              to: ppvCanID,
+              strAmount: amountTRAX,
+              token: process.env.NEXT_PUBLIC_TRAX_CANISTER_ID as string
+            };
+            //@ts-ignore
+            transfer = await window.ic.plug.requestTransferToken(params).catch((error) =>{
+              message.error('Transaction failed. Please try again later.');
+              this.setState({requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0})
+            });
+            
+          } else {
+            this.setState({ requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0 })
+            message.error('Insufficient balance, please top up your wallet and try again.');
+          }
+        }
         
         if (ticker === 'ICP') {
-          this.setState({ ppvProgress: 30 });
+          this.setState({ ppvProgress: 50 });
           if(icp_balance >= Number(amountICP)){
             const requestTransferArg = {
               to: ppvCanID,
@@ -455,17 +518,17 @@ class VideoViewPage extends PureComponent<IProps> {
 
         if(transfer.height){
 
-          this.setState({ ppvProgress: 70 });
+          this.setState({ ppvProgress: 75 });
         
           await ppvActor.purchaseContent(transfer.height, video._id, ticker, ticker === "ICP" ? BigInt(amountToSendICP) : BigInt(amountToSendCKBTC)).then(async () => {
-            this.setState({ ppvProgress: 90 });
+            
             await tokenTransctionService.sendCryptoPpv(video?.performer?._id, { performerId: video?.performer?._id, price: Number(amountToSendICP), tokenSymbol: ticker }).then(() => {
               this.setState({ ppvProgress: 100 });
               this.setState({ requesting: false, openPPVModal: false, submiting: false });
               message.success('Payment successful! You can now access this content');
             });
             setTimeout(() => this.setState({
-              requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0
+              requesting: false, submiting: false
             }), 1000);
   
             this.setState({ isBought: true, requesting: false });
@@ -491,7 +554,7 @@ class VideoViewPage extends PureComponent<IProps> {
 
   async handlePurchaseVideoCrypto(ppvCanID: Principal, fanID: Principal, ledgerActor: any, ppvActor: any, ticker: string) {
     const { video } = this.state;
-    const { amountICP, amountCKBTC } = this.state;
+    const { amountICP, amountCKBTC, amountTRAX } = this.state;
 
     this.setState({ openPPVProgressModal: true, openPPVModal: false, ppvProgress: 20 });
 
@@ -525,6 +588,7 @@ class VideoViewPage extends PureComponent<IProps> {
     const uuid = BigInt(Math.floor(Math.random() * 1000));
     const amountToSendICP = BigInt(Math.trunc(Number(amountICP) * 100000000));
     const amountToSendCKBTC = BigInt(Math.trunc(Number(amountCKBTC) * 100000000));
+    const amountToSendTRAX = BigInt(Math.trunc(Number(amountTRAX) * 100000000));
     let transferArgs: TransferArgs;
     let transferParams: TransferParams;
     const balArgs: AccountBalanceArgs = {
@@ -581,21 +645,48 @@ class VideoViewPage extends PureComponent<IProps> {
         message.error('Insufficient balance, please top up your wallet and try again.');
       }
 
+    }else if(ticker ==="TRAX"){
+
+      transferParams = {
+        amount: amountToSendTRAX,
+        fee: BigInt(100000),
+        from_subaccount: null,
+        to: {
+          owner: ppvCanID,
+          subaccount: [],
+        },
+        created_at_time: BigInt(Date.now() * 1000000)
+      };
+
+      let balICRC1 = await ledgerActor.balance({
+        owner: fanID,
+        certified: false
+      });
+
+      if(Number(balICRC1) < Number(amountToSendTRAX) + 100000){
+        this.setState({
+          requesting: false,
+          submiting: false,
+          openPPVProgressModal: false,
+          ppvProgress: 0
+        });
+        message.error('Insufficient balance, please top up your wallet and try again.');
+      }
+
     }else{
       message.error('Invalid ticker, please select a different token!');
     }
 
-      this.setState({ ppvProgress: 30 });
+      this.setState({ ppvProgress: 50 });
       await ledgerActor.transfer(ticker === "ICP" ? transferArgs : transferParams).then(async (res) => {
-        this.setState({ ppvProgress: 50 });
+        this.setState({ ppvProgress: 75 });
 
         await ppvActor.purchaseContent(
           ticker === "ICP" ? res.Ok : res, 
           video._id, ticker, 
-          ticker === "ICP" ? amountToSendICP : amountToSendCKBTC
+          ticker === "ICP" ? amountToSendICP : ( ticker === "ckBTC" ? amountToSendCKBTC : amountToSendTRAX)
           ).then(async () => {
 
-          this.setState({ ppvProgress: 90 });
           
           await tokenTransctionService.sendCryptoPpv(video?.performer?._id, { performerId: video?.performer?._id, price: Number(amountToSendICP), tokenSymbol: ticker }).then(() => {
             this.setState({ ppvProgress: 100 });
@@ -603,7 +694,7 @@ class VideoViewPage extends PureComponent<IProps> {
             message.success('Payment successful! You can now access this content');
           });
           setTimeout(() => this.setState({
-            requesting: false, submiting: false, openPPVProgressModal: false, ppvProgress: 0
+            requesting: false, submiting: false
           }), 1000);
 
           this.setState({ isBought: true, requesting: false });
@@ -630,30 +721,30 @@ class VideoViewPage extends PureComponent<IProps> {
 
   async purchaseVideoCrypto(ticker: string) {
     this.setState({ requesting: true, submiting: true });
+    const { settings } = this.props;
 
     try {
-      let ppvCanID;
-      let ledgerCanID;
       let ppvActor;
       let ledgerActor;
       let sender;
       let identity;
       let agent;
-      let ckBTCLedgerCanID;
+
+      const ledgerCanID = settings.icLedger;
+      const ckBTCLedgerCanID = Principal.fromText(settings.icCKBTCMinter);
+      const ppvCanID = Principal.fromText(settings.icPPV);
+      const traxLedgerCanID = Principal.fromText(settings.icTraxToken);
 
       const authClient = await AuthClient.create();
 
-      if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+      if (settings.icNetwork !== true) {
         await authClient.login({
-          identityProvider: process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string,
+          identityProvider: cryptoService.getIdentityProviderLink(),
           onSuccess: async () => {
             if (await authClient.isAuthenticated()) {
               identity = authClient.getIdentity();
-              ppvCanID = process.env.NEXT_PUBLIC_PPV_CANISTER_ID_LOCAL as string;
-              ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID_LOCAL as string;
-              ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID_LOCAL as string;
 
-              const host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
+              const host = settings.icHost;
               agent = new HttpAgent({
                 identity,
                 host
@@ -672,6 +763,11 @@ class VideoViewPage extends PureComponent<IProps> {
                   agent,
                   canisterId: ckBTCLedgerCanID
                 });
+              }else if(ticker === "TRAX"){
+                ledgerActor = IcrcLedgerCanister.create({
+                  agent,
+                  canisterId: traxLedgerCanID
+                });
               }else{
                 message.error('Invalid ticker, please select a different token!');
               }
@@ -680,16 +776,12 @@ class VideoViewPage extends PureComponent<IProps> {
                 agent,
                 canisterId: ppvCanID
               });
-              await this.handlePurchaseVideoCrypto(Principal.fromText(ppvCanID), sender, ledgerActor, ppvActor, ticker);
+              await this.handlePurchaseVideoCrypto(ppvCanID, sender, ledgerActor, ppvActor, ticker);
             }
           }
         });
       } else {
-        const host = process.env.NEXT_PUBLIC_HOST as string;
-
-        ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID as string;
-        ppvCanID = process.env.NEXT_PUBLIC_PPV_CANISTER_ID as string;
-        ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID as string;
+        const host = settings.icHost;
 
         await authClient.login({
           onSuccess: async () => {
@@ -698,7 +790,6 @@ class VideoViewPage extends PureComponent<IProps> {
             sender = await agent.getPrincipal();
 
             if(ticker == "ICP"){
-
               ledgerActor = Actor.createActor<_SERVICE_LEDGER>(idlFactoryLedger, {
                 agent,
                 canisterId: ledgerCanID
@@ -712,17 +803,24 @@ class VideoViewPage extends PureComponent<IProps> {
               });
 
 
+            }else if(ticker === "TRAX"){
+
+              ledgerActor = IcrcLedgerCanister.create({
+                agent,
+                canisterId: ckBTCLedgerCanID
+              });
+
+
             }else{
               message.error('Invalid ticker, please select a different token!');
             }
-
             ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
               agent,
               canisterId: ppvCanID
             });
 
 
-            await this.handlePurchaseVideoCrypto(Principal.fromText(ppvCanID), sender, ledgerActor, ppvActor, ticker);
+            await this.handlePurchaseVideoCrypto(ppvCanID, sender, ledgerActor, ppvActor, ticker);
           }
         });
       }
@@ -792,7 +890,7 @@ class VideoViewPage extends PureComponent<IProps> {
     }
   }
 
-  async subscribeCrypto(currency: string, subType: string) {
+  /*async subscribeCrypto(currency: string, subType: string) {
     const { user } = this.props;
     const { video } = this.state;
     if (!user._id) {
@@ -832,6 +930,10 @@ class VideoViewPage extends PureComponent<IProps> {
     } finally {
       this.setState({ submiting: false });
     }
+  }*/
+
+  handleFileChange(val){
+    this.setState({isPlaying: val})
   }
 
   render() {
@@ -849,11 +951,11 @@ class VideoViewPage extends PureComponent<IProps> {
       commentMapping,
       comment
     } = this.props;
-    const { video } = this.state;
+    const { video, openTeaserModal, stopTeaser } = this.state;
     if (error) {
       return <Error statusCode={error?.statusCode || 404} title={error?.message || 'Video was not found'} />;
     }
-    if (video === null) {
+    if (video === null || !settings) {
       return <div style={{ margin: 30, textAlign: 'center' }}><Spin /></div>;
     }
     const { requesting: commenting } = comment;
@@ -862,9 +964,10 @@ class VideoViewPage extends PureComponent<IProps> {
     const totalComments = commentMapping.hasOwnProperty(video._id) ? commentMapping[video._id].total : 0;
     const {
       videoStats, isLiked, isBookmarked, isSubscribed, isBought, submiting, requesting, activeTab, isFirstLoadComment,
-      openSubscriptionModal, subscriptionType, openPPVModal, openPPVProgressModal, ppvProgress, isPriceICPLoading, amountICPToDisplay, amountCKBTCToDisplay
+      openSubscriptionModal, subscriptionType, openPPVModal, openPPVProgressModal, ppvProgress, isPriceICPLoading, amountICPToDisplay, amountTRAXToDisplay, amountCKBTCToDisplay, openInfoModal, isPlaying
     } = this.state;
     const thumbUrl = video?.thumbnail?.url || (video?.teaser?.thumbnails && video?.teaser?.thumbnails[0]) || (video?.video?.thumbnails && video?.video?.thumbnails[0]) || '/static/no-image.jpg';
+    
     const videoJsOptions = {
       key: video._id,
       autoplay: true,
@@ -882,9 +985,9 @@ class VideoViewPage extends PureComponent<IProps> {
     };
     const videoJsOptionsAudio = {
       key: video._id,
-      source: video?.video?.url
+      source: video?.video?.url,
+      stop: false
     };
-
     const teaserOptions = {
       key: `${video._id}_teaser`,
       autoplay: true,
@@ -897,14 +1000,18 @@ class VideoViewPage extends PureComponent<IProps> {
           uploadedToIC: video?.teaser?.uploadedToIC
         }
       ],
-      source: video?.teaser?.url
+      source: video?.teaser?.url,
+      stop: stopTeaser
     };
     const teaserOptionsAudio = {
       key: `${video._id}_teaser`,
       source: video?.teaser?.url,
       poster: thumbUrl,
-      uploadedToIC: video?.teaser?.uploadedToIC
+      uploadedToIC: video?.teaser?.uploadedToIC,
+      stop: stopTeaser
     };
+
+    
 
     return (
       <Layout className={styles.pagesVideoModule}>
@@ -934,64 +1041,17 @@ class VideoViewPage extends PureComponent<IProps> {
             content={video.description}
           />
         </Head>
-        <div className="main-container" style={{ maxWidth: `${video?.trackType === 'audio' ? '1080px' : '100vw'}` }}>
-
-          <div className={(video.isSale === 'pay' && !isBought) || (video.isSale === 'subscription' && !isSubscribed) ? 'vid-player-locked' : 'vid-player'}>
-            {((video.isSale === 'pay' && !isBought) || (video.isSale === 'subscription' && !isSubscribed) || video.isSchedule) && (
-            <div className="vid-group">
-              {video.teaser && video.teaserProcessing && (
-              <div className="vid-processing">
-                <div className="text-center">
-                  <Spin />
-                  <br />
-                  Teaser is currently processing
+        <div className="tick-img-background" style={{backgroundImage: thumbUrl ? `url('${thumbUrl}')`: '/static/empty_product.svg'}}>
+                <div className='tick-img-blur-background' style={{background: `${video.isSale === 'pay' || video.isSale === 'subscription' && '#000'}`}}>
                 </div>
               </div>
-              )}
-              {video.teaser && !video.teaserProcessing && video?.trackType === 'audio' ? <AudioPlayer {...teaserOptionsAudio} /> : <VideoPlayer {...teaserOptions} />}
-              {!video.teaser && (
-              <div className="video-thumbs">
-                <img alt="thumbnail" src={thumbUrl} />
-              </div>
-              )}
-              <div className="vid-exl-group">
-                {/* eslint-disable-next-line no-nested-ternary */}
-                <h3>{(video.isSale === 'pay' && !isBought && !video.isSchedule) ? 'This content is locked' : (video.isSale === 'subscription' && !isSubscribed && !video.isSchedule) ? `Only subscribers of ${video?.performer?.name} can view this content.` : 'Soon to be released'}</h3>
-                <div className="text-center" style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-                  {video.isSale === 'pay' && !isBought && (
-                    <>
-                      <Button block className="new-post-options-btn" loading={requesting} disabled={requesting} onClick={() => this.setState({ openPPVModal: true })} style={{ width: 'unset' }}>
-                        UNLOCK CONTENT
-                      </Button>
-                    </>
-                  )}
-                  {video.isSale === 'subscription' && !isSubscribed && (
-                    <div>
-                      <Button
-                        className="new-post-options-btn"
-                        style={{ marginRight: '15px' }}
-                        disabled={!user || !user._id}
-                        onClick={() => {
-                          this.setState({ openSubscriptionModal: true, subscriptionType: 'monthly' });
-                        }}
-                      >
-                        Subscribe to
-                        {' '}
-                        {video?.performer?.name}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                {video.isSchedule && (
-                <h4>
-                  Main video will be premiered on
-                  {' '}
-                  {formatDate(video.scheduledAt, 'll')}
-                </h4>
-                )}
-              </div>
-            </div>
-            )}
+        <div className="main-container" style={{position: 'relative', maxWidth: `${video?.trackType === 'audio' ? '350px' : '100vw'}`, marginTop: `${video?.trackType === 'audio' ? '4rem' : 'unset'}` }}>
+        
+          <div 
+          className={(video.isSale === 'pay' && !isBought) || (video.isSale === 'subscription' && !isSubscribed) ? 'vid-player-locked' : 'vid-player'} 
+          // style={{width: `${video?.trackType === 'audio' ? '500px' : '100%'}` }}
+          >
+            
             {((video.isSale === 'subscription' && isSubscribed && !video.isSchedule) || (video.isSale === 'pay' && isBought && !video.isSchedule) || (video.isSale === 'free' && !video.isSchedule)) && (
             <>
               {video.processing ? (
@@ -1005,36 +1065,330 @@ class VideoViewPage extends PureComponent<IProps> {
               ) : video?.trackType === 'audio'
                 ? (
                   <div className="audio-track-wrapper">
-                    <div className="audio-thumbs">
+                    <motion.div animate={isPlaying ? "isPlaying" : "isPaused"} variants={variants}
+                    whileHover={{ scale: 1 }} whileTap={{ scale: 0.9 }} 
+                    className="audio-thumbs">
                       <img alt="thumbnail" src={thumbUrl} />
+                    </motion.div>
+                    <div className='vid-heading-wrapper' >
+                      <div className="vid-heading" style={{justifyContent: 'flex-start', width: '100%'}}>
+                        <span className="vid-heading-span" >{video.title || 'Untitled'}</span>
+                      </div>
+                      <Link 
+                        href={`/artist/profile?id=${video?.performer?.username || video?.performer?._id}`}
+                        as={`/artist/profile?id=${video?.performer?.username || video?.performer?._id}`} 
+                        style={{justifyContent: 'flex-start', width: '100%'}}
+                        className="vid-artist-wrapper"
+                        >
+                        <span className="vid-artist">{video?.performer?.name || 'N/A'}</span>
+                      </Link>
                     </div>
-
-                    <AudioPlayer {...videoJsOptionsAudio} />
+                    <AudioPlayer_ {...videoJsOptionsAudio} />
                   </div>
                 )
                 : <div><VideoPlayer {...videoJsOptions} /></div>}
             </>
             )}
+            {(video.isSale === 'pay' && !isBought && !video.isSchedule) && (
+              <>
+              <img className='track-thumbnail' alt="thumbnail" src={thumbUrl} />
+              </>
+
+            )}
           </div>
         </div>
 
         <div className="secondary-container">
-          <div className="vid-heading">
-            <span className="vid-heading-span">{video.title || 'Untitled'}</span>
-            <button
-              type="button"
-              className={isBookmarked ? 'react-btn-lg active' : 'react-btn-lg'}
-              onClick={this.onReaction.bind(this, 'book_mark')}
-            >
-              {isBookmarked ? (
-                <BsCheckCircleFill style={{ color: '#c7ff02', marginTop: '1px' }} />
-              ) : (
-                <PlusOutlined />
+          {video?.trackType === 'video' && (
+            <div className='vid-heading-wrapper'>
+              <div className="vid-heading">
+                <span className="vid-heading-span">{video.title || 'Untitled'}</span>
+              </div>
+              <Link 
+                href={`/artist/profile?id=${video?.performer?.username || video?.performer?._id}`}
+                as={`/artist/profile?id=${video?.performer?.username || video?.performer?._id}`} 
+                className="vid-artist-wrapper"
+                >
+                <span className="vid-artist">{video?.performer?.name || 'N/A'}</span>
+              </Link>
+            </div>
+          )}
+          
+          <div className='vid-more-info-btn-wrapper'>
+            {(video.isSale !== 'pay' && video.isSale !== 'subscription') && (
+              <Button className='vid-more-info-btn-free' >
+                Free
+              </Button>
+            )}
+
+            {/* {((video.isSale === 'pay' && !isBought) || (video.isSale === 'subscription' && !isSubscribed) || video.isSchedule) && (
+                <Button
+            
+                  className="show-teaser-btn"
+                  onClick={() => this.setState({ openTeaserModal: true })}
+                >
+                  Show teaser
+                </Button>
+              )} */}
+
+            {/* {((video.isSale === 'pay' && !isBought) || (video.isSale === 'subscription' && !isSubscribed) || video.isSchedule) && (
+            <div style={{ textAlign: 'center' }}>
+              
+              <Modal
+                key="teaser"
+                className="teaser-modal"
+                open={openTeaserModal}
+                centered
+                onOk={() => this.setState({ stopTeaser: true }, () => this.setState({ openTeaserModal: false }))}
+                footer={null}
+                width={420}
+                title={null}
+                onCancel={() => this.setState({ stopTeaser: true }, () => this.setState({ openTeaserModal: false }))}
+              >
+                <div className="vid-group">
+                  {video.teaser && video.teaserProcessing && (
+                  <div className="vid-processing">
+                    <div className="text-center">
+                      <Spin />
+                      <br />
+                      Teaser is currently processing
+                    </div>
+                  </div>
+                  )}
+                  {video.teaser && !video.teaserProcessing && video?.trackType === 'audio' ? <AudioPlayer_ {...teaserOptionsAudio} /> : <VideoPlayer {...teaserOptions} />}
+                  {!video.teaser && (
+                  <div className="video-thumbs">
+                    <img alt="thumbnail" src={thumbUrl} />
+                  </div>
+                  )}
+                  <div className="vid-exl-group">
+
+                    <h3>{(video.isSale === 'pay' && !isBought && !video.isSchedule) ? 'This content is locked' : (video.isSale === 'subscription' && !isSubscribed && !video.isSchedule) ? `Only subscribers of ${video?.performer?.name} can view this content.` : 'Soon to be released'}</h3>
+                    <div className="text-center" style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                    </div>
+                    {video.isSchedule && (
+                    <h4>
+                      Main video will be premiered on
+                      {' '}
+                      {formatDate(video.scheduledAt, 'll')}
+                    </h4>
+                    )}
+                  </div>
+                </div>
+              </Modal>
+            </div>
+            )} */}
+
+              {video.isSale === 'pay' && !isBought && (
+                <>
+                  <Button block className='vid-more-info-btn-ppv' loading={requesting} disabled={requesting} onClick={() => this.setState({ openPPVModal: true })} style={{ width: 'unset' }}>
+                    Purchase
+                  </Button>
+                </>
               )}
-              {' '}
-            </button>
+              {video.isSale === 'subscription' && !isSubscribed && (
+                <div>
+                  <Button
+                    className='vid-more-info-btn-sub'
+                    style={{ marginRight: '15px' }}
+                    disabled={!user || !user._id}
+                    onClick={() => {
+                      this.setState({ openSubscriptionModal: true, subscriptionType: 'monthly' });
+                    }}
+                  >
+                    Subscribe
+                  </Button>
+                </div>
+              )}
+               
+              <div className="like-act-btns">
+              <button
+                type="button"
+                className={isLiked ? 'react-btn active' : 'react-btn'}
+                onClick={this.onReaction.bind(this, 'like')}
+              >
+                {isLiked ? <FireFilled /> : <FireOutlined />}
+                {isLiked && (
+                  <>
+                  {' '}
+                    {shortenLargeNumber(videoStats.likes || 0)}
+                  </>
+                )}
+              </button>
+            </div>
+            <button
+                type="button"
+                className={isBookmarked ? 'react-btn-lg active' : 'react-btn-lg'}
+                onClick={this.onReaction.bind(this, 'book_mark')}
+              >
+                {isBookmarked ? (
+                  <BsCheckCircleFill style={{ color: '#c7ff02' }} />
+                ) : (
+                  <PlusOutlined />
+                )}
+                {' '}
+              </button>
+
+              {/* <button
+                type="button"
+                className={isBookmarked ? 'react-btn-lg active' : 'react-btn-lg'}
+                onClick={()=>this.setState({openInfoModal: true})}
+              >
+                <FontAwesomeIcon icon={faEllipsis} />
+              </button> */}
           </div>
+
+          <div>
+          
+          <div className='vid-tab-wrapper'>
+            <Tabs
+              defaultActiveKey="comment"
+              activeKey={activeTab}
+              onChange={(tab) => this.onChangeTab(tab)}
+              className=""
+            >
+              <TabPane
+                tab="Comments"
+                key="comment"
+              >
+                <CommentForm
+                  creator={user}
+                  onSubmit={this.onSubmitComment.bind(this)}
+                  objectId={video._id}
+                  requesting={commenting}
+                  objectType="video"
+                  siteName={ui?.siteName}
+                />
+
+                <ListComments
+                  key={`list_comments_${comments.length}`}
+                  requesting={fetchingComment}
+                  comments={comments}
+                  total={totalComments}
+                  onDelete={this.deleteComment.bind(this)}
+                  user={user}
+                  canReply
+                />
+
+                {comments.length < totalComments && (
+                  <p className="text-center">
+                    <a aria-hidden onClick={this.loadMoreComment.bind(this)}>
+                      More comments
+                    </a>
+                  </p>
+                )}
+              </TabPane>
+              
+              <TabPane tab="Participants" key="participants">
+                {video.participants && video.participants.length > 0 ? (
+                  video.participants.map((per: IPerformer) => (
+                    <Link
+                      key={per._id}
+                      href={`/artist/profile?id=${per?.username || per?._id}`}
+                      as={`/artist/profile?id=${per?.username || per?._id}`}
+                      legacyBehavior
+                    >
+                      <div key={per._id} className="participant-card">
+                        <img
+                          alt="per_atv"
+                          src={per?.avatar || '/no-avatar.png'}
+                        />
+                        <div className="participant-info">
+                          <h4>
+                            {per?.name || 'N/A'}
+                            &nbsp;
+                            {per?.verifiedAccount && <BadgeCheckIcon style={{ height: '1rem', color: '#c8ff02' }} />}
+                            &nbsp;
+                            {per?.wallet_icp && (
+
+                              <Image src="/static/infinity-symbol.png" style={{ height: '1rem' }} />
+                            )}
+                          </h4>
+
+                          <h5>
+                            @
+                            {per?.username || 'n/a'}
+                          </h5>
+                          <Tooltip title={per?.bio}>
+                            <div className="p-bio">
+                              {per?.bio || 'No bio'}
+                            </div>
+                          </Tooltip>
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  <p style={{color: 'white'}}>No profile was found.</p>
+                )}
+              </TabPane>
+              <TabPane tab="Description" key="description">
+                <div className='descriptions-wrapper'>
+                  <span className=''>
+                    {shortenLargeNumber(videoStats.views || 0)}
+                    &nbsp;
+                    <span>streams</span>
+                  </span>
+                  <span className=''>
+                    {formatDate(video.updatedAt, 'll')}
+                  </span>
+
+                  <span>
+                    {video.tags && video.tags.length > 0 && (
+                    
+                    <>
+                      {video.tags.map((tag) => (
+                        <a color="magenta" key={tag} style={{ marginRight: 5 }}>
+                          #
+                          {tag || 'tag'}
+                        </a>
+                      ))}
+                    
+                    </>
+                  )}
+                  </span>
+
+                  
+                </div>
+              
+              
+                <p style={{ color: '#959595' }}>{video.description || 'No description...'}</p>
+              </TabPane>
+              
+            </Tabs>
+          </div>
+          </div>
+          
+          <div className="related-items">
+            <h4 className="ttl-1">You may also like</h4>
+            {relatedVideos.requesting && <div className="text-center"><Spin /></div>}
+            {relatedVideos.items.length > 0 && !relatedVideos.requesting && (
+              <RelatedListVideo videos={relatedVideos.items} />
+            )}
+            {!relatedVideos.items.length && !relatedVideos.requesting && (
+              <p>No video was found</p>
+            )}
+          </div>
+        </div>
+        <Modal
+          key="ppv-purchase-modal"
+          className="ppv-purchase-modal"
+          width={500}
+          centered
+          title={null}
+          open={openInfoModal}
+          footer={null}
+          onCancel={() => this.setState({ openInfoModal: false })}
+        >
+
           <div className="vid-split">
+            <div className='track-info-modal-title'>
+              <span>Track info</span>
+            </div>
+            
+            <div className="track-info-title">
+              <span >{video?.title || ' '}</span>
+            </div>
             <div className="main-container">
               <div className="vid-act">
                 <Link
@@ -1063,6 +1417,7 @@ class VideoViewPage extends PureComponent<IProps> {
                     </div>
                   </div>
                 </Link>
+
                 <div className="act-btns">
                   <button
                     type="button"
@@ -1133,7 +1488,7 @@ class VideoViewPage extends PureComponent<IProps> {
                         <h4>
                           {per?.name || 'N/A'}
                           &nbsp;
-                          {per?.verifiedAccount && <BadgeCheckIcon style={{ height: '1rem' }} />}
+                          {per?.verifiedAccount && <BadgeCheckIcon style={{ height: '1rem', color: '#c8ff02' }} />}
                           &nbsp;
                           {per?.wallet_icp && (
 
@@ -1155,7 +1510,7 @@ class VideoViewPage extends PureComponent<IProps> {
                   </Link>
                 ))
               ) : (
-                <p>No profile was found.</p>
+                <p style={{color: 'white'}}>No profile was found.</p>
               )}
             </TabPane>
             <TabPane
@@ -1190,19 +1545,11 @@ class VideoViewPage extends PureComponent<IProps> {
               )}
             </TabPane>
           </Tabs>
-          <div className="related-items">
-            <h4 className="ttl-1">You may also like</h4>
-            {relatedVideos.requesting && <div className="text-center"><Spin /></div>}
-            {relatedVideos.items.length > 0 && !relatedVideos.requesting && (
-              <RelatedListVideo videos={relatedVideos.items} />
-            )}
-            {!relatedVideos.items.length && !relatedVideos.requesting && (
-              <p>No video was found</p>
-            )}
-          </div>
-        </div>
+        </Modal>
+
+
         <Modal
-          key="ppv-purchase-modal"
+          key="ppv-purchase-modal2"
           className="ppv-purchase-modal"
           width={420}
           centered
@@ -1217,12 +1564,12 @@ class VideoViewPage extends PureComponent<IProps> {
             performer={video?.performer}
             submiting={submiting}
             onFinish={this.beforePurchase.bind(this)}
-            settings={settings}
             isPriceICPLoading={isPriceICPLoading}
             user={user}
             video={video}
             contentPriceICP={amountICPToDisplay}
             contentPriceCKBTC={amountCKBTCToDisplay}
+            contentPriceTRAX={amountTRAXToDisplay}
           />
         </Modal>
 
@@ -1233,27 +1580,12 @@ class VideoViewPage extends PureComponent<IProps> {
           centered
           onOk={() => this.setState({ openPPVProgressModal: false })}
           footer={null}
-          width={600}
+          width={450}
           title={null}
           onCancel={() => this.setState({ openPPVProgressModal: false })}
         >
-          <div className="confirm-purchase-form" >
-            <div className="left-col" >
-              <Avatar src={video?.performer?.avatar || '/static/no-avatar.png'} />
-              <div className="p-name" style={{textAlign: 'center'}}>
-                Purchase content from
-                {' '}
-                <br />
-                {video?.performer?.name || 'N/A'}
-                {' '}
-                {video?.performer?.verifiedAccount && <BadgeCheckIcon style={{ height: '1.5rem' }} className="primary-color" />}
-              </div>
-              <br />
-              <p className="p-subtitle">Please wait while your transaction is processing. Please do not refresh the page.</p>
 
-            </div>
-            <Progress percent={Math.round(ppvProgress)} style={{color: 'white'}}/>
-          </div>
+          <PaymentProgress progress={ppvProgress} performer={video?.performer}/>
 
         </Modal>
 
@@ -1272,7 +1604,6 @@ class VideoViewPage extends PureComponent<IProps> {
             performer={video?.performer}
             submiting={submiting}
             onFinish={this.subscribe.bind(this)}
-            settings={settings}
             user={user}
           />
         </Modal>

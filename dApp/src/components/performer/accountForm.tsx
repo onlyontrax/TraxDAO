@@ -6,7 +6,7 @@ import { AvatarUpload } from '@components/user/avatar-upload';
 import { CoverUpload } from '@components/user/cover-upload';
 import { getGlobalConfig } from '@services/config';
 import {
-  Button, Checkbox, Col, Form, Image, Input, Modal, Popover, Progress, Row, Select, Upload, message
+  Button, Checkbox, Col, Form, Image, Input, Modal, Popover, Progress, Row, Select, Upload, message, Switch
 } from 'antd';
 import moment from 'moment';
 import { PureComponent } from 'react';
@@ -230,7 +230,7 @@ export class PerformerAccountForm extends PureComponent<IProps> {
           <Col lg={12} md={12} xs={12} style={{marginBottom: '24px', maxWidth: '100%'}}>
             <p className="account-form-item-tag">Primary genre</p>
             <Form.Item name="genreOne">
-              <Select className="account-form-input">
+              <Select className="account-form-input" style={{height: 42, fontSize: '12px'}}>
                 {genreOne.map((s) => (
                   <Select.Option key={s.value} value={s.value}>
                     {s.text}
@@ -242,7 +242,7 @@ export class PerformerAccountForm extends PureComponent<IProps> {
           <Col lg={12} md={12} xs={12} style={{marginBottom: '24px', maxWidth: '100%'}}>
             <p className="account-form-item-tag">Secondary genre</p>
             <Form.Item name="genreTwo">
-              <Select className="account-form-input">
+              <Select className="account-form-input" style={{height: 42}}>
                 {genreTwo.map((s) => (
                   <Select.Option key={s.value} value={s.value}>
                     {s.text}
@@ -551,7 +551,13 @@ export class PerformerAccountForm extends PureComponent<IProps> {
               <Input className="account-form-input"/>
             </Form.Item>
           </Col>
-          <Col lg={24} md={24} xs={24} style={{marginBottom: '24px', maxWidth: '100%'}}>
+          <Col lg={12} md={12} xs={24} style={{marginBottom: '24px', maxWidth: '100%'}}>
+            <p className="account-form-item-tag">Email notifications</p>
+            <Form.Item name="unsubscribed" valuePropName="checked">
+              <Switch className="switch" checkedChildren="Off" unCheckedChildren="On" />
+            </Form.Item>
+          </Col>
+          {/* <Col lg={24} md={24} xs={24} style={{marginBottom: '24px', maxWidth: '100%'}}>
             <Form.Item>
               <p style={{ fontSize: '1rem', color: 'white' }}>Intro video</p>
               <Upload
@@ -586,7 +592,7 @@ export class PerformerAccountForm extends PureComponent<IProps> {
             <Form.Item name="activateWelcomeVideo" valuePropName="checked">
               <Checkbox style={{ color: 'white' }}>Activate intro video</Checkbox>
             </Form.Item>
-          </Col>
+          </Col> */}
           <Col lg={24} md={24} xs={24}>
             {user.twitterConnected && (
               <Form.Item>

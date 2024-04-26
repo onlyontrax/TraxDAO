@@ -30,10 +30,8 @@ export class ScrollListNft extends PureComponent<IProps> {
       >
         <PerformerListNft items={items} />
         {!loading && !items.length && (
-          <div className="coming-soon-wrapper  custom">
-                  <div className="text-center coming-soon-alert">
-                    <span>Coming soon!</span>
-                  </div>
+          <div className="">
+                  <Alert className="no-object-found" message={notFoundText || 'This artist has not created any NFTs'} type="info" />
                 </div>
         )}
         {loading && <div className="text-center"><Spin /></div>}

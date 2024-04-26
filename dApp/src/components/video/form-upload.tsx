@@ -381,6 +381,10 @@ export class FormUploadVideo extends PureComponent<IProps> {
             data.trackType = trackType;
             data.royaltyCut = royaltyCut;
             data.uploadToIC = uploadToIC;
+
+            if(!data.participantIds){
+              data.participantIds = [user._id];
+            }
             submit(data);
           }}
           onFinishFailed={() => message.error('Please complete the required fields')}

@@ -33,8 +33,6 @@ import SignUpModal from '@components/sign-up/sign-up-modal';
 import EmailSignUpModal from '@components/sign-up/email-sign-up-modal';
 import { BadgeCheckIcon } from '@heroicons/react/solid';
 import CopyReferralCode from 'src/components/common/referralCode';
-
-import type { _SERVICE as _SERVICE_PPV } from '../../../smart-contracts/declarations/ppv/ppv.did';
 import styles from './new-header.module.scss';
 
 interface IProps {
@@ -196,8 +194,8 @@ class NewHeader extends PureComponent<IProps> {
                         Sign In
                       </Link>
                     </li>,
-                      <li key="signup" className={router.pathname === '/auth/register' ? 'active logged-out' : 'logged-out'}>
-                        <Link href="/auth/register" className='logged-out-link'>
+                      <li key="signup" className={router.pathname === '/register' ? 'active logged-out' : 'logged-out'}>
+                        <Link href="/register" className='logged-out-link'>
                           Create account
                         </Link>
                       </li>,
@@ -245,7 +243,7 @@ class NewHeader extends PureComponent<IProps> {
               <div className='log-in-modal-wrapper'>
                 <Modal
                   key="purchase_post"
-                  className="log-in-modal"
+                  className="auth-modal"
                   title={null}
                   open={openLogInModal}
                   footer={null}
@@ -260,7 +258,7 @@ class NewHeader extends PureComponent<IProps> {
               <div className='sign-in-modal-wrapper'>
                 <Modal
                   key="purchase_post"
-                  className="sign-in-modal"
+                  className="auth-modal"
                   title={null}
                   open={openSignUpModal}
                   footer={null}

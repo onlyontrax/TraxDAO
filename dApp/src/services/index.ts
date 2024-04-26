@@ -30,3 +30,4 @@ export * from './shipping-address.service';
 export * from './follow.service';
 export * from './crypto.service';
 export * from './nft.service';
+export * from './ticket.service';

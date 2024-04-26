@@ -3,6 +3,7 @@ import PageHeading from '@components/common/page-heading';
 import { FormUploadVideo } from '@components/video/form-upload';
 import { getResponseError } from '@lib/utils';
 import { videoService } from '@services/video.service';
+import { cryptoService } from '@services/crypto.service';
 import { Layout, message } from 'antd';
 import Head from 'next/head';
 import Router from 'next/router';
@@ -13,10 +14,10 @@ import { IPerformer, ISettings, IUIConfig } from 'src/interfaces';
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { AuthClient } from '@dfinity/auth-client';
 import { Principal } from '@dfinity/principal';
-import { Content, Participants } from '../../../src/smart-contracts/declarations/ppv/ppv.did';
+import { Content, Participants } from '../../../src/smart-contracts/declarations/ppv/ppv2.did';
 
-import { idlFactory as idlFactoryPPV } from '../../../src/smart-contracts/declarations/ppv';
-import type { _SERVICE as _SERVICE_PPV } from '../../../src/smart-contracts/declarations/ppv/ppv.did';
+import { idlFactory as idlFactoryPPV } from '../../../src/smart-contracts/declarations/ppv/ppv.did.js';
+import type { _SERVICE as _SERVICE_PPV } from '../../../src/smart-contracts/declarations/ppv/ppv2.did';
 
 interface IProps {
   ui: IUIConfig;
@@ -56,7 +57,7 @@ class UploadVideo extends PureComponent<IProps> {
   componentDidMount() {
     const { user } = this.props;
     if (!user || !user.verifiedDocument) {
-      message.warning('Your ID documents are not verified yet! You could not post any content right now.');
+      message.warning('Your Identity has not been verified yet! You can\'t post any content right now. Please to to Account settings to verify your account.');
       Router.back();
     }
   }
@@ -70,13 +71,13 @@ class UploadVideo extends PureComponent<IProps> {
   }
 
   async submit(data: any) {
-    const { user } = this.props;
+    const { user, settings } = this.props;
     if (!this._files.video) {
       message.error('Please select file!');
       return;
     }
+
     const submitData = { ...data };
-    console.log(data.walletOption)
     if ((data.isSale === 'pay' && !data.price) || (data.isSale === 'pay' && data.price < 1)) {
       message.error('Invalid amount of tokens');
       return;
@@ -133,13 +134,13 @@ class UploadVideo extends PureComponent<IProps> {
         const authClient = await AuthClient.create();
         
         if(data.walletOption === ('II' || 'nfid' )){
-          if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+          if (settings.icNetwork !== true) {
             await authClient.login({
-              identityProvider: process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string,
+              identityProvider: cryptoService.getIdentityProviderLink(),
               onSuccess: async () => {
                 if (await authClient.isAuthenticated()) {
                   identity = authClient.getIdentity();
-                  host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
+                  host = settings.icHost;
                   agent = new HttpAgent({
                     identity,
                     host
@@ -149,21 +150,21 @@ class UploadVideo extends PureComponent<IProps> {
                   agent.fetchRootKey();
                   ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
                     agent,
-                    canisterId: process.env.NEXT_PUBLIC_PPV_CANISTER_ID_LOCAL as string
+                    canisterId: settings.icPPV
                   });
                 }
                 await this.handleAddPPVContent(res.data._id, content, ppvActor);
               }
             });
           } else {
-            host = process.env.NEXT_PUBLIC_HOST as string;
+            host = settings.icHost;
             await authClient.login({
               onSuccess: async () => {
                 identity = await authClient.getIdentity();
                 agent = new HttpAgent({ identity, host });
                 ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
                   agent,
-                  canisterId: process.env.NEXT_PUBLIC_PPV_CANISTER_ID as string
+                  canisterId: settings.icPPV
                 });
 
                 await this.handleAddPPVContent(res.data._id, content, ppvActor);
@@ -173,16 +174,14 @@ class UploadVideo extends PureComponent<IProps> {
         }else if(data.walletOption === 'plug'){
 
           const whitelist = [
-            process.env.NEXT_PUBLIC_PPV_CANISTER_ID as string, 
+            settings.icPPV, 
           ];
 
           if(typeof window !== 'undefined' && 'ic' in window){
             // @ts-ignore
             const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
               whitelist,
-              host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') 
-              ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) 
-              : (process.env.NEXT_PUBLIC_HOST as string)
+              host: settings.icHost
             }) : false;
       
             !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
@@ -191,17 +190,16 @@ class UploadVideo extends PureComponent<IProps> {
       
             // @ts-ignore
             if (!window?.ic?.plug?.agent && connected  ) {
-              console.log('creating agent')
               // @ts-ignore
               await window.ic.plug.createAgent({ 
                 whitelist, 
-                host: (process.env.NEXT_PUBLIC_DFX_NETWORK as string !== 'ic') ? (process.env.NEXT_PUBLIC_HOST_LOCAL as string) : (process.env.NEXT_PUBLIC_HOST as string) 
+                host: settings.icHost
               });
             }
 
             ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
               agent: (window as any).ic.plug.agent,
-              canisterId: process.env.NEXT_PUBLIC_PPV_CANISTER_ID as string
+              canisterId: settings.icPPV
             });
 
             await this.handleAddPPVContent(res.data._id, content, ppvActor);

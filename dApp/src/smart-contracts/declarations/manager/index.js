@@ -1,4 +1,5 @@
 import { Actor, HttpAgent } from '@dfinity/agent';
+import storeHolder from '@lib/storeHolder';
 
 // Imports and re-exports candid interface
 import { idlFactory } from './manager.did.js';
@@ -8,21 +9,32 @@ import { idlFactory } from './manager.did.js';
  * process.env.CANISTER_ID_<CANISTER_NAME_UPPERCASE>
  * beginning in dfx 0.15.0
  */
-export const canisterId = process.env.CANISTER_ID_MANAGER
-  || process.env.MANAGER_CANISTER_ID;
-
-export const createActor = (canId, options = {}) => {
-  const agent = options.agent || new HttpAgent({ ...options.agentOptions });
-
-  if (options.agent && options.agentOptions) {
-    // eslint-disable-next-line no-console
-    console.warn(
-      'Detected both agent and agentOptions passed to createActor. Ignoring agentOptions and proceeding with the provided agent.'
-    );
+export const canisterId = () => {
+  const store = storeHolder.getStore();
+  if (!store) {
+    throw new Error('Redux store is not initialized');
   }
 
+  const state = store.getState();
+  const { settings } = state;
+  return settings.icContentManager;
+};
+
+export const createActor = (canId, options = {}) => {
+  const store = storeHolder.getStore();
+  if (!store) {
+    throw new Error('Redux store is not initialized');
+  }
+
+  const state = store.getState();
+  const { settings } = state;
+
+  const agent = options.agent || new HttpAgent({
+    host: settings.icHost
+  });
+
   // Fetch root key for certificate validation during development
-  if (process.env.DFX_NETWORK !== 'ic') {
+  if (settings.icNetwork !== true) {
     agent.fetchRootKey().catch((err) => {
       // eslint-disable-next-line no-console
       console.warn(

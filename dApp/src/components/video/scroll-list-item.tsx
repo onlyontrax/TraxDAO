@@ -29,7 +29,7 @@ export class ScrollListVideo extends PureComponent<IProps> {
         scrollThreshold={0.9}
       >
         <PerformerListVideo videos={items} />
-        {!items.length && !loading && <div className="main-container custom"><Alert className="text-center" message={notFoundText || 'No video was found'} type="info" /></div>}
+        {!items.length && !loading && <div className="main-container custom"><div><Alert className="no-object-found" message={notFoundText || 'This artist has no music available'} type="info" /></div></div>}
         {loading && <div className="text-center"><Spin /></div>}
       </InfiniteScroll>
     );

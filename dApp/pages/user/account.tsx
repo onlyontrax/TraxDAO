@@ -11,7 +11,7 @@ import { ISettings, IUIConfig } from 'src/interfaces';
 import { IUser } from 'src/interfaces/user';
 import { updateCurrentUserAvatar, updatePassword, updateUser } from 'src/redux/user/actions';
 import { SocketContext } from 'src/socket';
-import { UserAccountForm } from '@components/user';
+import UserAccountForm from '@components/user/account-form';
 import styles from './index.module.scss';
 
 interface IProps {
@@ -150,7 +150,6 @@ class UserAccountSettingPage extends PureComponent<IProps, IState> {
             onVerifyEmail={this.verifyEmail.bind(this)}
             onSwitchToPerformer={this.handleSwitchToPerformer.bind(this)}
             ui={ui}
-            settings={settings}
             onNFIDConnect={this.onNFIDConnect.bind(this)}
           />
         </div>

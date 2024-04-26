@@ -52,7 +52,8 @@ export default function TrendingTracks() {
 
   return (
     <div className="hot-tracks-container">
-      <p className="hot-tracks-header">Recommended Tracks</p>
+      <p className="hot-tracks-header">New Music</p>
+      
       <div className="hot-tracks-wrapper">
         {videos.map((video) => (
           <MappedElement key={video._id} video={video} />

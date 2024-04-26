@@ -1,8 +1,8 @@
 /* eslint-disable react/no-unused-prop-types */
 import { connect } from 'react-redux';
-import { FormTicket } from '@components/product/form-ticket';
+import { FormTicket } from '@components/ticket/form-ticket';
 import { getResponseError } from '@lib/utils';
-import { productService } from '@services/product.service';
+import { ticketService } from '@services/ticket.service';
 import { Layout, message } from 'antd';
 import Head from 'next/head';
 import Router from 'next/router';
@@ -41,7 +41,7 @@ class CreateTicket extends PureComponent<IProps> {
   componentDidMount() {
     const { user } = this.props;
     if (!user || !user.verifiedDocument) {
-      message.warning('Your ID documents are not verified yet! You could not post any content right now.');
+      message.warning('Your Identity has not been verified yet! You can\'t post any content right now. Please to to Account settings to verify your account.');
       Router.back();
     }
   }
@@ -55,17 +55,18 @@ class CreateTicket extends PureComponent<IProps> {
   }
 
   async submit(data: any) {
+    const {user} = this.props;
+
     if (!this._files.image) {
       message.error('Please upload product image!');
       return;
     }
-    if (data.type === 'digital' && !this._files.digitalFile) {
+    if (!this._files.digitalFile) {
       message.error('Please select digital file!');
       return;
     }
-    if (data.type === 'physical') {
-      this._files.digitalFile = null;
-    }
+
+    data.tiers = JSON.stringify([...[], ...data.tiers]);
 
     const files = Object.keys(this._files).reduce((tmpFiles, key) => {
       if (this._files[key]) {
@@ -81,9 +82,9 @@ class CreateTicket extends PureComponent<IProps> {
       uploading: true
     });
     try {
-      await productService.createProduct(files, data, this.onUploading.bind(this));
+      await ticketService.createTicket(files, data, this.onUploading.bind(this));
       message.success('New product was successfully created');
-      Router.push('/artist/my-store');
+      Router.push(`/artist/profile?id=${user?.username || user?._id}`);
     } catch (error) {
       message.error(getResponseError(error) || 'Something went wrong, please try again!');
       this.setState({
@@ -98,7 +99,7 @@ class CreateTicket extends PureComponent<IProps> {
     return (
       <Layout>
         <Head>
-          <title>{`${ui?.siteName} | New product`}</title>
+          <title>{`${ui?.siteName} | New ticket`}</title>
         </Head>
         <div className="main-container">
           <FormTicket

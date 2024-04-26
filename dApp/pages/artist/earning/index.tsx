@@ -41,8 +41,14 @@ const initialState = {
     totalSiteCommission: 0,
     totalNetPrice: 0,
     totalGrossPriceICP: 0,
+    totalGrossPriceTRAX: 0,
+    totalGrossPriceCKBTC: 0,
     totalSiteCommissionICP: 0,
+    totalSiteCommissionTRAX: 0,
+    totalSiteCommissionCKBTC: 0,
     totalNetPriceICP: 0,
+    totalNetPriceTRAX: 0,
+    totalNetPriceCKBTC: 0,
     totalReferralCommission: 0,
     totalAgentCommission: 0
   },
@@ -101,6 +107,7 @@ class EarningPage extends PureComponent<IProps, IStates> {
         type,
         ...dateRange
       });
+
       this.setState({
         earning: earning.data.data,
         pagination: { ...pagination, total: earning.data.total },

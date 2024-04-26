@@ -3,7 +3,12 @@ import { Banner } from '@components/common';
 import HomeFooter from '@components/common/layout/footer';
 import { HomePerformers } from '@components/performer';
 import ScrollListFeed from '@components/post/scroll-list';
+
 import { getFeeds, moreFeeds, removeFeedSuccess } from '@redux/feed/actions';
+
+import { getContentFeeds, moreContentFeeds } from '@redux/feed/actions';
+
+
 import {
   bannerService, feedService, performerService, streamService, utilsService
 } from '@services/index';
@@ -30,9 +35,13 @@ interface IProps {
   user: IUser;
   performers: IPerformer[];
   getFeeds: Function;
+  getContentFeeds: Function;
   moreFeeds: Function;
+  moreContentFeeds: Function;
   feedState: any;
+  contentFeedState: any;
   removeFeedSuccess: Function;
+  all: any;
 }
 
 function isInViewport(el) {
@@ -79,7 +88,8 @@ class HomePage extends PureComponent<IProps> {
     showFooter: false,
     banners: null,
     countries: null,
-    streams: null
+    streams: null,
+    feedType: 'for-you'
   };
 
   async componentDidMount() {
@@ -96,6 +106,7 @@ class HomePage extends PureComponent<IProps> {
   updateDataDependencies() {
     this.getPerformers();
     this.getFeeds();
+    this.getContentFeeds();
     window.addEventListener('scroll', this.handleScroll);
   }
 
@@ -139,6 +150,19 @@ class HomePage extends PureComponent<IProps> {
     });
   }
 
+  async getContentFeeds() {
+    const { getContentFeeds: handleGetFeeds } = this.props;
+    const {
+      itemPerPage, feedPage, keyword, orientation
+    } = this.state;
+    handleGetFeeds({
+      q: keyword,
+      orientation,
+      limit: itemPerPage,
+      offset: itemPerPage * feedPage
+    });
+  }
+
   async getPerformers() {
     const { isFreeSubscription } = this.state;
     const { user } = this.props;
@@ -168,16 +192,31 @@ class HomePage extends PureComponent<IProps> {
     });
   }
 
+  async loadmoreContentFeeds() {
+    const { contentFeedState, moreContentFeeds: handleGetMore } = this.props;
+    const { items: posts, total: totalContentFeeds } = contentFeedState;
+    const { feedPage, itemPerPage } = this.state;
+    if (posts.length >= totalContentFeeds) return;
+    this.setState({ feedPage: feedPage + 1 }, () => {
+      handleGetMore({
+        limit: itemPerPage,
+        offset: (feedPage + 1) * itemPerPage
+      });
+    });
+  }
+
   render() {
-    const { randomPerformers, loadingPerformer, showFooter, banners, countries, streams } = this.state;
+    const { randomPerformers, loadingPerformer, showFooter, banners, countries, streams, feedType } = this.state;
     if (countries === null) {
       return <div style={{ margin: 30, textAlign: 'center' }}><Spin /></div>;
     }
     const {
-      ui, feedState, user, settings
+      ui, feedState, contentFeedState, user, settings, all
     } = this.props;
+
     const { items: feeds, total: totalFeeds, requesting: loadingFeed } = feedState;
-    const topBanners = banners && banners.length > 0 && banners.filter((b) => b.position === 'top');
+    const { items: contentFeeds, total: totalContentFeeds, requesting: loadingContentFeed } = contentFeedState;
+    // const topBanners = banners && banners.length > 0 && banners.filter((b) => b.position === 'top');
     return (
       <div className={styles.pagesHomeModule}>
         <Layout>
@@ -185,13 +224,13 @@ class HomePage extends PureComponent<IProps> {
             <Head>
               <title>{`${ui?.siteName} | Home`}</title>
             </Head>
-            <div className="home-page" style={{ background: '#00000000', width: '98%', margin: 'auto' }}>
+            <div className="home-page" style={{ background: '#00000000', width: '100%', margin: 'auto', maxWidth: '1400px' }}>
               <div className="feed-container">
-                <div className="home-top-container">
+                {/* <div className="home-top-container">
                   <div className="top-container">
                     <TrendingTracks />
                   </div>
-                </div>
+                </div> */}
                 <div className="home-container">
                   <div className="left-container">
                     {user._id && !user.verifiedEmail && settings.requireEmailVerification && (
@@ -217,30 +256,60 @@ class HomePage extends PureComponent<IProps> {
                         </div>
                       </div>
                     )}
-                    {!loadingFeed && !totalFeeds && (
-                      <div className="main-container custom text-center" style={{ margin: 'auto' }}>
-                        <Alert
-                          type="warning"
-                          message={(
-                            <Link href="/artist">
-                              <SearchOutlined />
-                              {' '}
-                              Find someone to follow
-                            </Link>
-                          )}
-                        />
-                      </div>
-                    )}
+                    
                     <div className='feed-title'>
-                      <span>Your Feed</span>
+                      <span  onClick={()=> this.setState({feedType: 'for-you'})} className={`${feedType === 'for-you' && 'selected'} feed-btn`}>For you</span>
+                      <span onClick={()=> this.setState({feedType: 'trending'})} className={`${feedType === 'trending' && 'selected'} feed-btn`}>Discover</span>
                     </div>
-                    <ScrollListFeed
-                      items={feeds}
-                      canLoadmore={feeds && feeds.length < totalFeeds}
-                      loading={loadingFeed}
-                      onDelete={this.onDeleteFeed.bind(this)}
-                      loadMore={this.loadmoreFeeds.bind(this)}
-                    />
+                    {feedType === 'for-you' ? (
+                      <>
+                        <ScrollListFeed
+                          items={feeds}
+                          canLoadmore={feeds && feeds.length < totalFeeds}
+                          loading={loadingFeed}
+                          onDelete={this.onDeleteFeed.bind(this)}
+                          loadMore={this.loadmoreFeeds.bind(this) }
+                        />
+                        {!loadingFeed && !totalFeeds && (
+                          <div className="main-container custom text-center" style={{ margin: 'auto' }}>
+                            <Alert
+                              type="warning"
+                              message={(
+                                <Link href="/artist">
+                                  <SearchOutlined />
+                                  {' '}
+                                  Find someone to follow
+                                </Link>
+                              )}
+                            />
+                          </div>
+                        )}
+                      </>
+                    ):(
+                      <>
+                        <ScrollListFeed
+                          items={contentFeeds}
+                          canLoadmore={contentFeeds && contentFeeds.length < totalContentFeeds}
+                          loading={loadingContentFeed}
+                          onDelete={this.onDeleteFeed.bind(this)}
+                          loadMore={this.loadmoreContentFeeds.bind(this)}
+                        />
+                        {!loadingContentFeed && !totalContentFeeds && (
+                          <div className="main-container custom text-center" style={{ margin: 'auto' }}>
+                            <Alert
+                              type="warning"
+                              message={(
+                                <Link href="/artist">
+                                  <SearchOutlined />
+                                  {' '}
+                                  Could not load trending feed. Refresh the page.
+                                </Link>
+                              )}
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                   <div className="right-container" id="home-right-container">
                     <div className="suggestion-bl">
@@ -270,12 +339,16 @@ const mapStates = (state: any) => ({
   ui: { ...state.ui },
   user: { ...state.user.current },
   feedState: { ...state.feed.feeds },
+  all: { ...state },
+  contentFeedState: { ...state.feed.contentFeeds },
   settings: { ...state.settings }
 });
 
 const mapDispatch = {
   getFeeds,
   moreFeeds,
-  removeFeedSuccess
+  removeFeedSuccess,
+  getContentFeeds,
+  moreContentFeeds
 };
 export default connect(mapStates, mapDispatch)(HomePage);

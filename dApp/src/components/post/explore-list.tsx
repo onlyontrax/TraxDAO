@@ -63,7 +63,7 @@ export default class ExploreListFeed extends PureComponent<IProps> {
         {!items.length && !loading && (
           <div className="main-container custom">
             <Alert
-              className="text-center"
+              className="no-object-found"
               message={notFoundText || 'No post was found'}
               type="info"
             />

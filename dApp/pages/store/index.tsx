@@ -1,10 +1,11 @@
-import { HeartOutlined } from '@ant-design/icons';
+import { HeartOutlined, LoadingOutlined } from '@ant-design/icons';
 import { PurchaseProductForm } from '@components/product/confirm-purchase';
 import { PerformerListProduct } from '@components/product/performer-list-product';
 import { updateBalance } from '@redux/user/actions';
 import {
   authService, productService, reactionService, tokenTransctionService, performerService, utilsService
 } from '@services/index';
+import { cryptoService } from '@services/crypto.service';
 import {
   Avatar, Button, Image, Layout, Modal, Spin, Tooltip, message, Progress
 } from 'antd';
@@ -17,22 +18,24 @@ import { PureComponent } from 'react';
 import { connect } from 'react-redux';
 import { TickIcon } from 'src/icons';
 import {
-  ICountry, IError, IPerformer, IProduct, IUIConfig, IUser
+  ICountry, IError, IPerformer, IProduct, IUIConfig, IUser, ISettings
 } from 'src/interfaces';
 import styles from './store.module.scss';
 
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { AuthClient } from '@dfinity/auth-client';
-import { idlFactory as idlFactoryLedger } from '../../src/smart-contracts/declarations/ledger';
+import { idlFactory as idlFactoryLedger } from '../../src/smart-contracts/declarations/ledger/ledger.did.js';
 import { IcrcLedgerCanister, TransferParams } from "@dfinity/ledger";
-import type { _SERVICE as _SERVICE_LEDGER } from '../../src/smart-contracts/declarations/ledger/ledger.did';
-import { TransferArgs, Tokens, TimeStamp } from '../../src/smart-contracts/declarations/ledger/ledger.did';
+import type { _SERVICE as _SERVICE_LEDGER } from '../../src/smart-contracts/declarations/ledger/ledger2.did';
+import { TransferArgs, Tokens, TimeStamp } from '../../src/smart-contracts/declarations/ledger/ledger2.did';
 import { AccountIdentifier } from '@dfinity/nns';
 import { AccountBalanceArgs } from '@dfinity/nns/dist/candid/ledger';
 import { Principal } from '@dfinity/principal';
 import { debounce } from 'lodash';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faChevronRight, faChevronDown, faCheck } from '@fortawesome/free-solid-svg-icons'
+import { faChevronRight, faChevronDown, faCheck, faStore, faXmark } from '@fortawesome/free-solid-svg-icons'
+import PaymentProgress from '../../src/components/user/payment-progress';
+
 interface IProps {
   user: IUser;
   ui: IUIConfig;
@@ -40,6 +43,7 @@ interface IProps {
   updateBalance: Function;
   product: IProduct;
   countries: ICountry[];
+  settings: ISettings;
 }
 
 interface IStates {
@@ -53,6 +57,9 @@ interface IStates {
   product: IProduct;
   countries: any;
   selectedOption: number;
+  caption: boolean;
+  isFollowed: boolean;
+  requesting: boolean;
 }
 
 class ProductViewPage extends PureComponent<IProps, IStates> {
@@ -94,19 +101,34 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
       progress: 0,
       product: null,
       selectedOption: null,
-      countries: null
+      countries: null,
+      caption: false,
+      requesting: false,
+      isFollowed: false
     };
   }
 
   async componentDidMount() {
     const { product } = this.state;
+    this.setState({ isFollowed: !!product?.performer?.isFollowed });
     if (product === null) {
       const data = await this.getData();
       this.setState({ product: data.product, countries: data.countries }, () => this.updateProductShallowRoute());
     } else {
       this.updateProductShallowRoute();
     }
+
+    Router.events.on('routeChangeComplete', this.onRouteChangeComplete);
   }
+
+  componentWillUnmount() {
+    Router.events.off('routeChangeComplete', this.onRouteChangeComplete);
+  }
+
+  onRouteChangeComplete = async (url) => {
+    const data = await this.getData();
+    this.setState({ product: data.product, countries: data.countries }, () => this.updateProductShallowRoute());
+  };
 
   async handleBookmark() {
     const { isBookmarked } = this.state;
@@ -137,6 +159,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
     }
   }
 
+
   async updateProductShallowRoute() {
     const { product } = this.state;
     if (product === null) return;
@@ -164,17 +187,21 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
   async purchaseProduct(payload: any) {
     const { user, updateBalance: handleUpdateBalance } = this.props;
     const { product } = this.state;
+
     if (product === null) return;
     if (user?.isPerformer) return;
     const fee = payload.shippingFee ? payload.shippingFee : 0;
-    if (user.balance < product.price + fee) {
+
+    if (payload.currencyOption === 'USD' && (user.balance < product.price + fee)) {
       message.error('You have an insufficient token balance. Please top up.');
       return;
     }
+
     if (product.type === 'physical' && !payload.deliveryAddressId) {
       message.error('Please select or create new the delivery address!');
       return;
     }
+
     try {
       this.setState({ submiting: true });
 
@@ -183,10 +210,17 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
         message.success('Payment success');
         handleUpdateBalance({ token: -product.price - fee });
         Router.push('/user/my-payments');
-      }else if(payload.currencyOption === "ICP"){
-        await this.purchaseProductCrypto(payload.currencyOption, payload.amountToSendICP)
+
+      }else if(payload.currencyOption !== "USD"){
+        if(payload.paymentOption === 'plug'){
+          await this.purchaseProductPlug(payload);
+        }else{
+          await this.purchaseProductCrypto(payload.currencyOption, payload.price)
+        }
+        
       }else{
-        await this.purchaseProductCrypto(payload.currencyOption, payload.amountToSendCKBTC)
+        message.error('This is an invalid currency option. Please pick a different currency to pay in.');
+        return;
       }
     } catch (e) {
       const err = await e;
@@ -216,33 +250,185 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
     return accountIdBlob;
   }
 
+  async purchaseProductPlug(payload: any){
+    const { product } = this.state;
+    const { settings } = this.props;
+    let transferToTrax;
+    let transferToArtist;
+    let transfer;
+    const ckBTCLedgerCanID = settings.icCKBTCMinter;
+
+    this.setState({
+      openProgressModal: true,
+      openPurchaseModal: false,
+      progress: 0
+    });
+
+    if(typeof window !== 'undefined' && 'ic' in window){
+      // @ts-ignore
+      const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
+        host: settings.icHost
+      }) : false;
+
+      !connected && message.error("Failed to connected to canister. Please try again later or contact us. ")
+
+      if(connected){
+        this.setState({ progress: 25 });
+        //@ts-ignore
+        const requestBalanceResponse = await window.ic?.plug?.requestBalance();
+        let icp_balance;
+        let ckBTC_balance;
+        let TRAX_balance;
+
+        for(let i = 0; i < requestBalanceResponse.length; i++){
+          if(requestBalanceResponse[i]?.symbol === 'ICP'){
+            icp_balance = requestBalanceResponse[i]?.amount;
+          }
+          if(requestBalanceResponse[i]?.symbol === 'ckBTC'){
+            ckBTC_balance = requestBalanceResponse[i]?.amount;
+          }
+          if(requestBalanceResponse[i]?.symbol === 'TRAX'){
+            TRAX_balance = requestBalanceResponse[i]?.amount;
+          }
+        };
+
+        let decimals = 100000000;
+
+        if(payload.currencyOption === 'ckBTC'){
+          if((ckBTC_balance * decimals) >= (payload.price * decimals) + 200000){
+            this.setState({ progress: 50 });
+            (async () => {
+            const params = {
+              to: payload.wallet_address,
+              strAmount: payload.price.toString(),
+              token: ckBTCLedgerCanID
+            };
+
+            //@ts-ignore
+            transfer = await window.ic?.plug?.requestTransferToken(params).catch((error) =>{
+              message.error(`Transaction failed. ${error}`);
+              console.log(error)
+              this.setState({progress: 0})
+            })
+          })();
+          } else {
+            this.setState({ progress: 0 })
+            message.error('Insufficient balance, please top up your wallet and try again.');
+          }
+        }
+
+
+        if(payload.currencyOption === 'TRAX'){
+          if((TRAX_balance * decimals) >= (payload.price * decimals) + 200000){
+            this.setState({ progress: 50 });
+
+            const params = {
+              to: payload.wallet_address,
+              strAmount: payload.price.toString(),
+              token: process.env.NEXT_PUBLIC_TRAX_CANISTER_ID as string
+            };
+
+
+            //@ts-ignore
+            transfer = await window.ic.plug.requestTransferToken(params).catch((error) =>{
+              message.error(`Transaction failed. ${error}`);
+              console.log(error)
+              this.setState({progress: 0})
+            })
+
+            
+          } else {
+            this.setState({ progress: 0 })
+            message.error('Insufficient balance, please top up your wallet and try again.');
+          }
+        }
+        
+        
+        if (payload.currencyOption === 'ICP') {
+          if((icp_balance * decimals) >= (payload.price * decimals) + 200000){
+            
+            this.setState({ progress: 50 });
+            
+            const param = {
+              to: payload.wallet_address,
+              amount: Math.trunc(payload.price * decimals),
+            }
+           
+            //@ts-ignore
+            transfer = await window.ic?.plug?.requestTransfer(param).catch((error) =>{
+              message.error(`Transaction failed. ${error}`);
+              console.log(error)
+              this.setState({progress: 0})
+            })
+            // transfer = await window.ic?.plug?.requestTransfer(param).catch((error) =>{
+            //   message.error(`Transaction failed. ${error}`);
+            //   console.log(error)
+            //   this.setState({progress: 0})
+            // })
+
+   
+          } else {
+            this.setState({progress: 0})
+            message.error('Insufficient balance, please top up your wallet and try again.');
+          }
+        }
+
+        console.log(transfer)
+
+        if(transfer.height){
+          this.setState({ progress: 75 });
+          
+          await tokenTransctionService.purchaseProductCrypto(product?.performer?._id, 
+            { 
+              performerId: product?.performer?._id, 
+              price: payload.price, 
+              tokenSymbol: payload.currency, 
+              id: product._id, 
+              shippingOption: payload.shippingOption,
+              cryptoTx: transfer.height,
+              quantity: payload.quantity
+            }).then(() => {
+            this.setState({ progress: 100 });
+            message.success(`Payment successful! You are going to ${product.name}`);
+          });
+
+        }else{
+          setTimeout(() => this.setState({
+            progress: 0
+          }), 1000);
+          message.error('Transaction failed. Please try again later.');
+        }
+      }
+    }
+  }
+
   async purchaseProductCrypto(ticker: string, amount: number){
     this.setState({
         openProgressModal: true,
         progress: 10
       });
 
-    const { user } = this.props;
+    const { user, settings } = this.props;
     const { product } = this.state;
     if (product === null) return;
-    let amountToSend = BigInt(Math.trunc((amount * 100000000) / 0.9));
-    let amountToSendPlatform = BigInt(Math.trunc((amount * 100000000) / 0.1));
+    let amountToSend = BigInt(Math.trunc((amount * 100000000) * 0.9));
+    let amountToSendPlatform = BigInt(Math.trunc((amount * 100000000) * 0.1));
 
     let identity;
     let ledgerActor;
     const authClient = await AuthClient.create();
     let sender;
     let agent;
-    let ledgerCanID;
-    let ckBTCLedgerCanID;
     let transferArgs: TransferArgs;
     let transferParams: TransferParams;
     let transferArgsPlatform: TransferArgs;
     let transferParamsPlatform: TransferParams;
     const uuid = BigInt(Math.floor(Math.random() * 1000));
+    const ledgerCanID = settings.icLedger;
+    const ckBTCLedgerCanID = Principal.fromText(settings.icCKBTCMinter);
 
     const recipientAccountIdBlob = this.getRecipientAccountIdentity(Principal.fromText(product?.performer?.wallet_icp))
-    const platformAccountIdBlob = this.getPlatformAccountIdentity(Principal.fromText(process.env.NEXT_PUBLIC_TRAX_ACCOUNT as string))
+    const platformAccountIdBlob = this.getPlatformAccountIdentity(Principal.fromText(settings.icTraxAccountPercentage))
     
     const fanAI = AccountIdentifier.fromPrincipal({
       principal: Principal.fromText(user.wallet_icp)
@@ -289,7 +475,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
         fee: BigInt(10),
         from_subaccount: null,
         to: {
-          owner: Principal.fromText(process.env.NEXT_PUBLIC_TRAX_ACCOUNT as string),
+          owner: Principal.fromText(settings.icTraxAccountPercentage),
           subaccount: [],
         },
         created_at_time: BigInt(Date.now() * 1000000)
@@ -299,15 +485,13 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
       return;
     }
 
-    if ((process.env.NEXT_PUBLIC_DFX_NETWORK as string) !== 'ic') {
+    if (settings.icNetwork !== true) {
       await authClient.login({
-        identityProvider: process.env.NEXT_PUBLIC_IDENTITY_PROVIDER as string,
+        identityProvider: cryptoService.getIdentityProviderLink(),
         onSuccess: async () => {
 
           identity = authClient.getIdentity();
-          ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID_LOCAL as string;
-          ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID_LOCAL as string;
-          const host = process.env.NEXT_PUBLIC_HOST_LOCAL as string;
+          const host = settings.icHost;
           agent = new HttpAgent({
             identity,
             host
@@ -392,9 +576,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
       });
 
     } else {
-      ledgerCanID = process.env.NEXT_PUBLIC_LEDGER_CANISTER_ID as string;
-      ckBTCLedgerCanID = process.env.NEXT_PUBLIC_CKBTC_MINTER_CANISTER_ID as string;
-      const host = process.env.NEXT_PUBLIC_HOST as string;
+      const host = settings.icHost;
 
       await authClient.login({
         onSuccess: async () => {
@@ -491,12 +673,16 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
     }));
   }
 
+  fullCaption(val: boolean) {
+    this.setState({ caption: val });
+  }
+
   render() {
     const {
       ui, error, user
     } = this.props;
     const {
-      selectedOption, product, countries, relatedProducts, isBookmarked, loading, openPurchaseModal, submiting, progress, openProgressModal
+      selectedOption, product, countries, relatedProducts, isBookmarked, loading, openPurchaseModal, submiting, progress, openProgressModal, caption, isFollowed
     } = this.state;
     if (product === null) {
       return <div style={{ margin: 30, textAlign: 'center' }}><Spin /></div>;
@@ -526,15 +712,25 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
           <meta name="twitter:image" content={product?.image || '/static/empty_product.svg'} />
           <meta name="twitter:description" content={product.description} />
         </Head>
-          <div className="prod-card">
-            {product && !loading ? (
-              <div className="prod-img" style={{backgroundImage: product?.image ? `url('${product?.image}')`: '/static/empty_product.svg'}}>
-                
-                <div className='prod-img-blur'>
 
+          {product && !loading ? (
+              <div className="tick-img-background" style={{backgroundImage: product?.image ? `url('${product?.image}')`: '/static/empty_product.svg'}}>
+                <div className='tick-img-blur-background'>
                 </div>
-                <Image alt="product-img" src={product?.image || '/static/empty_product.svg'} />
-                
+              </div>
+          ) : (
+              <div className="text-center">
+                <Spin />
+              </div>
+          )}
+
+          <div className="prod-card">
+
+            {product && !loading ? (
+              <div className='prod-img-wrapper'>
+                <div className="prod-img-thumb">
+                  <div className="prod-img-bg" style={{backgroundImage: product?.image ? `url('${product?.image}')`: '/static/empty_product.svg'}} />
+                </div>
               </div>
             ) : (
               <div className="text-center">
@@ -543,42 +739,61 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
             )}
             {product && (
               <div className="prod-info">
-                <p className="prod-name">{product.name || 'N/A'}</p>
-                <div className="add-cart">
+                <div className='product-header-flexbox'>
+                  <p className="prod-name">{product.name || 'N/A'}</p>
                   <p className="prod-price">
                     $
                     {product.price.toFixed(2)}
                   </p>
-                  <p>
-                  {product.stock && product.type === 'physical' ? (
-                    <div className='prod-stock-wrapper'>
-                      <span className="prod-stock">
-                        <FontAwesomeIcon className='faCheck-prod' icon={faCheck} />
-                        In stock and ready to ship
-                      </span>
-                    </div>
-                    
-                  ) : null}
-                  {product.stock && product.type === 'digital' ? (
-                    <div className='prod-stock-wrapper'>
-                      <span className="prod-stock">
-                        <FontAwesomeIcon className='faCheck-prod' icon={faCheck} />
-                        In stock and ready to buy
-                      </span>
-                    </div>
-                    
-                  ) : null}
-                  {product.stock === 0 && (
-                  <span style={{color: 'red'}}>Sold out!</span>
-                )}
-                  {!product.stock && product.type === 'physical' && <span className="prod-stock">Out of stock!</span>}
-                  {product.type === 'digital' && <div className='prod-digital-wrapper'><span className="prod-digital">Digital</span></div>}
-                </p>
+                </div>
 
-                  <p className="prod-desc">{product?.description || 'No description yet'}</p>
-                    <div style={{display: 'flex', flexDirection: 'row', gap: 4}}>
+                <div className='prod-badge-wrapper'>
+                  <span className='prod-type'>
+                    <div className='prod-icon-wrapper'>
+                      <FontAwesomeIcon className='prod-icon' icon={faStore} />
+                    </div>
+                    <span>
+                      {product?.type === 'physical' ? 'Physical product' : 'Digital product'}
+                    </span>
+                  </span>
+                </div>
+
+                <div className="add-cart">
+                  <p>
+                    <div className='prod-stock-wrapper'>
+                      <span className={product.stock ? 'prod-stock' : 'prod-no-stock'}>
+                        {product.stock ? (
+                          <>
+                            <FontAwesomeIcon className='faCheck-prod' icon={faCheck} />
+                            {product.type === 'digital' && (
+                              <span>In stock and ready to buy</span>
+                            )}
+                            {product.stock && product.type === 'physical' && (
+                              <span>In stock and ready to ship</span>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon className='faX-prod' icon={faXmark} />
+                            <span>Out of stock</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                </p>
+                <div className='prod-description-wrapper'>
+                    <span>Event information</span>
+                    <p className="prod-desc">
+                      {caption ? product?.description : product?.description?.split(' ').splice(0, 15).join(' ')}
+                      <span onClick={() => this.fullCaption(true)} style={{ color: 'white', cursor: 'pointer', fontSize: '18px', fontWeight: '500' }}>
+                        {(caption || product?.description?.split(' ').filter((word) => word !== '').length < 15) ? ' ' : <div>read more</div>}
+                      </span>
+                    </p>
+                  </div>
+
+                    <div style={{display: 'flex', flexDirection: 'row', gap: 4, marginBottom: '1rem'}}>
                     <Button
-                      className="buy-button"
+                      className="buy-prod-button"
                       disabled={loading}
                       onClick={() => {
                         if (!user?._id) {
@@ -598,6 +813,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
                     >
                       Purchase
                     </Button>
+
                     <div className="act-btns">
                       <Tooltip title={isBookmarked ? 'Unsave item' : 'Save item'}>
                         <button
@@ -636,6 +852,18 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
                       ))}
                     </div>
                   )}
+
+                          <div className='prod-artist-profile-container'>
+                            <Avatar className='prod-artist-avatar' src={product?.performer?.avatar || '/no-avatar.png'}/>
+                            <span className='prod-profile-name'>{product.performer?.name}</span>
+                            {/* onClick={() => this.handleFollow()} */}
+                            <Link 
+                              className='prod-profile-link'
+                              href={`/artist/profile?id=${product?.performer?.username || product?.performer?._id}`}
+                              as={`/artist/profile?id=${product?.performer?.username || product?.performer?._id}`}>
+                              <Button className={`${isFollowed ? 'prod-profile-following-btn' : 'prod-profile-follow-btn'} `}>Visit profile</Button>
+                            </Link>
+                        </div>
                 </div>
               </div>
             )}
@@ -656,7 +884,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
 
         <Modal
           key="purchase-product"
-          width={660}
+          width={700}
           title={null}
           open={openPurchaseModal}
           onOk={() => this.setState({ openPurchaseModal: false })}
@@ -674,6 +902,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
             onFinish={this.purchaseProduct.bind(this)}
           />
         </Modal>
+        
         <Modal
           key="ppv_progress"
           className="tip-progress"
@@ -681,34 +910,25 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
           centered
           onOk={() => this.setState({ openProgressModal: false })}
           footer={null}
-          width={600}
+          width={450}
           title={null}
           onCancel={() => this.setState({ openProgressModal: false })}
         >
-          <div className="confirm-purchase-form">
-            <div className="left-col">
-              <Avatar src={product?.performer?.avatar || '/static/no-avatar.png'} />
-              <div className="p-name">
-                Purchase product from
-                {' '}
-                {product?.performer?.name || 'N/A'}
-                {' '}
-                {product?.performer?.verifiedAccount && <BadgeCheckIcon style={{ height: '1.5rem' }} className="primary-color" />}
-              </div>
-              <p className="p-subtitle">Transaction progress</p>
 
-            </div>
-            <Progress percent={Math.round(progress)} />
-          </div>
+          <PaymentProgress progress={progress} performer={product?.performer}/>
 
         </Modal>
+
+
+
       </Layout>
     );
   }
 }
 const mapStates = (state: any) => ({
   user: state.user.current,
-  ui: { ...state.ui }
+  ui: { ...state.ui },
+  settings: { ...state.settings }
 });
 
 const mapDispatch = { updateBalance };

@@ -32,7 +32,7 @@ class CreatePost extends PureComponent<IProps> {
   componentDidMount() {
     const { user } = this.props;
     if (!user || !user.verifiedDocument) {
-      message.warning('Your ID documents are not verified yet! You could not post any content right now.');
+      message.warning('Your Identity has not been verified yet! You can\'t post any content right now. Please to to Account settings to verify your account.');
       Router.back();
     }
   }
@@ -55,7 +55,7 @@ class CreatePost extends PureComponent<IProps> {
                   <div className="post-wrapper" onClick={() => this.setState({ createPost: true })}>
                     <div aria-hidden className="type-item left">
                       <span>
-                        <CameraIcon />
+                        <CameraIcon className="shopping-bag-icon"/>
                       </span>
                     </div>
                     <div className="post-type-info-wrapper">
@@ -67,7 +67,7 @@ class CreatePost extends PureComponent<IProps> {
                     <div className="post-wrapper">
                       <div aria-hidden className="type-item middle">
                         <span>
-                          <MusicNoteIcon />
+                          <MusicNoteIcon className="shopping-bag-icon"/>
                         </span>
                       </div>
                       <div className="post-type-info-wrapper">
@@ -89,7 +89,8 @@ class CreatePost extends PureComponent<IProps> {
                       </div>
                     </div>
                   </Link>
-                  <div className="post-wrapper-disabled" >
+                  <Link href="/artist/my-events/create">
+                    <div className="post-wrapper" >
                       <div aria-hidden className="type-item right">
                         <span>
                           <BsFillTicketPerforatedFill style={{position: 'relative', top: '1px', left: '1px', fontSize: '25px'}}/>
@@ -100,7 +101,8 @@ class CreatePost extends PureComponent<IProps> {
                         <p>Release tickets for your latest event</p>
                       </div>
                     </div>
-                    <div className="post-wrapper-disabled">
+                  </Link>
+                    {/* <div className="post-wrapper-disabled">
                       <div aria-hidden className="type-item middle">
                         <span>
                           <PlayIcon />
@@ -121,7 +123,7 @@ class CreatePost extends PureComponent<IProps> {
                       <h2>NFT Track</h2>
                       <p>Release a song as an NFT</p>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             ) : (

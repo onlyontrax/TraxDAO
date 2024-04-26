@@ -16,6 +16,30 @@ export class PaymentProductModel {
   productType: string;
 
   productId: string;
+  
+  purchasedTier?: string;
+}
+
+export class PaymentTicketModel {
+  name?: string;
+
+  description?: string;
+
+  price?: number | string;
+
+  tokenSymbol?: string;
+
+  cryptoTransactionId?: string;
+
+  isCrypto?: boolean;
+
+  extraInfo?: any;
+
+  purchasedTier: string;
+
+  type?: string;
+
+  ticketId?: string;
 }
 
 export interface ITransaction {

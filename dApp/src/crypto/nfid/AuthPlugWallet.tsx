@@ -4,25 +4,28 @@ import {
 } from 'antd';
 import { connect, useDispatch } from 'react-redux';
 import { NFIDIcon } from '../../icons/index';
+import { ISettings } from "src/interfaces";
 import React, {useState} from 'react';
 import { LoadingOutlined } from '@ant-design/icons';
 interface IAuthButton {
   onSignOut: Function
   onConnect: Function,
   handlePlugWalletConnect: Function,
+  plugLoading: boolean;
   isAuthenticated: boolean,
   isLogin: boolean,
   currentPrincipal?: string,
   state: any,
-  from: string
+  from: string,
+  settings: ISettings
 }
 
-function AuthPlugWallet({ onSignOut, onConnect, isAuthenticated, handlePlugWalletConnect, isLogin, currentPrincipal, from }: IAuthButton) {
+function AuthPlugWallet({ onSignOut, onConnect, isAuthenticated, handlePlugWalletConnect, isLogin, currentPrincipal, from, plugLoading, settings }: IAuthButton) {
   const [loading, setLoading] = useState(false);
 
   const authenticateNow = async () => {
-    setLoading(true)
-    const identityCanisterId = (process.env.NEXT_PUBLIC_DFX_NETWORK as string) === 'ic' ? (process.env.NEXT_PUBLIC_IDENTITY_CANISTER as string) : (process.env.NEXT_PUBLIC_IDENTITY_CANISTER_LOCAL as string);
+    setLoading(true);
+    const identityCanisterId = settings.icTraxIdentity;
       const whitelist = [identityCanisterId];
       // @ts-ignore
       const res = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
@@ -37,24 +40,24 @@ function AuthPlugWallet({ onSignOut, onConnect, isAuthenticated, handlePlugWalle
   return (
     <div>
       {!isAuthenticated ? (
-        <Button onClick={authenticateNow} htmlType="button" className={from === 'sign-up' ? "nfid-button-wrapper-sign-up" : "nfid-button-wrapper"}>
-            {from === 'sign-up' ? (
+        <Button onClick={authenticateNow} htmlType="button" className="nfid-button-wrapper">
+            {from === 'sign-up' || 'log-in' ? (
             <>
-            {loading ? (
+            {loading || plugLoading? (
                 <LoadingOutlined style={{color: '#c8ff00', fontSize: 17, marginRight: '0.5rem'}}/>
               ):(
-                <img src="/static/plug-favicon.png" alt="" className='plug-icon-sign'/>
+                <img src="/static/plug-favicon-2.png" alt="" className='plug-icon-sign'/>
               )}
-              <span>Plug Wallet</span>
+              <span>{from === 'sign-up' ? 'Sign up with Plug' : 'Continue with Plug'}</span>
             </>
           )
           :
           (
             <>
-              {loading ? (
+              {loading || plugLoading ? (
                 <LoadingOutlined style={{color: '#c8ff00', fontSize: 23, marginTop: 2}}/>
               ):(
-                <img src="/static/plug-favicon.png" alt="" className='plug-icon-sign'/>
+                <img src="/static/plug-favicon-2.png" alt="" className='plug-icon-sign'/>
               )}
             </>
           )}
@@ -62,12 +65,12 @@ function AuthPlugWallet({ onSignOut, onConnect, isAuthenticated, handlePlugWalle
       ) : (
         <div>
           <Button onClick={handlePlugWalletConnectUp} htmlType="button" className={from === 'sign-up' ? "nfid-button-wrapper-sign-up" : "nfid-button-wrapper"}>
-            {from === 'sign-up' ? (
+            {from === 'sign-up' || 'log-in' ? (
             <>
-              {loading ? (
+              {loading || plugLoading ? (
                 <LoadingOutlined style={{color: '#c8ff00', fontSize: 17, marginRight: '0.5rem'}}/>
               ):(
-                <img src="/static/plug-favicon.png" alt="" className='plug-icon-sign'/>
+                <img src="/static/plug-favicon-2.png" alt="" className='plug-icon-sign'/>
               )}
               <span>Plug Wallet</span>
             </>
@@ -75,12 +78,12 @@ function AuthPlugWallet({ onSignOut, onConnect, isAuthenticated, handlePlugWalle
           :
           (
             <>
-             {loading ? (
+             {loading || plugLoading ? (
                 <LoadingOutlined style={{color: '#c8ff00', fontSize: 23, marginTop: 2}}/>
               ):(
-                <img src="/static/plug-favicon.png" alt="" className='plug-icon-sign'/>
+                <img src="/static/plug-favicon-2.png" alt="" className='plug-icon-sign'/>
               )}
-              
+
             </>
           )}
           </Button>
