@@ -9,25 +9,15 @@ import Map                "mo:stable-hash-map/Map";
 import Debug              "mo:base/Debug";
 import Text               "mo:base/Text";
 import T                  "../types";
-import Hash               "mo:base/Hash";
-import Nat32              "mo:base/Nat32";
 import Nat64              "mo:base/Nat64";
 import Iter               "mo:base/Iter";
-import Float              "mo:base/Float";
-import Time               "mo:base/Time";
-import Int                "mo:base/Int";
-import Result             "mo:base/Result";
 import Blob               "mo:base/Blob";
-import Array              "mo:base/Array";
 import Buffer             "mo:base/Buffer";
-import Trie               "mo:base/Trie";
-import TrieMap            "mo:base/TrieMap";
 import CanisterUtils      "../utils/canister.utils";
 import WalletUtils        "../utils/wallet.utils";
 import Utils              "../utils/utils";
 import Prim               "mo:⛔";
 import Env                "../env";
-import B                  "mo:stable-buffer/StableBuffer";
 
 actor Manager {
 
@@ -38,6 +28,7 @@ actor Manager {
   type CanisterId                     = T.CanisterId;
   type StatusRequest                  = T.StatusRequest;
   type StatusResponse                 = T.StatusResponse;
+  type Tokens                         = T.Tokens;
   type CanisterStatus                 = IC.canister_status_response;
   
   private let canisterUtils : CanisterUtils.CanisterUtils = CanisterUtils.CanisterUtils();
@@ -47,13 +38,13 @@ actor Manager {
 
   private let cyclesManagerId : Principal = Principal.fromText("exmw2-raaaa-aaaan-qecxa-cai");
 
-  let { ihash; nhash; thash; phash; calcHash } = Map;
+  let { thash; phash; } = Map;
 
   stable var CYCLE_AMOUNT : Nat         = 100_000_000_000;
   stable var numOfFanAccounts: Nat      = 0;
   stable var MAX_CANISTER_SIZE: Nat     = 68_700_000_000; // <-- approx. 64GB
   stable var numOfArtistAccounts: Nat   = 0;
-  var VERSION: Nat               = 1;
+  var VERSION: Nat                      = 1;
   let top_up_amount                     =  2_000_000_000_000;
   
   
@@ -88,7 +79,7 @@ actor Manager {
   private func createCanister(userID: Principal, userType: UserType, accountDataFan: ?FanAccountData, accountDataArtist: ?ArtistAccountData): async (Principal) {
     Debug.print("@createCanister: userID: " # Principal.toText(userID));
     
-    Cycles.add(1_000_000_000_000);
+    Cycles.add<system>(1_000_000_000_000);
 
     var canisterId: ?Principal = null;
 
@@ -140,10 +131,10 @@ actor Manager {
           await walletUtils.transferCycles(canisterId, 2_000_000_000_000);
 
         if (userType == #fan) {   
-          let a = Map.put(fanAccountsMap, phash, userID, canisterId);
+          ignore Map.put(fanAccountsMap, phash, userID, canisterId);
           numOfFanAccounts := numOfFanAccounts + 1;
         } else {   
-          let b = Map.put(artistAccountsMap, phash, userID, canisterId);
+          ignore Map.put(artistAccountsMap, phash, userID, canisterId);
           numOfArtistAccounts := numOfArtistAccounts + 1;
         };
         return canisterId;
@@ -154,7 +145,7 @@ actor Manager {
 
   private func wallet_receive() : async { accepted: Nat64 } {
     let available = Cycles.available();
-    let accepted = Cycles.accept(Nat.min(available, top_up_amount));
+    let accepted = Cycles.accept<system>(Nat.min(available, top_up_amount));
     // let accepted = Cycles.accept(top_up_amount);
     { accepted = Nat64.fromNat(accepted) };
   };
@@ -259,75 +250,57 @@ actor Manager {
 
 
 
-  public shared({caller}) func getAvailableMemoryCanister(canisterId: Principal) : async ?Nat{
-    if (not Utils.isManager(caller)) {
-      throw Error.reject("@getAvailableMemoryCanister: Unauthorized access. Caller is not the manager. Caller is: " # Principal.toText(caller));
-    };
 
-    let can = actor(Principal.toText(canisterId)): actor { 
-        getStatus: (?StatusRequest) -> async ?StatusResponse;
-    };
-
-    let request : StatusRequest = {
-        cycles: Bool = false;
-        heap_memory_size: Bool = false; 
-        memory_size: Bool = true;
-        version: Bool = false;
-    };
-    
-    switch(await can.getStatus(?request)){
-      case(?status){
-        switch(status.memory_size){
-          case(?memSize){
-            let availableMemory: Nat = MAX_CANISTER_SIZE - memSize;
-            return ?availableMemory;
-          };
-          case null null;
-        };
-      };
-      case null null;
-    };
-  };
-
-
-
-
-  public query({caller}) func getStatus(request: ?StatusRequest): async ?StatusResponse {
-Debug.print("@getStatus: caller: " # Principal.toText(caller));
-    // assert(Utils.isManager(caller));
-    Debug.print("caller principal: " # debug_show caller);
-    Debug.print("manager principal: " # debug_show Env.manager);
+  public shared({caller}) func getStatus(request: ?StatusRequest): async ?StatusResponse {
+    // assert(U.isAdmin(caller));
       switch(request) {
           case (null) {
               return null;
           };
           case (?_request) {
               var cycles: ?Nat = null;
-              if (_request.cycles) {
+              switch(_request.cycles){
+                case(?checkCycles){
                   cycles := ?getCurrentCycles();
+                };case null {};
               };
+              
               var memory_size: ?Nat = null;
-              if (_request.memory_size) {
+              switch(_request.memory_size){
+                case(?checkStableMemory){
                   memory_size := ?getCurrentMemory();
+                };case null {};
               };
+
               var heap_memory_size: ?Nat = null;
-              if (_request.heap_memory_size) {
+              switch(_request.heap_memory_size){
+                case(?checkHeapMemory){
                   heap_memory_size := ?getCurrentHeapMemory();
+                };case null {};
               };
               var version: ?Nat = null;
-              if (_request.version) {
+              switch(_request.version){
+                case(?checkVersion){
                   version := ?getVersion();
+                };case null {};
               };
+              
+              var icp_balance: ?Tokens = null;
+              var ckbtc_balance: ?Nat = null;
+              var trax_balance: ?Nat = null;
+
               return ?{
                   cycles = cycles;
                   memory_size = memory_size;
                   heap_memory_size = heap_memory_size;
                   version = version;
+                  icp_balance = icp_balance;
+                  ckbtc_balance = ckbtc_balance;
+                  trax_balance = trax_balance;
               };
           };
       };
   };
-
 
 
 
@@ -397,7 +370,7 @@ Debug.print("@getStatus: caller: " # Principal.toText(caller));
     switch(Map.get(fanAccountsMap, phash, currentOwner)){
       case(?canisterId){
         Map.delete(fanAccountsMap, phash, currentOwner);
-        let a = Map.put(fanAccountsMap, phash, newOwner, canisterId);
+        ignore Map.put(fanAccountsMap, phash, newOwner, canisterId);
 
       }; case null throw Error.reject("@transferOwnershipFan: This fan account doesnt exist");
     };
@@ -410,7 +383,7 @@ Debug.print("@getStatus: caller: " # Principal.toText(caller));
     assert(caller == currentOwner or Utils.isManager(caller));
     switch(Map.get(artistAccountsMap, phash, currentOwner)){
       case(?canisterId){
-        let update = Map.replace(artistAccountsMap, phash, newOwner, canisterId);
+        ignore Map.replace(artistAccountsMap, phash, newOwner, canisterId);
       }; case null throw Error.reject("@transferOwnershipArtist: This artist account doesnt exist.");
     };
   };
@@ -464,7 +437,7 @@ Debug.print("@getStatus: caller: " # Principal.toText(caller));
       switch(Map.get(fanAccountsMap, phash, user)){
         case(?fanAccount){
           Map.delete(fanAccountsMap, phash, user);
-          let res = await canisterUtils.deleteCanister(?canisterId);
+          await canisterUtils.deleteCanister(?canisterId);
           return true;
         };
         case null false
@@ -473,7 +446,7 @@ Debug.print("@getStatus: caller: " # Principal.toText(caller));
        switch(Map.get(artistAccountsMap, phash, user)){
         case(?artistAccount){
           Map.delete(artistAccountsMap, phash, user);
-          let res = await canisterUtils.deleteCanister(?canisterId);
+          await canisterUtils.deleteCanister(?canisterId);
           return true;
         };
         case null false

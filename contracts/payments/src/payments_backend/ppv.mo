@@ -1,10 +1,7 @@
-import Hash       "mo:base/Hash";
-// import Map        "mo:base/HashMap";
 import Principal  "mo:base/Principal";
 import Nat        "mo:base/Nat";
 import Nat32      "mo:base/Nat32";
 import Nat64      "mo:base/Nat64";
-import Nat8       "mo:base/Nat64";
 import Text       "mo:base/Text";
 import Iter       "mo:base/Iter";
 import Float      "mo:base/Float";
@@ -18,14 +15,8 @@ import Result     "mo:base/Result";
 import U          "./utils/utils";
 import Hex        "./utils/Hex";
 import Blob       "mo:base/Blob";
-import Array      "mo:base/Array";
 import Buffer     "mo:base/Buffer";
-import Trie       "mo:base/Trie";
-import TrieMap    "mo:base/TrieMap";
 import Cycles     "mo:base/ExperimentalCycles";
-import Char       "mo:base/Char";
-import Int64      "mo:base/Int64";
-import Timer      "mo:base/Timer";
 import Env        "./utils/env";
 import Map        "mo:stable-hash-map/Map";
 import Prim       "mo:⛔";
@@ -59,7 +50,7 @@ actor class PPV() = this{
   type Account                   = T.Account;
   type GetBlocksRequest          = ICRC1T.GetBlocksRequest;
   type GetTransactionsResponse   = ICRC1T.GetTransactionsResponse;
-   type StatusRequest            = T.StatusRequest;
+  type StatusRequest            = T.StatusRequest;
   type StatusResponse            = T.StatusResponse;
   
 
@@ -68,10 +59,11 @@ actor class PPV() = this{
   private type FanToTime         = Map.Map<FanID, (Timestamp, Nat, Ticker)>;
   private type ArtistToFan         = Map.Map<ArtistID, FanToTime>;
   
-  let { ihash; nhash; n64hash; thash; phash; calcHash } = Map;
+  let { n64hash; thash; phash; } = Map;
 
   let FEE : Nat64                = 10000;
   let FEE_CKBTC : Nat64          = 10;
+  let FEE_TRAX : Nat64           = 100_000;
   var PLATFORM_FEE: Float        = 0.10;
   var VERSION: Nat               = 1;
   stable var txNo : Nat64        = 0;
@@ -81,25 +73,29 @@ actor class PPV() = this{
   stable let contentPaymentMap   = Map.new<ContentID, ArtistToFan>(thash); // true false conditional which verifies whether a fan has paid.
   stable let verifiedTxs         = Map.new<BlockIndex, FanID>(n64hash);
   stable let verifiedTxsCKBTC    = Map.new<BlockIndex, FanID>(n64hash);
+  stable let verifiedTxsTRAX     = Map.new<BlockIndex, FanID>(n64hash);
 
 
   let Ledger = actor "ryjl3-tyaaa-aaaaa-aaaba-cai" : actor {
-  // let Ledger = actor "bd3sg-teaaa-aaaaa-qaaba-cai" : actor {
-       query_blocks : shared query GetBlocksArgs -> async QueryBlocksResponse;
-       transfer : shared TransferArgs -> async  Result_1;
-       account_balance : shared query BinaryAccountBalanceArgs -> async Tokens;
+    query_blocks : shared query GetBlocksArgs -> async QueryBlocksResponse;
+    transfer : shared TransferArgs -> async  Result_1;
+    account_balance : shared query BinaryAccountBalanceArgs -> async Tokens;
   };
 
   let XRC = actor "uf6dk-hyaaa-aaaaq-qaaaq-cai" : actor {
-  //  let XRC = actor "asrmz-lmaaa-aaaaa-qaaeq-cai" : actor {
-      get_exchange_rate : shared GetExchangeRateRequest -> async GetExchangeRateResult;
-    };
+    get_exchange_rate : shared GetExchangeRateRequest -> async GetExchangeRateResult;
+  };
 
   let CkBTCLedger = actor "mxzaz-hqaaa-aaaar-qaada-cai" : actor {
-  // let CkBTCLedger = actor "b77ix-eeaaa-aaaaa-qaada-cai" : actor {
-       icrc1_transfer : shared TransferArg -> async Result;
-       icrc1_balance_of : shared query Account -> async Nat;
-       get_transactions : shared query GetBlocksRequest -> async GetTransactionsResponse;
+    icrc1_transfer : shared TransferArg -> async Result;
+    icrc1_balance_of : shared query Account -> async Nat;
+    get_transactions : shared query GetBlocksRequest -> async GetTransactionsResponse;
+  };
+
+  let TRAXLedger = actor "emww2-4yaaa-aaaaq-aacbq-cai" : actor {
+    icrc1_transfer : shared TransferArg -> async Result;
+    icrc1_balance_of : shared query Account -> async Nat;
+    get_transactions : shared query GetBlocksRequest -> async GetTransactionsResponse;
   };
 
 
@@ -123,7 +119,7 @@ public func getExchangeRate(symbol : Text) : async Float { // can drain cycles
     };
 
     
-    Cycles.add(10_000_000_000); // Every XRC call needs 10B cycles.
+    Cycles.add<system>(10_000_000_000); // Every XRC call needs 10B cycles.
     let response = await XRC.get_exchange_rate(request);
     // Print out the response to get a detailed view.
     Debug.print(debug_show(response));
@@ -168,7 +164,6 @@ private func checkBalance(fan: FanID, amount: Nat64) : async Bool {
       var publisherID : ?ArtistID = null;
       var publisherPercentage : Percentage = 0;
       var participants: [Participants] = [];
-      let now = Time.now();
       var amountToSend : Nat64 = 0;
 
       if(ticker == "ICP"){
@@ -177,16 +172,16 @@ private func checkBalance(fan: FanID, amount: Nat64) : async Bool {
       }else if (ticker == "ckBTC"){
         txFee := FEE_CKBTC;
         assert(await queryBlocksCkBTC(caller, amount, blockIndex));
+      }else if (ticker == "TRAX"){ 
+        txFee := FEE_TRAX;
+        assert(await queryBlocksTRAX(caller, amount, blockIndex));
       }else{
         throw Error.reject("@purchaseContent: ticker is invalid");
       };
       
-      
       switch(Map.get(contentMap, thash, id)){
       case(?content){
           Debug.print("Price of content: " # debug_show content.price);
-          // let amountICP: Nat64 =  Nat64.fromIntWrap(Float.toInt((content.price / priceCrypto) * 100000000));
-          // Debug.print("amount ICP: " # debug_show amountICP);
           amountToSend := await platformDeduction(amount - (txFee * 2), ticker); // 
           publisherID := ?content.publisher;
           publisherPercentage := content.publisherPercentage;
@@ -197,17 +192,24 @@ private func checkBalance(fan: FanID, amount: Nat64) : async Bool {
         switch(publisherID){  
           case (?artist) { 
             let publishersCut :  Nat64 = await getDeductedAmount((amountToSend - FEE), publisherPercentage);
-            let vTx = Map.put(verifiedTxs, n64hash, blockIndex, caller);
-              switch(await transfer(artist, publishersCut, ticker)){
-                case(#ok(res)){ 
-                
-                  await addToContentPaymentMap(id, artist, ticker, caller, Nat64.toNat(publishersCut));
-                  Debug.print("Paid artist: " # debug_show artist # " in block " # debug_show res);
-                }; case(#err(msg)){   
+            ignore Map.put(verifiedTxs, n64hash, blockIndex, caller);
+            switch(await transfer(artist, publishersCut, ticker)){
+              case(#ok(res)){ 
+                await addToContentPaymentMap(id, artist, ticker, caller, Nat64.toNat(publishersCut));
+                Debug.print("Paid artist: " # debug_show artist # " in block " # debug_show res);
+              }; case(#err(msg)){   
+                if(ticker == "ICP"){
                   Map.delete(verifiedTxs, n64hash, blockIndex);
-                  throw Error.reject("Unexpected error: " # debug_show msg);    
+                }else if(ticker == "ckBTC"){
+                  Map.delete(verifiedTxsCKBTC, n64hash, blockIndex);
+                }else if(ticker == "TRAX"){
+                  Map.delete(verifiedTxsTRAX, n64hash, blockIndex);
+                }else{
+                  throw Error.reject("@sendTip: Failed to delete from verified Txs - unknown ticker. " # debug_show msg);    
                 };
+                throw Error.reject("Unexpected error: " # debug_show msg);    
               };
+            };
           }; case null { };
         };
         var count : Nat64 = 0;
@@ -237,7 +239,7 @@ private func checkBalance(fan: FanID, amount: Nat64) : async Bool {
         switch(tx.transfer){
           case(?transfer){
             if(caller == transfer.from.owner and Principal.fromActor(this) == transfer.to.owner and Nat64.toNat(amount) == transfer.amount){
-                switch(Map.get(verifiedTxs, n64hash, blockIndex)){
+                switch(Map.get(verifiedTxsCKBTC, n64hash, blockIndex)){
                   case(?sender){
                       if(sender == caller){
                       
@@ -251,6 +253,42 @@ private func checkBalance(fan: FanID, amount: Nat64) : async Bool {
                 };
             }else{
               throw Error.reject("@queryBlocksCkBTC: Could not validate tx, from and to fields do not match inputs:\n" # debug_show transfer.from.owner # " " # Principal.toText(caller) );
+              return false;
+            };
+          };
+          case(null){
+            return false;
+          };           
+        };
+      };
+    return false;
+  };
+
+
+  private func queryBlocksTRAX(caller: Principal, amount: Nat64, blockIndex: Nat64) : async (Bool){
+      let blockQuery = await TRAXLedger.get_transactions({
+        start = Nat64.toNat(blockIndex);
+        length = 1;
+      });
+
+      for(tx in Iter.fromArray(blockQuery.transactions)){
+        switch(tx.transfer){
+          case(?transfer){
+            if(caller == transfer.from.owner and Principal.fromActor(this) == transfer.to.owner and Nat64.toNat(amount) == transfer.amount){
+                switch(Map.get(verifiedTxsTRAX, n64hash, blockIndex)){
+                  case(?sender){
+                      if(sender == caller){
+                      
+                      throw Error.reject("@queryBlocksTRAX: This tx has already been verified.");
+                      return false;
+
+                    };
+                  }; case null { 
+                    return true;
+                  };
+                };
+            }else{
+              throw Error.reject("@queryBlocksTRAX: Could not validate tx, from and to fields do not match inputs:\n" # debug_show transfer.from.owner # " " # Principal.toText(caller) );
               return false;
             };
           };
@@ -333,23 +371,23 @@ private func checkBalance(fan: FanID, amount: Nat64) : async Bool {
       case(?innerMap){
         switch(Map.get(innerMap, phash, artist)){
           case(?hasInit){
-              var a = Map.put(hasInit, phash, fan, (now, amount, ticker));
+              ignore Map.put(hasInit, phash, fan, (now, amount, ticker));
           };
           case null {
             var x : FanToTime = Map.new<FanID, (Timestamp, Nat, Ticker)>(phash);
             
-            var b = Map.put(x, phash, fan, (now, amount, ticker));
+            ignore Map.put(x, phash, fan, (now, amount, ticker));
             
-            var c = Map.put(innerMap, phash, artist, x);
+            ignore Map.put(innerMap, phash, artist, x);
           };
         };
         
       }; case null {
         var z : FanToTime = Map.new<FanID, (Timestamp, Nat, Ticker)>(phash);
         var y : ArtistToFan = Map.new<ArtistID, FanToTime>(phash);
-        var d = Map.put(z, phash, fan, (now, amount, ticker));
-        var e = Map.put(y, phash, artist, z);
-        var f = Map.put(contentPaymentMap, thash, id, y);
+        ignore Map.put(z, phash, fan, (now, amount, ticker));
+        ignore Map.put(y, phash, artist, z);
+        ignore Map.put(contentPaymentMap, thash, id, y);
       }
     };
   };
@@ -373,7 +411,7 @@ private func checkBalance(fan: FanID, amount: Nat64) : async Bool {
       case(?exists){
         throw Error.reject("This content ID has been taken");
       }; case null {
-        var a = Map.put(contentMap, thash, id, content);    
+        ignore Map.put(contentMap, thash, id, content);    
       }
     };
   };
@@ -393,9 +431,8 @@ private func checkBalance(fan: FanID, amount: Nat64) : async Bool {
     switch(Map.get(contentMap, thash, id)){
       case(?exists){
 
-         assert(caller == exists.publisher or U.isAdmin(caller));
-
-        let update = Map.replace(contentMap, thash, id, content);
+        assert(caller == exists.publisher or U.isAdmin(caller));
+        ignore Map.replace(contentMap, thash, id, content);
 
       }; case null{
         throw Error.reject("Content ID does not match any existing record.");
@@ -680,6 +717,34 @@ private func checkBalance(fan: FanID, amount: Nat64) : async Bool {
           
         };
 
+      }else if(ticker == "TRAX"){
+
+        let transferResult = await TRAXLedger.icrc1_transfer(
+          {
+            amount = Nat64.toNat(amount);
+            from_subaccount = null;
+            created_at_time = null;
+            fee = ?100_000;
+            memo = null;
+            to = {
+              owner = to;
+              subaccount = null;
+            };
+          }
+        );
+
+        switch (transferResult) {
+          case (#Ok(transferResult)) {
+              txNo += 1;
+              Debug.print("@transfer: Paid recipient TRAX: " # debug_show to # " in block " # debug_show transferResult);
+              return #ok(Nat64.fromNat(transferResult));
+          };
+          case (#Err(transferError)) {
+            return #err("@transfer: Couldn't transfer TRAX funds to default account:\n" # debug_show (transferError));
+          };
+          
+        };
+
       }else{
         throw Error.reject("@transfer: ticker in invalid");
       };
@@ -742,8 +807,20 @@ private func checkBalance(fan: FanID, amount: Nat64) : async Bool {
   };
 
 
-  public func canisterBalance() : async Tokens {
+  public func icpBalanceOfCanister() : async Tokens {
     await Ledger.account_balance({ account = Blob.toArray(myAccountId()) });
+  };
+
+  public func ckbtcBalanceOfCanister() : async Nat{
+    await CkBTCLedger.icrc1_balance_of(
+      {owner = Principal.fromActor(this); subaccount = null }
+    );
+  };
+
+  public func traxBalanceOfCanister() : async Nat{
+    await TRAXLedger.icrc1_balance_of(
+      {owner = Principal.fromActor(this); subaccount = null }
+    );
   };
 
   private func myAccountId() : Account.AccountIdentifier {
@@ -792,7 +869,7 @@ let errInvalidToken =
 
   private func wallet_receive() : async { accepted: Nat64 } {
     let available = Cycles.available();
-    let accepted = Cycles.accept(Nat.min(available, top_up_amount));
+    let accepted = Cycles.accept<system>(Nat.min(available, top_up_amount));
     { accepted = Nat64.fromNat(accepted) };
   };
 
@@ -801,8 +878,8 @@ let errInvalidToken =
 
 
   public func cyclesBalance() : async Nat {
-      return Cycles.balance();
-    };
+    return Cycles.balance();
+  };
 
 
 
@@ -816,30 +893,64 @@ let errInvalidToken =
           };
           case (?_request) {
               var cycles: ?Nat = null;
-              if (_request.cycles) {
+              switch(_request.cycles){
+                case(?checkCycles){
                   cycles := ?getCurrentCycles();
+                };case null {};
               };
+              
               var memory_size: ?Nat = null;
-              if (_request.memory_size) {
+              switch(_request.memory_size){
+                case(?checkStableMemory){
                   memory_size := ?getCurrentMemory();
+                };case null {};
               };
+
               var heap_memory_size: ?Nat = null;
-              if (_request.heap_memory_size) {
+              switch(_request.heap_memory_size){
+                case(?checkHeapMemory){
                   heap_memory_size := ?getCurrentHeapMemory();
+                };case null {};
               };
               var version: ?Nat = null;
-              if (_request.version) {
+              switch(_request.version){
+                case(?checkVersion){
                   version := ?getVersion();
+                };case null {};
               };
+              
               var icp_balance: ?Tokens = null;
-              if (_request.icp_balance) {
-                switch(await canisterBalance()){
-                  case(_bal){
+              switch(_request.icp_balance){
+                case(?checkIcpBal){
+                  switch(await icpBalanceOfCanister()){
+                    case(_bal){
                       icp_balance := ?_bal;
+                    };
                   };
-                };
+                };case null {};
               };
+
               var ckbtc_balance: ?Nat = null;
+              switch(_request.ckbtc_balance){
+                case(?checkCkbtcBal){
+                  switch(await ckbtcBalanceOfCanister()){
+                    case(_bal){
+                      ckbtc_balance := ?_bal;
+                    };
+                  };
+                };case null {};
+              };
+
+              var trax_balance: ?Nat = null;
+              switch(_request.trax_balance){
+                case(?checkTraxBal){
+                  switch(await traxBalanceOfCanister()){
+                    case(_bal){
+                      trax_balance := ?_bal;
+                    };
+                  };
+                };case null {};
+              };
 
               return ?{
                   cycles = cycles;
@@ -848,6 +959,7 @@ let errInvalidToken =
                   version = version;
                   icp_balance = icp_balance;
                   ckbtc_balance = ckbtc_balance;
+                  trax_balance = trax_balance;
               };
           };
       };
