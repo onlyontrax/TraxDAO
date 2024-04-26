@@ -40,6 +40,7 @@ actor class ArtistContentBucket(owner: Principal, manager: Principal, artistBuck
   type Thumbnail                 = T.Thumbnail;
   type Trailer                   = T.Trailer;
   type CanisterStatus            = IC.canister_status_response;
+  type Tokens                    = T.Tokens;
   
   let { ihash; nhash; thash; phash; calcHash } = Map;
 
@@ -50,7 +51,7 @@ actor class ArtistContentBucket(owner: Principal, manager: Principal, artistBuck
   stable var CYCLE_AMOUNT : Nat     =  100_000_000_000; // minimum amount of cycles needed to create new canister 
   let maxCycleAmount                = 80_000_000_000_000; // canister cycles capacity 
   let top_up_amount                 = 1_000_000_000_000;
-  var VERSION: Nat                  = 1; 
+  var VERSION: Nat                  = 3; 
 
   private let canisterUtils : CanisterUtils.CanisterUtils = CanisterUtils.CanisterUtils();
   private let walletUtils : WalletUtils.WalletUtils = WalletUtils.WalletUtils();
@@ -252,39 +253,59 @@ actor class ArtistContentBucket(owner: Principal, manager: Principal, artistBuck
 
 
 
-  public query({caller}) func getStatus(request: ?StatusRequest): async ?StatusResponse {
-    // assert(caller == owner or Utils.isManager(caller) or caller == artistBucket);
-        switch(request) {
-            case (null) {
-                return null;
-            };
-            case (?_request) {
-                var cycles: ?Nat = null;
-                if (_request.cycles) {
-                    cycles := ?getCurrentCycles();
-                };
-                var memory_size: ?Nat = null;
-                if (_request.memory_size) {
-                    memory_size := ?getCurrentMemory();
-                };
 
-                var heap_memory_size: ?Nat = null;
-                if (_request.heap_memory_size) {
-                    heap_memory_size := ?getCurrentHeapMemory();
-                };
-                var version: ?Nat = null;
-                if (_request.version) {
-                    version := ?getVersion();
-                };
-                return ?{
-                    cycles = cycles;
-                    memory_size = memory_size;
-                    heap_memory_size = heap_memory_size;
-                    version = version;
-                };
-            };
-        };
+
+  public shared({caller}) func getStatus(request: ?StatusRequest): async ?StatusResponse {
+    // assert(U.isAdmin(caller));
+      switch(request) {
+          case (null) {
+              return null;
+          };
+          case (?_request) {
+              var cycles: ?Nat = null;
+              switch(_request.cycles){
+                case(?checkCycles){
+                  cycles := ?getCurrentCycles();
+                };case null {};
+              };
+              
+              var memory_size: ?Nat = null;
+              switch(_request.memory_size){
+                case(?checkStableMemory){
+                  memory_size := ?getCurrentMemory();
+                };case null {};
+              };
+
+              var heap_memory_size: ?Nat = null;
+              switch(_request.heap_memory_size){
+                case(?checkHeapMemory){
+                  heap_memory_size := ?getCurrentHeapMemory();
+                };case null {};
+              };
+              var version: ?Nat = null;
+              switch(_request.version){
+                case(?checkVersion){
+                  version := ?getVersion();
+                };case null {};
+              };
+              
+              var icp_balance: ?Tokens = null;
+              var ckbtc_balance: ?Nat = null;
+              var trax_balance: ?Nat = null;
+
+              return ?{
+                  cycles = cycles;
+                  memory_size = memory_size;
+                  heap_memory_size = heap_memory_size;
+                  version = version;
+                  icp_balance = icp_balance;
+                  ckbtc_balance = ckbtc_balance;
+                  trax_balance = trax_balance;
+              };
+          };
+      };
   };
+
 
 
 
@@ -293,6 +314,12 @@ actor class ArtistContentBucket(owner: Principal, manager: Principal, artistBuck
   private func getVersion() : Nat {
 		return VERSION;
 	}; 
+
+
+  public query func getVersionNumber() : async Nat {
+		return VERSION;
+	};  
+
 
   public shared({caller}) func getCanisterStatus() : async CanisterStatus {
     // if (not Utils.isManager(caller)) {

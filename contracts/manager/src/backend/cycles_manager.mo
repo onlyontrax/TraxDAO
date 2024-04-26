@@ -167,41 +167,53 @@ actor Cycles_Manager {
 
 
 
-  public query({caller}) func getStatus(request: ?StatusRequest): async ?StatusResponse {
-    // if (not Utils.isManager(caller)) {
-    //   throw Error.reject("@getStatus: Unauthorized access. Caller is not the manager principal. Caller: " # Principal.toText(caller));
-    // };
 
-    Debug.print("caller principal: " # debug_show Principal.toText(caller));
-    Debug.print("manager principal: " # debug_show Env.manager);
-
-
+  public shared({caller}) func getStatus(request: ?StatusRequest): async ?StatusResponse {
+    // assert(U.isAdmin(caller));
       switch(request) {
           case (null) {
               return null;
           };
           case (?_request) {
               var cycles: ?Nat = null;
-              if (_request.cycles) {
+              switch(_request.cycles){
+                case(?checkCycles){
                   cycles := ?getCurrentCycles();
+                };case null {};
               };
+              
               var memory_size: ?Nat = null;
-              if (_request.memory_size) {
+              switch(_request.memory_size){
+                case(?checkStableMemory){
                   memory_size := ?getCurrentMemory();
+                };case null {};
               };
+
               var heap_memory_size: ?Nat = null;
-              if (_request.heap_memory_size) {
+              switch(_request.heap_memory_size){
+                case(?checkHeapMemory){
                   heap_memory_size := ?getCurrentHeapMemory();
+                };case null {};
               };
               var version: ?Nat = null;
-              if (_request.version) {
+              switch(_request.version){
+                case(?checkVersion){
                   version := ?getVersion();
+                };case null {};
               };
+              
+              var icp_balance: ?Tokens = null;
+              var ckbtc_balance: ?Nat = null;
+              var trax_balance: ?Nat = null;
+
               return ?{
                   cycles = cycles;
                   memory_size = memory_size;
                   heap_memory_size = heap_memory_size;
                   version = version;
+                  icp_balance = icp_balance;
+                  ckbtc_balance = ckbtc_balance;
+                  trax_balance = trax_balance;
               };
           };
       };

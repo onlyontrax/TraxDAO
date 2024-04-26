@@ -34,6 +34,18 @@
         }
       }
     },
+
+    "trax_ledger" : {
+      "type" : "custom",
+      "candid" : "icrc1.did",
+      "wasm" : "icrc1.wasm",
+      "remote": {
+        "candid": "icrc1.did",
+        "id": {
+          "ic" : "emww2-4yaaa-aaaaq-aacbq-cai"
+        }
+      }
+    },
     
     "subscriptions": {
       "main": "src/payments_backend/subscriptions.mo",
@@ -55,8 +67,38 @@
       "source": ["dist", "src/assets"]
     },
 
+    "ppv.staging": {
+      "main": "src/payments_backend/staging/ppv.staging.mo",
+      "type": "motoko",
+      "declarations": {
+        "node_compatibility": true,
+        "env_override": ""
+      },
+      "source": ["dist", "src/assets"]
+    },
+
     "tipping": {
       "main": "src/payments_backend/tipping.mo",
+      "type": "motoko",
+      "declarations": {
+        "node_compatibility": true,
+        "env_override": ""
+      },
+      "source": ["dist", "src/assets"]
+    },
+
+    "tipping.staging": {
+      "main": "src/payments_backend/staging/tipping.staging.mo",
+      "type": "motoko",
+      "declarations": {
+        "node_compatibility": true,
+        "env_override": ""
+      },
+      "source": ["dist", "src/assets"]
+    },
+
+    "airdrop": {
+      "main": "src/payments_backend/airdrop/airdrop.mo",
       "type": "motoko",
       "declarations": {
         "node_compatibility": true,

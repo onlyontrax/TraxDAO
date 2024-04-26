@@ -1,9 +1,6 @@
-import HashMap        "mo:base/HashMap";
 import Principal      "mo:base/Principal";
 import Nat            "mo:base/Nat";
-import Nat32          "mo:base/Nat32";
 import Nat64          "mo:base/Nat64";
-import Nat8           "mo:base/Nat64";
 import Text           "mo:base/Text";
 import Iter           "mo:base/Iter";
 import T              "./types";
@@ -14,25 +11,14 @@ import Error          "mo:base/Error";
 import Debug          "mo:base/Debug";
 import Result         "mo:base/Result";
 import U              "./utils/utils";
-import Hex            "./utils/Hex";
 import Blob           "mo:base/Blob";
-import Array          "mo:base/Array";
-import Buffer         "mo:base/Buffer";
-import Trie           "mo:base/Trie";
-import TrieMap        "mo:base/TrieMap";
 import Cycles         "mo:base/ExperimentalCycles";
-import Char           "mo:base/Char";
-import Int64          "mo:base/Int64";
-import Timer          "mo:base/Timer";
 import Map            "mo:stable-hash-map/Map";
 import Env            "./utils/env";
 import Float          "mo:base/Float";
-import BitcoinWallet  "./bitcoin/BitcoinWallet";
-import BitcoinApi     "./bitcoin/BitcoinApi";
-import BT             "./bitcoin/Types";
-import BUtils         "./bitcoin/Utils";
 import ICRC1T         "./ckbtcTypes";
 import Prim           "mo:⛔";
+import Buffer         "mo:base/Buffer";
 
 // actor class Tipping(_network : BT.Network) = this{
 actor class Tipping() = this{
@@ -60,23 +46,24 @@ actor class Tipping() = this{
   type Account                   = T.Account;
   type GetBlocksRequest          = ICRC1T.GetBlocksRequest;
   type GetTransactionsResponse   = ICRC1T.GetTransactionsResponse;
-  type StatusRequest                  = T.StatusRequest;
-  type StatusResponse                 = T.StatusResponse;
+  type StatusRequest             = T.StatusRequest;
+  type StatusResponse            = T.StatusResponse;
 
   type ReferralType = {
     #firstYear;
     #lifetime;
   };
 
-  let { ihash; n64hash; thash; phash; calcHash } = Map;
+  let { ihash; n64hash; phash; } = Map;
   
-  let FEE : Nat64                     = 10000;
+  let FEE : Nat64                     = 10_000;
   let FEE_CKBTC : Nat64               = 10;
+  let FEE_TRAX : Nat64                = 100_000;
   stable var txNo : Nat64             = 0;
-  var PLATFORM_FEE: Float      = 0.10;
-  var REFERRAL_FEE_YEAR: Float      = 0.05;
-  var REFERRAL_FEE_LIFETIME: Float  = 0.01;
-  var VERSION: Nat             = 1;
+  var PLATFORM_FEE: Float             = 0.10;
+  var REFERRAL_FEE_YEAR: Float        = 0.05;
+  var REFERRAL_FEE_LIFETIME: Float    = 0.01;
+  var VERSION: Nat                    = 1;
   let top_up_amount                   = 2_000_000_000_000;
 
   private type FanToTippingData       = Map.Map<FanID, TippingData>;
@@ -91,6 +78,7 @@ actor class Tipping() = this{
   stable let tippingMap               = Map.new<ArtistID, FanToTippingData>(phash); // Keep record of every tip transaction
   stable let verifiedTxs              = Map.new<BlockIndex, FanID>(n64hash);
   stable let verifiedTxsCKBTC         = Map.new<BlockIndex, FanID>(n64hash);
+  stable let verifiedTxsTRAX          = Map.new<BlockIndex, FanID>(n64hash);
 
                                         // referrer -> referee -> referType
   stable let referralMap              = Map.new<ArtistID, ArtistToReferralType>(phash);
@@ -98,17 +86,24 @@ actor class Tipping() = this{
 
 
   let Ledger = actor "ryjl3-tyaaa-aaaaa-aaaba-cai" : actor {
-  // let Ledger = actor "bd3sg-teaaa-aaaaa-qaaba-cai" : actor {
+  // let Ledger = actor "bkyz2-fmaaa-aaaaa-qaaaq-cai" : actor {
        query_blocks : shared query GetBlocksArgs -> async QueryBlocksResponse;
        transfer : shared TransferArgs -> async  Result_1;
        account_balance : shared query BinaryAccountBalanceArgs -> async Tokens;
   };
 
   let CkBTCLedger = actor "mxzaz-hqaaa-aaaar-qaada-cai" : actor {
-  // let CkBTCLedger = actor "b77ix-eeaaa-aaaaa-qaada-cai" : actor {
+  // let CkBTCLedger = actor "be2us-64aaa-aaaaa-qaabq-cai" : actor {
        icrc1_transfer : shared TransferArg -> async Result;
        icrc1_balance_of : shared query Account -> async Nat;
        get_transactions : shared query GetBlocksRequest -> async GetTransactionsResponse;
+  };
+
+  let TRAXLedger = actor "emww2-4yaaa-aaaaq-aacbq-cai" : actor {
+    // let TRAXLedger = actor "bkyz2-fmaaa-aaaaa-qaaaq-cai" : actor {
+         icrc1_transfer : shared TransferArg -> async Result;
+         icrc1_balance_of : shared query Account -> async Nat;
+         get_transactions : shared query GetBlocksRequest -> async GetTransactionsResponse;
   };
 
   public shared({caller}) func addToReferralMap(referrer: ArtistID, referee: ArtistID): async(){
@@ -117,36 +112,36 @@ actor class Tipping() = this{
     };
     let referType: ReferralType = #firstYear;
     var y : ArtistToReferralType = Map.new<ArtistID, ReferralType>(phash);
-    var a = Map.put(y, phash, referee, referType);
-    var b = Map.put(referralMap, phash, referrer, y);
+    ignore Map.put(y, phash, referee, referType);
+    ignore Map.put(referralMap, phash, referrer, y);
   };
 
 
-  private func addToReferralTxs(referrer: ArtistID, referee: ArtistID, ticker: Ticker, amount: Nat64) : async (){
-    let now = Time.now();
-    switch(Map.get(referralTxs, phash, referee)){
-      case(?artistToReferralTypeData){
+  // private func addToReferralTxs(referrer: ArtistID, referee: ArtistID, ticker: Ticker, amount: Nat64) : async (){
+  //   let now = Time.now();
+  //   switch(Map.get(referralTxs, phash, referee)){
+  //     case(?artistToReferralTypeData){
       
-        switch(Map.get(artistToReferralTypeData, phash, referee)){
-            case(?referralData){
-                var add = Map.put(referralData, ihash, now, (Nat64.toNat(amount), ticker));
-            };
-            case null {
-                var y : ReferralData = Map.new<Timestamp, (Nat, Ticker)>(ihash);
-                var a = Map.put(y, ihash, now, (Nat64.toNat(amount), ticker));
-                var b = Map.put(artistToReferralTypeData, phash, referrer, y);
-            };
-        };
-      };
-      case null {
-          var y : ReferralData = Map.new<Timestamp, (Nat, Ticker)>(ihash);
-          var x : ArtistToReferralData = Map.new<ArtistID, ReferralData>(phash);
-          var a = Map.put(y, ihash, now, (Nat64.toNat(amount), ticker));
-          var b = Map.put(x, phash, referee, y);
-          var c = Map.put(referralTxs, phash, referrer, x);
-      };
-    };
-  };
+  //       switch(Map.get(artistToReferralTypeData, phash, referee)){
+  //           case(?referralData){
+  //               var add = Map.put(referralData, ihash, now, (Nat64.toNat(amount), ticker));
+  //           };
+  //           case null {
+  //               var y : ReferralData = Map.new<Timestamp, (Nat, Ticker)>(ihash);
+  //               var a = Map.put(y, ihash, now, (Nat64.toNat(amount), ticker));
+  //               var b = Map.put(artistToReferralTypeData, phash, referrer, y);
+  //           };
+  //       };
+  //     };
+  //     case null {
+  //         var y : ReferralData = Map.new<Timestamp, (Nat, Ticker)>(ihash);
+  //         var x : ArtistToReferralData = Map.new<ArtistID, ReferralData>(phash);
+  //         var a = Map.put(y, ihash, now, (Nat64.toNat(amount), ticker));
+  //         var b = Map.put(x, phash, referee, y);
+  //         var c = Map.put(referralTxs, phash, referrer, x);
+  //     };
+  //   };
+  // };
   
 
 
@@ -155,7 +150,6 @@ actor class Tipping() = this{
   public shared({caller}) func sendTip(blockIndex: Nat64, participants: TippingParticipants, amount: Nat64, ticker: Ticker) : async (){
 
     assert(amount > 0);
-    let now = Time.now();
 
     var amountToSend: Nat64 = 0;
     var txFee: Nat64 = 0;
@@ -170,16 +164,20 @@ actor class Tipping() = this{
 
       //   let amountToSendPlatform: Nat64 = await getDeductedAmount(amount, REFERRAL_FEE_YEAR);
       // }else{
-        amountToSend := await platformDeduction(amount - txFee, ticker); 
+      amountToSend := await platformDeduction(amount - txFee, ticker);
       // };
-      
-      let vTx = Map.put(verifiedTxs, n64hash, blockIndex, caller);
+      ignore Map.put(verifiedTxs, n64hash, blockIndex, caller);
 
     }else if(ticker == "ckBTC"){
       assert(await queryBlocksCkBTC(caller, amount, blockIndex));
       txFee := FEE_CKBTC;
       amountToSend := await platformDeduction(amount - txFee, ticker); 
-      let vTx = Map.put(verifiedTxsCKBTC, n64hash, blockIndex, caller);
+      ignore Map.put(verifiedTxsCKBTC, n64hash, blockIndex, caller);
+    }else if(ticker == "TRAX"){
+      assert(await queryBlocksTRAX(caller, amount, blockIndex));
+      txFee := FEE_TRAX;
+      amountToSend := await platformDeduction(amount - txFee, ticker); 
+      ignore Map.put(verifiedTxsTRAX, n64hash, blockIndex, caller);
     }else{
       throw Error.reject("@sendTip: ticker is invalid");
     };
@@ -200,7 +198,15 @@ actor class Tipping() = this{
             
               Debug.print("@sendTip: Paid artist: " # debug_show collabs.participantID #"\namount: "# debug_show participantsCut #  "\nin block " # debug_show res);
             }; case(#err(msg)){
-              Map.delete(verifiedTxs, n64hash, blockIndex);
+              if(ticker == "ICP"){
+                Map.delete(verifiedTxs, n64hash, blockIndex);
+              }else if(ticker == "ckBTC"){
+                Map.delete(verifiedTxsCKBTC, n64hash, blockIndex);
+              }else if(ticker == "TRAX"){
+                Map.delete(verifiedTxsTRAX, n64hash, blockIndex);
+              }else{
+                throw Error.reject("@sendTip: Failed to delete from verified Txs - unknown ticker. " # debug_show msg);    
+              };
               throw Error.reject("@sendTip: Unexpected error: " # debug_show msg);    
             };
           };
@@ -231,7 +237,7 @@ actor class Tipping() = this{
                          Account.accountIdentifier(Principal.fromActor(this), Account.defaultSubaccount()) == Blob.fromArray(to)
                          and amountToSend == amount.e8s){
 
-                          switch(Map.get(verifiedTxsCKBTC, n64hash, blockIndex)){
+                          switch(Map.get(verifiedTxs, n64hash, blockIndex)){
                             case(?sender){
                                 if(sender == caller){
                                 throw Error.reject("@queryBlocksICP: This tx has already been verified.");
@@ -283,7 +289,7 @@ actor class Tipping() = this{
       switch(tx.transfer){
         case(?transfer){
           if(caller == transfer.from.owner and Principal.fromActor(this) == transfer.to.owner and Nat64.toNat(amount) == transfer.amount){
-              switch(Map.get(verifiedTxs, n64hash, blockIndex)){
+              switch(Map.get(verifiedTxsCKBTC, n64hash, blockIndex)){
                 case(?sender){
                     if(sender == caller){
                     
@@ -291,7 +297,7 @@ actor class Tipping() = this{
                     return false;
                     
                   };
-                }; case null { 
+                }; case null {
                   return true;
                 };
               };
@@ -310,6 +316,43 @@ actor class Tipping() = this{
 
 
 
+  private func queryBlocksTRAX(caller: Principal, amount: Nat64, blockIndex: Nat64) : async (Bool){
+      let blockQuery = await TRAXLedger.get_transactions({
+      start = Nat64.toNat(blockIndex);
+      length = 1;
+    });
+
+    for(tx in Iter.fromArray(blockQuery.transactions)){
+      switch(tx.transfer){
+        case(?transfer){
+          if(caller == transfer.from.owner and Principal.fromActor(this) == transfer.to.owner and Nat64.toNat(amount) == transfer.amount){
+              switch(Map.get(verifiedTxsTRAX, n64hash, blockIndex)){
+                case(?sender){
+                    if(sender == caller){
+                    
+                    throw Error.reject("@queryBlocksTRAX: This tx has already been verified.");
+                    return false;
+                    
+                  };
+                }; case null { 
+                  return true;
+                };
+              };
+          }else{
+            throw Error.reject("@queryBlocksTRAX: Could not validate tx, from and to fields do not match inputs:\n" # debug_show transfer.from.owner # " " # Principal.toText(caller) );
+            return false;
+          };
+        };
+        case(null){
+          return false;
+        };
+      };
+    };
+    return false;
+  };
+
+
+
 
   private func addToTippingMap(fanId: FanID, artistId: ArtistID, ticker: Ticker, amount: Nat64) : async (){
     let now = Time.now();
@@ -318,12 +361,12 @@ actor class Tipping() = this{
       
         switch(Map.get(fanToTippingData, phash, fanId)){
             case(?tippingData){
-                var add = Map.put(tippingData, ihash, now, (Nat64.toNat(amount), ticker));
+                ignore Map.put(tippingData, ihash, now, (Nat64.toNat(amount), ticker));
             };
             case null {
                 var y : TippingData = Map.new<Timestamp, (Nat, Ticker)>(ihash);
-                var a = Map.put(y, ihash, now, (Nat64.toNat(amount), ticker));
-                var b = Map.put(fanToTippingData, phash, fanId, y);
+                ignore Map.put(y, ihash, now, (Nat64.toNat(amount), ticker));
+                ignore Map.put(fanToTippingData, phash, fanId, y);
             };
         };
         
@@ -331,9 +374,9 @@ actor class Tipping() = this{
       case null {
           var y : TippingData = Map.new<Timestamp, (Nat, Ticker)>(ihash);
           var x : FanToTippingData = Map.new<FanID, TippingData>(phash);
-          var a = Map.put(y, ihash, now, (Nat64.toNat(amount), ticker));
-          var b = Map.put(x, phash, fanId, y);
-          var c = Map.put(tippingMap, phash, artistId, x);
+          ignore Map.put(y, ihash, now, (Nat64.toNat(amount), ticker));
+          ignore Map.put(x, phash, fanId, y);
+          ignore Map.put(tippingMap, phash, artistId, x);
       };
     };
   };
@@ -407,7 +450,6 @@ actor class Tipping() = this{
           };
         };
 
-
       }else if(ticker == "ckBTC"){
 
         let transferResult = await CkBTCLedger.icrc1_transfer(
@@ -436,6 +478,34 @@ actor class Tipping() = this{
           
         };
 
+      }else if(ticker == "TRAX"){
+
+        let transferResult = await TRAXLedger.icrc1_transfer(
+          {
+            amount = Nat64.toNat(amount);
+            from_subaccount = null;
+            created_at_time = null;
+            fee = ?100_000;
+            memo = null;
+            to = {
+              owner = to;
+              subaccount = null;
+            };
+          }
+        );
+
+        switch (transferResult) {
+          case (#Ok(transferResult)) {
+              txNo += 1;
+              Debug.print("@transfer: Paid recipient TRAX: " # debug_show to # " in block " # debug_show transferResult);
+              return #ok(Nat64.fromNat(transferResult));
+          };
+          case (#Err(transferError)) {
+            return #err("@transfer: Couldn't transfer TRAX funds to default account:\n" # debug_show (transferError));
+          };
+          
+        };
+
       }else{
         throw Error.reject("@transfer: ticker in invalid");
       };
@@ -456,7 +526,7 @@ actor class Tipping() = this{
     let deduction :  Float = priceFloat * percent;
     return Nat64.fromNat(Int.abs(Float.toInt(priceFloat - deduction)))
   };
-  
+
 
 
 
@@ -517,8 +587,8 @@ actor class Tipping() = this{
 
 
 
-  public query func canisterAccount() : async Account.AccountIdentifier {
-    myAccountId();
+  public func canisterAccount() : async Account.AccountIdentifier {
+    await myAccountId(Principal.fromActor(this));
   };
 
 
@@ -526,7 +596,7 @@ actor class Tipping() = this{
 
   private func wallet_receive() : async { accepted: Nat64 } {
     let available = Cycles.available();
-    let accepted = Cycles.accept(Nat.min(available, top_up_amount));
+    let accepted = Cycles.accept<system>(Nat.min(available, top_up_amount));
     { accepted = Nat64.fromNat(accepted) };
   };
 
@@ -540,22 +610,40 @@ actor class Tipping() = this{
 
 
 
-  public func canisterBalance() : async Tokens {
-    await Ledger.account_balance({ account = Blob.toArray(myAccountId()) });
+  public func icpBalanceOfCanister() : async Tokens {
+    await Ledger.account_balance({ account = Blob.toArray(await myAccountId(Principal.fromActor(this))) });
+  };
+
+
+
+  public func icpBalance(principal: Principal) : async Tokens {
+    await Ledger.account_balance({ account = Blob.toArray(await myAccountId(principal)) });
   };
 
 
 
 
   public func ckbtcBalance(principal: Principal) : async Nat{
-    let balance = await CkBTCLedger.icrc1_balance_of(
+    await CkBTCLedger.icrc1_balance_of(
+      {owner = principal; subaccount = null }
+    );
+  };
+
+  public func traxBalance(principal: Principal) : async Nat{
+    await TRAXLedger.icrc1_balance_of(
       {owner = principal; subaccount = null }
     );
   };
 
 
   public func ckbtcBalanceOfCanister() : async Nat{
-    let balance = await CkBTCLedger.icrc1_balance_of(
+    await CkBTCLedger.icrc1_balance_of(
+      {owner = Principal.fromActor(this); subaccount = null }
+    );
+  };
+
+  public func traxBalanceOfCanister() : async Nat{
+    await TRAXLedger.icrc1_balance_of(
       {owner = Principal.fromActor(this); subaccount = null }
     );
   };
@@ -563,8 +651,8 @@ actor class Tipping() = this{
 
 
 
-  private func myAccountId() : Account.AccountIdentifier {
-    Account.accountIdentifier(Principal.fromActor(this), Account.defaultSubaccount());
+  public func myAccountId(principal: Principal) : async Account.AccountIdentifier {
+    Account.accountIdentifier(principal, Account.defaultSubaccount());
   };
 
 
@@ -576,36 +664,63 @@ actor class Tipping() = this{
           };
           case (?_request) {
               var cycles: ?Nat = null;
-              if (_request.cycles) {
+              switch(_request.cycles){
+                case(?checkCycles){
                   cycles := ?getCurrentCycles();
+                };case null {};
               };
+              
               var memory_size: ?Nat = null;
-              if (_request.memory_size) {
+              switch(_request.memory_size){
+                case(?checkStableMemory){
                   memory_size := ?getCurrentMemory();
+                };case null {};
               };
+
               var heap_memory_size: ?Nat = null;
-              if (_request.heap_memory_size) {
+              switch(_request.heap_memory_size){
+                case(?checkHeapMemory){
                   heap_memory_size := ?getCurrentHeapMemory();
+                };case null {};
               };
               var version: ?Nat = null;
-              if (_request.version) {
+              switch(_request.version){
+                case(?checkVersion){
                   version := ?getVersion();
+                };case null {};
               };
+              
               var icp_balance: ?Tokens = null;
-              if (_request.icp_balance) {
-                switch(await canisterBalance()){
-                  case(_bal){
+              switch(_request.icp_balance){
+                case(?checkIcpBal){
+                  switch(await icpBalanceOfCanister()){
+                    case(_bal){
                       icp_balance := ?_bal;
+                    };
                   };
-                };
+                };case null {};
               };
+
               var ckbtc_balance: ?Nat = null;
-              if (_request.icp_balance) {
-                switch(await ckbtcBalanceOfCanister()){
-                  case(_bal){
+              switch(_request.ckbtc_balance){
+                case(?checkCkbtcBal){
+                  switch(await ckbtcBalanceOfCanister()){
+                    case(_bal){
                       ckbtc_balance := ?_bal;
+                    };
                   };
-                };
+                };case null {};
+              };
+
+              var trax_balance: ?Nat = null;
+              switch(_request.trax_balance){
+                case(?checkTraxBal){
+                  switch(await traxBalanceOfCanister()){
+                    case(_bal){
+                      trax_balance := ?_bal;
+                    };
+                  };
+                };case null {};
               };
 
               return ?{
@@ -615,11 +730,11 @@ actor class Tipping() = this{
                   version = version;
                   icp_balance = icp_balance;
                   ckbtc_balance = ckbtc_balance;
+                  trax_balance = trax_balance;
               };
           };
       };
   };
-
 
 
 
@@ -640,6 +755,8 @@ actor class Tipping() = this{
   private func getCurrentCycles(): Nat {
     Cycles.balance();
   };
+
+
 
   private func getVersion() : Nat {
 		return VERSION;

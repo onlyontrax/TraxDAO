@@ -5,9 +5,57 @@
       "type": "motoko",
       "optimize": "cycles"
     },
-    
 
+    "manager.staging": {
+      "main": "src/backend/staging/manager.staging.mo",
+      "type": "motoko",
+      "optimize": "cycles"
+    },
+
+
+
+    "account_bucket_artist": {
+      "main": "src/backend/artist/account-bucket.mo",
+      "type": "motoko"
+    },
+
+    "account_bucket_artist.staging": {
+      "main": "src/backend/staging/artist-account-bucket.staging.mo",
+      "type": "motoko"
+    },
+
+
+
+    "content_bucket_artist": {
+      "main": "src/backend/artist/content-bucket.mo",
+      "type": "motoko"
+    },
+
+    "content_bucket_artist.staging": {
+      "main": "src/backend/staging/artist-content-bucket.staging.mo",
+      "type": "motoko"
+    },
+
+
+
+    "identity": {
+      "main": "src/backend/identity/identity.mo",
+      "type": "motoko"
+    },
     
+    "internet_identity": {
+          "type": "custom",
+          "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",
+          "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz",
+          "remote": {
+            "id": {
+              "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai"
+            }
+          },
+          "frontend": {}
+        }
+    },
+
     "frontend": {
       "dependencies": [
         "backend"
@@ -22,37 +70,12 @@
       "type": "assets"
     },
 
-"account_bucket_artist": {
-      "main": "src/backend/artist/account-bucket.mo",
-      "type": "motoko"
+    "defaults": {
+      "build": {
+        "args": "",
+        "packtool": "vessel sources"
+      }
     },
-"content_bucket_artist": {
-      "main": "src/backend/artist/content-bucket.mo",
-      "type": "motoko"
-    },
-"identity": {
-      "main": "src/backend/identity/identity.mo",
-      "type": "motoko"
-    },
-"internet_identity": {
-      "type": "custom",
-      "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",
-      "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz",
-      "remote": {
-        "id": {
-          "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai"
-        }
-      },
-      "frontend": {}
-    }
-},
-
-  "defaults": {
-    "build": {
-      "args": "",
-      "packtool": "vessel sources"
-    }
-  },
-  "output_env_file": ".env",
-  "version": 1
+    "output_env_file": ".env",
+    "version": 1
 }

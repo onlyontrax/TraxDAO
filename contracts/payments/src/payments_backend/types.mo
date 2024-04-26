@@ -82,12 +82,13 @@ module Types{
 
 
   public type StatusRequest = {
-        cycles: Bool;
-        memory_size: Bool;
-        heap_memory_size: Bool;
-        version: Bool;
-        icp_balance: Bool;
-        ckbtc_balance: Bool;
+        cycles: ?Bool;
+        memory_size: ?Bool;
+        heap_memory_size: ?Bool;
+        version: ?Bool;
+        icp_balance:?Bool;
+        ckbtc_balance: ?Bool;
+        trax_balance: ?Bool;
   };
 
   public type StatusResponse = {
@@ -97,6 +98,7 @@ module Types{
         version: ?Nat;
         icp_balance: ?Tokens;
         ckbtc_balance: ?Nat;
+        trax_balance: ?Nat;
   }; 
 
 
