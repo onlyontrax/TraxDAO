@@ -4,7 +4,7 @@ import TipPerformerForm from '@components/performer/tip-form';
 import ChatBox from '@components/stream-chat/chat-box';
 import { SubscriberProps } from '@components/streaming/agora/subscriber';
 import { PurchaseStreamForm } from '@components/streaming/confirm-purchase';
-import { BadgeCheckIcon } from '@heroicons/react/solid';
+import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import { getResponseError, videoDuration } from '@lib/index';
 import {
   getStreamConversation,
@@ -43,6 +43,7 @@ import type { _SERVICE as _SERVICE_LEDGER } from '../../src/smart-contracts/decl
 import type { _SERVICE as _SERVICE_TIPPING, TippingParticipants, Participants } from '../../src/smart-contracts/declarations/tipping/tipping2.did.js';
 import { TransferArgs, Tokens, TimeStamp } from '../../src/smart-contracts/declarations/ledger/ledger2.did';
 import styles from '../artist/live/index.module.scss';
+import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider } from '../../src/crypto/mobilePlugWallet';
 
 const AgoraProvider = dynamic(() => import('src/agora/AgoraProvider'), {
   ssr: false
@@ -146,9 +147,9 @@ class LivePage extends PureComponent<IProps> {
       message.error('Please subscribe to join live chat!', 5);
       Router.push(
         {
-          pathname: `/artist/profile?id=${performer?.username || performer?._id}`
+          pathname: `/${performer?.username || performer?._id}`
         },
-        `/artist/profile?id=${performer?.username || performer?._id}`
+        `/${performer?.username || performer?._id}`
       );
       return;
     }
@@ -313,9 +314,9 @@ class LivePage extends PureComponent<IProps> {
     setTimeout(() => {
       Router.push(
         {
-          pathname: `/artist/profile?id=${performer?.username || performer?._id}`
+          pathname: `/${performer?.username || performer?._id}`
         },
-        `/artist/profile?id=${performer?.username || performer?._id}`
+        `/${performer?.username || performer?._id}`
       );
     }, 10 * 1000);
   }
@@ -328,7 +329,7 @@ class LivePage extends PureComponent<IProps> {
         await this.sendTipPlug(price, ticker)
       }else{
         await this.sendTipCrypto(price, ticker);
-      } 
+      }
     }
   }
 
@@ -501,121 +502,108 @@ class LivePage extends PureComponent<IProps> {
       tippingCanID,
     ];
 
-    if(typeof window !== 'undefined' && 'ic' in window){
-      // @ts-ignore
-      const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
-        whitelist,
-        host: settings.icHost
-      }) : false;
+    const plugWalletProvider = await getPlugWalletProvider();
+    const agent = await getPlugWalletAgent('tippingCanID');
+    const connected = await getPlugWalletIsConnected();
 
-      !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
-        
-      this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 20 });
+    !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
 
-      // @ts-ignore
-      if (!window?.ic?.plug?.agent && connected  ) {
-        // @ts-ignore
-        await window.ic.plug.createAgent({ 
-          whitelist, 
-          host: settings.icHost
-        });
-      }
-      
-      let tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
-        agent: (window as any).ic.plug.agent,
-        canisterId: tippingCanID
-      });
-      const participants = [];
-      
-      if(connected){
-        //@ts-ignore
-        const requestBalanceResponse = await window.ic?.plug?.requestBalance();
-        const icp_balance = requestBalanceResponse[0]?.amount;
-        const ckBTC_balance = requestBalanceResponse[1]?.amount;
+    this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 20 });
 
-        if(ticker === 'ckBTC'){
-          if(ckBTC_balance >= amount){
-            this.setState({ tipProgress: 30 });
-            const params = {
-              to: tippingCanID,
-              strAmount: amount,
-              token: 'mxzaz-hqaaa-aaaar-qaada-cai'
-            };
-            //@ts-ignore
-            transfer = await window.ic.plug.requestTransferToken(params);
-            
-          } else {
-            this.setState({
-              requesting: false,
-              submiting: false,
-              openTipProgressModal: false,
-              tipProgress: 0
-            })
-            message.error('Insufficient balance, please top up your wallet and try again.');
-          }
-        }
-        
-        if (ticker === 'ICP') {
+    let tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
+      agent: agent,
+      canisterId: tippingCanID
+    });
+    const participants = [];
+
+    if(connected){
+      //@ts-ignore
+      const requestBalanceResponse = await plugWalletProvider.requestBalance();
+      const icp_balance = requestBalanceResponse[0]?.amount;
+      const ckBTC_balance = requestBalanceResponse[1]?.amount;
+
+      if(ticker === 'ckBTC'){
+        if(ckBTC_balance >= amount){
           this.setState({ tipProgress: 30 });
-          if(icp_balance >= amount){
-            const requestTransferArg = {
-              to: tippingCanID,
-              amount: Math.trunc(Number(amount) * 100000000)
-            }
-            //@ts-ignore
-            transfer = await window.ic?.plug?.requestTransfer(requestTransferArg);
-            
-          } else {
-            this.setState({
-              requesting: false,
-              submiting: false,
-              openTipProgressModal: false,
-              tipProgress: 0
-            })
-            message.error('Insufficient balance, please top up your wallet and try again.');
-          }
-        }
-
-        this.setState({ tipProgress: 50 });
-
-        if(transfer.height){
-          const obj2: Participants = {
-            participantID: Principal.fromText(performer?.wallet_icp),
-            participantPercentage: 1
+          const params = {
+            to: tippingCanID,
+            strAmount: amount,
+            token: 'mxzaz-hqaaa-aaaar-qaada-cai'
           };
-          participants.push(obj2);
-          const participantArgs: TippingParticipants = participants;
-        
-          await tippingActor.sendTip(transfer.height, participantArgs, amountToSend, ticker).then(() => {
-            this.setState({ tipProgress: 100 });
-            tokenTransctionService.sendCryptoTip(performer?._id, {
-                performerId: performer?._id,
-                price: Number(amountToSend),
-                tokenSymbol: ticker
-              }).then(() => {});
-            setTimeout(
-              () => this.setState({
-                requesting: false,
-                submiting: false,
-                openTipProgressModal: false,
-                tipProgress: 0
-              }),1000);
-            message.success(`Payment successful! ${performer?.name} has recieved your tip`);
-            this.setState({ requesting: false, submiting: false });
-          }).catch((error) => {
-            this.setState({
+          //@ts-ignore
+          transfer = await plugWalletProvider.requestTransferToken(params);
+
+        } else {
+          this.setState({
+            requesting: false,
+            submiting: false,
+            openTipProgressModal: false,
+            tipProgress: 0
+          })
+          message.error('Insufficient balance, please top up your wallet and try again.');
+        }
+      }
+
+      if (ticker === 'ICP') {
+        this.setState({ tipProgress: 30 });
+        if(icp_balance >= amount){
+          const requestTransferArg = {
+            to: tippingCanID,
+            amount: Math.trunc(Number(amount) * 100000000)
+          }
+          //@ts-ignore
+          transfer = await plugWalletProvider.requestTransfer(requestTransferArg);
+
+        } else {
+          this.setState({
+            requesting: false,
+            submiting: false,
+            openTipProgressModal: false,
+            tipProgress: 0
+          })
+          message.error('Insufficient balance, please top up your wallet and try again.');
+        }
+      }
+
+      this.setState({ tipProgress: 50 });
+
+      if(transfer.height){
+        const obj2: Participants = {
+          participantID: Principal.fromText(performer?.wallet_icp),
+          participantPercentage: 1
+        };
+        participants.push(obj2);
+        const participantArgs: TippingParticipants = participants;
+
+        await tippingActor.sendTip(transfer.height, participantArgs, amountToSend, ticker).then(() => {
+          this.setState({ tipProgress: 100 });
+          tokenTransctionService.sendCryptoTip(performer?._id, {
+              performerId: performer?._id,
+              price: Number(amountToSend),
+              tokenSymbol: ticker
+            }).then(() => {});
+          setTimeout(
+            () => this.setState({
               requesting: false,
               submiting: false,
               openTipProgressModal: false,
               tipProgress: 0
-            });
-            message.error(error.message || 'error occured, please try again later');
-            return error;
+            }),1000);
+          message.success(`Payment successful! ${performer?.name} has recieved your tip`);
+          this.setState({ requesting: false, submiting: false });
+        }).catch((error) => {
+          this.setState({
+            requesting: false,
+            submiting: false,
+            openTipProgressModal: false,
+            tipProgress: 0
           });
-        }else{
-          message.error('Transaction failed. Please try again later.');
-        }
-    }
+          message.error(error.message || 'error occured, please try again later');
+          return error;
+        });
+      }else{
+        message.error('Transaction failed. Please try again later.');
+      }
     }
   }
 
@@ -791,9 +779,9 @@ class LivePage extends PureComponent<IProps> {
                         className="primary"
                         onClick={() => Router.push(
                           {
-                            pathname: `/artist/profile?id=${performer?.username || performer?._id}`
+                            pathname: `/${performer?.username || performer?._id}`
                           },
-                          `/artist/profile?id=${performer?.username || performer?._id}`
+                          `/${performer?.username || performer?._id}`
                         )}
                       >
                         Leave Chat
@@ -835,7 +823,7 @@ class LivePage extends PureComponent<IProps> {
                     {performer?.name || 'N/A'}
                     {' '}
                     {performer?.verifiedAccount && (
-                      <BadgeCheckIcon style={{ height: '1.5rem' }} className="primary-color" />
+                      <CheckBadgeIcon style={{ height: '1.5rem' }} className="primary-color" />
                     )}
                   </div>
                   <p className="p-subtitle">Transaction progress</p>

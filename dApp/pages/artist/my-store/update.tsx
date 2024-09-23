@@ -29,7 +29,8 @@ class ProductUpdate extends PureComponent<IProps> {
     submiting: false,
     fetching: true,
     product: {} as IProduct,
-    uploadPercentage: 0
+    uploadPercentage: 0,
+    id: ''
   };
 
   _files: {
@@ -41,15 +42,41 @@ class ProductUpdate extends PureComponent<IProps> {
   };
 
   async componentDidMount() {
+    const { id } = this.props;
+    if (!id) {
+      const data = await this.getData();
+
+      this.setState({ product: data.product });
+    } else {
+      try {
+        const resp = await productService.findById(id);
+        this.setState({ product: resp.data });
+      } catch (e) {
+        const err = await Promise.resolve(e);
+        message.error(getResponseError(err) || 'Product not found!');
+        Router.back();
+      } finally {
+        this.setState({ fetching: false });
+      }
+    }
+  }
+
+  async getData() {
     try {
-      const { id } = this.props;
+      const url = new URL(window.location.href);
+      const id = url.searchParams.get('id');
+      this.setState({id});
       const resp = await productService.findById(id);
-      this.setState({ product: resp.data });
+
+      return {
+        product: resp?.data
+      };
     } catch (e) {
-      const err = await Promise.resolve(e);
-      message.error(getResponseError(err) || 'Product not found!');
-      Router.back();
-    } finally {
+      message.error('Product not found!');
+      return {
+        video: null
+      };
+    }finally {
       this.setState({ fetching: false });
     }
   }
@@ -66,7 +93,7 @@ class ProductUpdate extends PureComponent<IProps> {
 
   async submit(data: any) {
     try {
-      const { id } = this.props;
+      const { id } = this.state;
       const files = Object.keys(this._files).reduce((tmpFiles, key) => {
         if (this._files[key]) {
           tmpFiles.push({
@@ -89,7 +116,7 @@ class ProductUpdate extends PureComponent<IProps> {
         this.onUploading.bind(this)
       );
       message.success('Changes saved.');
-      this.setState({ submiting: false }, () => Router.push('/artist/my-store'));
+      this.setState({ submiting: false }, () => Router.push('/artist/studio'));
     } catch (e) {
       // TODO - check and show error here
       message.error(

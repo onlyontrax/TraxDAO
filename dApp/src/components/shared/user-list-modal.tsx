@@ -1,9 +1,7 @@
 import { Component, Fragment } from "react";
 import { Avatar, Modal } from "antd";
-
-import { BadgeCheckIcon } from "@heroicons/react/solid";
 import Link from "next/link";
-
+import {CheckBadgeIcon} from '@heroicons/react/24/solid'
 export interface IProps {
   close: () => void;
   isOpen: boolean;
@@ -64,7 +62,7 @@ class UserListModal<OtherProps> extends Component<IProps & OtherProps> {
               );
               if (u.isPerformer)
                 return (
-                  <Link key={u.username} href={`/artist/profile?id=${u.username}`}>
+                  <Link key={u.username} href={`/${u.username}`}>
                     <LR />
                   </Link>
                 );
@@ -96,7 +94,7 @@ class LikeRow extends Component<{
           size={40}
         />
         <div style={{ paddingLeft: 10 }}>{this.props.name}</div>
-        {this.props.verifiedAccount && <BadgeCheckIcon className="feed-v-badge" />}
+        {this.props.verifiedAccount && <CheckBadgeIcon className="feed-v-badge" />}
       </div>
     );
   }

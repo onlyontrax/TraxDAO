@@ -29,33 +29,62 @@ export default function Places(props) {
   }, [location, venueAddress])
 
   if (!isLoaded) return <div>Loading...</div>;
-  return <Map setLocation={setLocation} setVenueAddress={setVenueAddress}/>;
+  return <Map setLocation={setLocation} setVenueAddress={setVenueAddress} ticket={props.ticket}/>;
 }
 
-function Map({setLocation, setVenueAddress}) {
+function Map({setLocation, setVenueAddress, ticket}) {
   const [selected, setSelected] = useState(null);
   const [cordinates , setCordinates] = useState({lat: 51.5123443, lng: -0.0909852});
   const [address , setAddress] = useState(null);
+  const [entered, setEntered] = useState(false);
+  const [pageLoaded, setPageLoaded] = useState(false);
 
   // const center = useMemo(() => ({lat: 51.5123443, lng: -0.0909852}), []);
 
   useEffect(()=>{
-    selected && setLocation(cordinates)
-    address && setVenueAddress(address)
+    // console.log(address)
+    // console.log(cordinates)
+    // console.log(selected)
 
-      navigator.geolocation.getCurrentPosition((position) => {
-        setCordinates({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
+    if(ticket && !entered){
+        setEntered(true)
+
+      let latLng = {
+        lat: ticket.latitude,
+        lng: ticket.longitude,
+      }
+
+      setCordinates(latLng);
+      setLocation(latLng)
+      setVenueAddress(ticket.address)
+      setAddress(ticket.address);
+      setSelected(latLng)
+    }else{
+      selected && setLocation(cordinates)
+      address && setVenueAddress(address)
+
+
+      if(!ticket && !pageLoaded){
+        setPageLoaded(true)
+        navigator.geolocation.getCurrentPosition((position) => {
+          setCordinates({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
         });
-      });
+      }
+
+
+    }
+
+
   }, [selected, address]);
 
   return (
-    
+
     <div className="maps-container">
       <div className="places-container">
-        <PlacesAutocomplete setSelected={setSelected} setCordinates={setCordinates} setAddress={setAddress}/>
+        <PlacesAutocomplete setSelected={setSelected} setCordinates={setCordinates} setAddress={setAddress} ticket={ticket}/>
       </div>
       <GoogleMap
         zoom={10}
@@ -256,7 +285,7 @@ function Map({setLocation, setVenueAddress}) {
   );
 }
 
-const PlacesAutocomplete = ({ setSelected, setCordinates, setAddress }) => {
+const PlacesAutocomplete = ({ setSelected, setCordinates, setAddress, ticket }) => {
   const {
     ready,
     value,
@@ -265,16 +294,31 @@ const PlacesAutocomplete = ({ setSelected, setCordinates, setAddress }) => {
     clearSuggestions,
   } = usePlacesAutocomplete();
 
+
+  useEffect(()=>{
+    if(ticket){
+      let latLng = {
+        lat: ticket.latitude,
+        lng: ticket.longitude,
+      }
+      setValue(ticket.address, false);
+      setAddress(ticket.address);
+      setCordinates(latLng)
+      setSelected(latLng);
+    }
+  },[])
+
   const handleSelect = async (address) => {
     setValue(address, false);
     clearSuggestions();
-    setAddress(address)
+    setAddress(address);
 
     const results = await getGeocode({ address });
     const { lat, lng } = await getLatLng(results[0]);
 
     setCordinates({ lat, lng })
     setSelected({ lat, lng });
+
   };
 
   return (

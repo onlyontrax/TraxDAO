@@ -59,7 +59,7 @@ class PaymentSuccess extends PureComponent<IProps> {
             title="Payment Successful"
             subTitle={`Hi ${user?.name || user?.username || 'there'}, your payment has been successfully processed`}
             extra={[
-              <Button className="secondary" key="console" onClick={() => Router.push('/home')}>
+              <Button className="secondary" key="console" onClick={() => Router.push('/')}>
                 <HomeIcon />
                 BACK HOME
               </Button>,

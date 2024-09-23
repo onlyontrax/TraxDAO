@@ -1,4 +1,3 @@
-import ScrollListFeed from '@components/post/scroll-list';
 import { ScrollListProduct } from '@components/product/scroll-list-item';
 import { ScrollListVideo } from '@components/video/scroll-list-item';
 import {PurchasedScrollListTicket} from '@components/ticket/purchased-scroll-list-item';
@@ -7,17 +6,15 @@ import Head from 'next/head';
 import { PureComponent } from 'react';
 import { connect } from 'react-redux';
 import {
-  ICountry, IFeed, IUIConfig, IUser
+  ICountry, IUIConfig, IUser
 } from 'src/interfaces';
 import {
-  feedService,
-  galleryService,
   productService,
   utilsService,
   videoService,
   ticketService
 } from 'src/services';
-import styles from '../index.module.scss';
+import UrlToggle from '../UrlToggle';
 
 interface IProps {
   ui: IUIConfig;
@@ -26,48 +23,42 @@ interface IProps {
 }
 interface IStates {
   loading: boolean;
-  feeds: any[];
-  totalFeeds: number;
   currentPage: {
-    feed: number;
-    gallery: number;
     video: number;
     product: number;
   };
   limit: number;
   videos: any[];
   totalVideos: number;
-  galleries: any[];
-  totalGalleries: number;
+  music: any[];
+  totalMusic: number;
   products: any[];
   totalProducts: number;
   tickets: any[],
   totalTickets: number;
   tab: string;
   countries: any;
+  isMobile: boolean;
 }
 
 const initialState = {
   loading: false,
-  feeds: [],
-  totalFeeds: 0,
   currentPage: {
-    feed: 0,
-    gallery: 0,
     video: 0,
     product: 0
   },
   limit: 12,
   videos: [],
   totalVideos: 0,
-  galleries: [],
-  totalGalleries: 0,
   products: [],
   totalProducts: 0,
   tickets: [],
   totalTickets: 0,
   tab: 'videos',
-  countries: null
+  countries: null,
+  music: [],
+  totalMusic: 0,
+  isMobile: false
 };
 
 class PurchasedPage extends PureComponent<IProps, IStates> {
@@ -90,32 +81,40 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
 
   async componentDidMount() {
     const { countries } = this.state;
+
     if (countries === null) {
       const data = await this.getData();
+
+      this.setState({isMobile: window.innerWidth < 450});
+      window.addEventListener('resize', this.updateMedia);
+
       this.setState({ countries: data.countries }, () => this.updateDataDependencies());
+
+      return () => window.removeEventListener('resize', this.updateMedia);
     } else {
       this.updateDataDependencies();
     }
   }
 
+  updateMedia = () => {
+    this.setState({isMobile: window.innerWidth < 450});
+  };
+
   updateDataDependencies() {
     this.getPurchasedVideos();
   }
 
-  async handlePagechange(key: 'feeds' | 'videos' | 'galleries' | 'products' | 'tickets') {
+  async handlePagechange(key: 'videos' | 'products' | 'tickets' | 'music') {
     const { currentPage } = this.state;
     this.setState({
       currentPage: { ...currentPage, [key]: currentPage[key] + 1 }
     });
 
-    if (key === 'feeds') {
-      this.getPurchasedPosts();
-    }
     if (key === 'videos') {
       this.getPurchasedVideos();
     }
-    if (key === 'galleries') {
-      this.getPurchasedGalleries();
+    if (key === 'music') {
+      this.getPurchasedMusic();
     }
     if (key === 'products') {
       this.getPurchasedProducts();
@@ -130,18 +129,21 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
     this.loadData(key);
   }
 
-  async getPurchasedPosts() {
-    const { currentPage, limit, feeds } = this.state;
+  async getPurchasedVideos() {
+    const { currentPage, limit } = this.state;
     try {
       await this.setState({ loading: true });
-      const resp = await feedService.getPurchased({
+
+      const resp = await videoService.getPurchased({
         limit,
-        offset: currentPage.feed * limit
+        offset: currentPage.video * limit
       });
-      this.setState({
-        feeds: [...feeds, ...resp.data.data],
-        totalFeeds: resp.data.total
-      });
+      let filteredVideos = resp.data.data.filter(d => d.trackType === 'video');
+
+      this.setState(prevState => ({
+      videos: currentPage.video === 0 ? filteredVideos : [...prevState.videos, ...filteredVideos],
+      totalVideos: resp.data.total
+    }));
     } catch (error) {
       message.error('Server error');
     } finally {
@@ -149,37 +151,21 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
     }
   }
 
-  async getPurchasedVideos() {
-    const { currentPage, limit, videos } = this.state;
+  async getPurchasedMusic() {
+    const { currentPage, limit } = this.state;
     try {
       await this.setState({ loading: true });
       const resp = await videoService.getPurchased({
         limit,
         offset: currentPage.video * limit
       });
-      this.setState({
-        videos: [...videos, ...resp.data.data],
-        totalVideos: resp.data.total
-      });
-    } catch (error) {
-      message.error('Server error');
-    } finally {
-      this.setState({ loading: false });
-    }
-  }
 
-  async getPurchasedGalleries() {
-    const { currentPage, limit, galleries } = this.state;
-    try {
-      await this.setState({ loading: true });
-      const resp = await galleryService.getPurchased({
-        limit,
-        offset: currentPage.gallery * limit
-      });
-      this.setState({
-        galleries: [...galleries, ...resp.data.data],
-        totalGalleries: resp.data.total
-      });
+      let filteredMusic = resp.data.data.filter(d => d.trackType === 'audio');
+
+      this.setState(prevState => ({
+        music: currentPage.video === 0 ? filteredMusic : [...prevState.music, ...filteredMusic],
+        totalMusic: resp.data.total
+      }));
     } catch (error) {
       message.error('Server error');
     } finally {
@@ -226,14 +212,11 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
   }
 
   async loadData(key: string) {
-    if (key === 'feeds' || undefined) {
-      await this.getPurchasedPosts();
-    }
     if (key === 'videos') {
       await this.getPurchasedVideos();
     }
-    if (key === 'galleries') {
-      await this.getPurchasedGalleries();
+    if (key === 'music') {
+      await this.getPurchasedMusic();
     }
     if (key === 'products') {
       await this.getPurchasedProducts();
@@ -246,8 +229,6 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
   render() {
     const {
       loading,
-      feeds,
-      totalFeeds,
       videos,
       totalVideos,
       products,
@@ -255,52 +236,47 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
       tickets,
       totalTickets,
       tab,
-      countries 
+      music,
+      totalMusic,
+      isMobile
     } = this.state;
     const { ui} = this.props;
+
+
     return (
       <Layout>
         <Head>
           <title>{`${ui?.siteName} | Purchased`}</title>
         </Head>
-        <div className="main-container">
-          <h1 className="library-page-heading" style={{marginBottom: '2rem'}}>Purchased</h1>
+        <div className="main-container pt-2 px-4">
+          <div className='flex justify-start m-4 absolute top-12 right-0 z-[12] sm:relative sm:top-auto sm:right-auto'>
+          {!isMobile && (
+            <h1 className="library-page-heading">Purchased</h1>
+          )}
+            <UrlToggle checked={true}/>
+          </div>
+
           <div className="user-account">
             <Tabs defaultActiveKey={tab || 'products'} size="large" onChange={this.onTabsChange.bind(this)}>
-              <Tabs.TabPane tab="Posts" key="feeds">
-                <div className="heading-tab">
-                  <h4>
-                    {totalFeeds > 0 && totalFeeds}
-                    {' '}
-                    {totalFeeds > 1 ? 'POSTS' : 'POST'}
-                  </h4>
-                </div>
-                <ScrollListFeed
-                  isGrid
-                  items={feeds.map((f) => f.objectInfo)}
-                  loading={loading}
-                  canLoadmore={totalFeeds > feeds.length}
-                  loadMore={this.handlePagechange.bind(this, 'feeds')}
-                  notFoundText="No purchased posts found"
-                />
-              </Tabs.TabPane>
-              <Tabs.TabPane tab="Tracks" key="videos">
-                <div className="heading-tab">
-                  <h4>
-                    {totalVideos > 0 && totalVideos}
-                    {' '}
-                    {totalVideos > 1 ? 'TRACKS' : 'TRACK'}
-                  </h4>
-                </div>
+              <Tabs.TabPane tab="Videos" key="videos">
                 <ScrollListVideo
-                  items={videos.map((f) => f)}
+                 items={videos.map((f) => f)}
                   loading={loading}
                   canLoadmore={totalVideos > videos.length}
                   loadMore={this.handlePagechange.bind(this, 'videos')}
                   notFoundText="No purchased videos found"
                 />
               </Tabs.TabPane>
-              <Tabs.TabPane tab="Products" key="products">
+              <Tabs.TabPane tab="Music" key="music">
+                <ScrollListVideo
+                  items={music.map((f) => f)}
+                  loading={loading}
+                  canLoadmore={totalMusic > music.length}
+                  loadMore={this.handlePagechange.bind(this, 'videos')}
+                  notFoundText="No purchased music found"
+                />
+              </Tabs.TabPane>
+              {/* <Tabs.TabPane tab="Products" key="products">
                 <div className="heading-tab">
                   <h4>
                     {totalProducts > 0 && totalProducts}
@@ -331,7 +307,7 @@ class PurchasedPage extends PureComponent<IProps, IStates> {
                   loadMore={this.handlePagechange.bind(this, 'tickets')}
                   notFoundText="No purchased tickets found"
                 />
-              </Tabs.TabPane>
+              </Tabs.TabPane> */}
             </Tabs>
           </div>
         </div>

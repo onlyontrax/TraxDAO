@@ -1,4 +1,7 @@
 import { APIRequest } from './api-request';
+import cookie from 'js-cookie';
+
+export const TOKEN = 'token';
 
 export class VideoService extends APIRequest {
   hotTracks() {
@@ -25,6 +28,13 @@ export class VideoService extends APIRequest {
     );
   }
 
+  homePageSearch(query?: { [key: string]: any }) {
+    query.token = APIRequest.token || cookie.get(TOKEN);
+    return this.get(
+      this.buildUrl('/user/performer-assets/videos/homePageSearch', query)
+    );
+  }
+
   delete(id: string) {
     return this.del(`/performer/performer-assets/videos/${id}`);
   }
@@ -38,6 +48,9 @@ export class VideoService extends APIRequest {
   }
 
   update(id: string, files: [{ fieldname: string; file: File }], payload: any, onProgress?: Function) {
+    if (typeof payload.status === 'boolean') {
+      payload.status = payload.status ? 'active' : 'inactive';
+    }
     return this.upload(`/performer/performer-assets/videos/edit/${id}`, files, {
       onProgress,
       customData: payload,
@@ -54,6 +67,10 @@ export class VideoService extends APIRequest {
     payload: any,
     onProgress?: Function
   ) {
+    if (typeof payload.status === 'boolean') {
+      // Set status to "active" or "inactive" based on its boolean value
+      payload.status = payload.status ? 'active' : 'inactive';
+    }
     return this.upload('/performer/performer-assets/videos/upload', files, {
       onProgress,
       customData: payload
@@ -62,6 +79,10 @@ export class VideoService extends APIRequest {
 
   getBookmarks(payload) {
     return this.get(this.buildUrl('/reactions/videos/bookmark', payload));
+  }
+
+  getLikes(payload) {
+    return this.get(this.buildUrl('/reactions/videos/like', payload));
   }
 
   getPurchased(payload) {

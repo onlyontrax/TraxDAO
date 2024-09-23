@@ -33,6 +33,15 @@ class PayoutRequestUpdatePage extends React.PureComponent<Props, States> {
   static authenticate = true;
 
   static onlyPerformer = true;
+  state = {
+    submiting: false,
+    statsPayout: {
+      totalEarnedTokens: 0,
+      previousPaidOutTokens: 0,
+      remainingUnpaidTokens: 0
+    },
+    payout: null
+  };
 
   async getData() {
     const url = new URL(window.location.href);
@@ -60,15 +69,6 @@ class PayoutRequestUpdatePage extends React.PureComponent<Props, States> {
 
   constructor(props: Props) {
     super(props);
-    this.state = {
-      submiting: false,
-      statsPayout: {
-        totalEarnedTokens: 0,
-        previousPaidOutTokens: 0,
-        remainingUnpaidTokens: 0
-      },
-      payout: null
-    };
   }
 
   async componentDidMount() {

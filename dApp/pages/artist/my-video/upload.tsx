@@ -18,6 +18,7 @@ import { Content, Participants } from '../../../src/smart-contracts/declarations
 
 import { idlFactory as idlFactoryPPV } from '../../../src/smart-contracts/declarations/ppv/ppv.did.js';
 import type { _SERVICE as _SERVICE_PPV } from '../../../src/smart-contracts/declarations/ppv/ppv2.did';
+import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider } from '../../../src/crypto/mobilePlugWallet';
 
 interface IProps {
   ui: IUIConfig;
@@ -103,7 +104,7 @@ class UploadVideo extends PureComponent<IProps> {
     });
     try {
       const res = (await videoService.uploadVideo(files, data, this.onUploading.bind(this))) as IResponse;
-      
+
       if (data.isCrypto) {
         const participants = [];
         let pubPercentage: number;
@@ -132,7 +133,7 @@ class UploadVideo extends PureComponent<IProps> {
         let identity, ppvActor, agent, host;
 
         const authClient = await AuthClient.create();
-        
+
         if(data.walletOption === ('II' || 'nfid' )){
           if (settings.icNetwork !== true) {
             await authClient.login({
@@ -174,44 +175,30 @@ class UploadVideo extends PureComponent<IProps> {
         }else if(data.walletOption === 'plug'){
 
           const whitelist = [
-            settings.icPPV, 
+            settings.icPPV,
           ];
 
-          if(typeof window !== 'undefined' && 'ic' in window){
-            // @ts-ignore
-            const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
-              whitelist,
-              host: settings.icHost
-            }) : false;
-      
-            !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
-              
-            this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 20 });
-      
-            // @ts-ignore
-            if (!window?.ic?.plug?.agent && connected  ) {
-              // @ts-ignore
-              await window.ic.plug.createAgent({ 
-                whitelist, 
-                host: settings.icHost
-              });
-            }
+          //const plugWalletProvider = await getPlugWalletProvider();
+          const agent = await getPlugWalletAgent('icPPV');
+          const connected = await getPlugWalletIsConnected();
 
-            ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
-              agent: (window as any).ic.plug.agent,
-              canisterId: settings.icPPV
-            });
+          !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
 
-            await this.handleAddPPVContent(res.data._id, content, ppvActor);
+          this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 20 });
 
-          }
+          ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
+            agent: agent,
+            canisterId: settings.icPPV
+          });
+
+          await this.handleAddPPVContent(res.data._id, content, ppvActor);
 
         }else{
           message.error("This wallet does not exist. Please try again.")
         }
       }
 
-      Router.replace(`/artist/profile?id=${user?.username || user?._id}`);
+      Router.replace(`/${user?.username || user?._id}`);
       message.success('Your track has been successfully uploaded!');
     } catch (error) {
       message.error(getResponseError(error) || 'An error occurred, please try again!');
@@ -227,7 +214,7 @@ class UploadVideo extends PureComponent<IProps> {
       .addPPVContent(id, content)
       .then(async () => {
         message.success('Upload successful!');
-        Router.replace(`/artist/profile?id=${user?.username || user?._id}`);
+        Router.replace(`/${user?.username || user?._id}`);
       })
       .catch(async (error) => {
         message.error(error.message || 'error occured, please try again later');
@@ -264,6 +251,7 @@ class UploadVideo extends PureComponent<IProps> {
             beforeUpload={this.beforeUpload.bind(this)}
             uploading={uploading}
             uploadPercentage={uploadPercentage}
+            settings={this.props.settings}
           />
         </div>
       </Layout>

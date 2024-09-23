@@ -1,240 +1,114 @@
-import Loader from '@components/common/base/loader';
-import ConfirmSubscriptionPerformerForm from '@components/performer/confirm-subscription';
-import { TableListSubscription } from '@components/subscription/table-list-subscription';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { getResponseError } from '@lib/utils';
-import { paymentService, subscriptionService } from '@services/index';
-import { Layout, Modal, message } from 'antd';
+import { subscriptionService } from '@services/index';
+import { Layout, message, Avatar, Button } from 'antd';
 import Head from 'next/head';
-import Router from 'next/router';
-import { PureComponent } from 'react';
-import { connect } from 'react-redux';
-import {
-  ISettings, ISubscription, IUIConfig, IUser
-} from 'src/interfaces';
-import { Principal } from '@dfinity/principal';
-/*import { subscriptions } from '../../../src/smart-contracts/declarations/subscriptions';
-import { SubType } from '../../../src/smart-contracts/declarations/subscriptions/subscriptions.did';*/
+import { formatDateNoTime } from '@lib/date';
+import InfiniteScroll from 'react-infinite-scroll-component';
+import Link from 'next/link';
 
-interface IProps {
-  currentUser: IUser;
-  ui: IUIConfig;
-  settings: ISettings;
-  user: IUser;
-}
+const SubscriptionPage = ({ ui, currentUser, settings}) => {
+  const router = useRouter();
 
-class SubscriptionPage extends PureComponent<IProps> {
-  static authenticate = true;
+  const [subscriptionList, setSubscriptionList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [filter, setFilter] = useState({});
+  const [noSubscriptionsMessage, setNoSubscriptionsMessage] = useState(null);
 
-  state = {
-    subscriptionList: [],
-    loading: false,
-    submiting: false,
-    pagination: {
-      pageSize: 10,
-      current: 1,
-      total: 0
-    },
-    sort: 'desc',
-    sortBy: 'updatedAt',
-    filter: {},
-    openSubscriptionModal: false,
-    selectedSubscription: null
-  };
+  useEffect(() => {
+    getData();
+  }, []);
 
-  componentDidMount() {
-    this.getData();
-  }
-
-  async handleTabChange(data) {
-    const { pagination } = this.state;
-    await this.setState({
-      pagination: { ...pagination, current: data.current }
-    });
-    this.getData();
-  }
-
-  async getData() {
+  const getData = async () => {
+    setLoading(true);
     try {
-      const {
-        filter, sort, sortBy, pagination
-      } = this.state;
-      await this.setState({ loading: true });
       const resp = await subscriptionService.userSearch({
         ...filter,
-        sort,
-        sortBy,
-        limit: pagination.pageSize,
-        offset: (pagination.current - 1) * pagination.pageSize
+        ...filter,
+        sort: 'desc',
+        sortBy: 'updatedAt',
+        limit: 10,
+        offset: subscriptionList.length,
       });
-      await this.setState({
-        subscriptionList: resp.data.data,
-        pagination: { ...pagination, total: resp.data.total }
-      });
-    } catch (error) {
-      message.error(getResponseError(error) || 'An error occured. Please try again.');
-    } finally {
-      this.setState({ loading: false });
-    }
-  }
+      const activeSubscriptions = resp.data.data.filter(sub => sub.status === 'active');
 
-  async cancelSubscription(subscription: ISubscription) {
+      setSubscriptionList(prevSubscriptions => [...prevSubscriptions, ...activeSubscriptions]);
+
+      // Check if there's more data to load
+      setHasMore(activeSubscriptions.length > 0);
+
+      // Set message when there are no subscriptions
+      if (activeSubscriptions.length === 0 && subscriptionList.length === 0) {
+        setNoSubscriptionsMessage('No active subscriptions found.');
+      } else {
+        setNoSubscriptionsMessage(null);
+      }
+    } catch (error) {
+      message.error(getResponseError(error) || 'An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelSubscription = async (subscription) => {
     if (!window.confirm('Are you sure you want to cancel this subscription!')) return;
     try {
       await subscriptionService.cancelSubscription(subscription._id, subscription.paymentGateway);
       message.success('Subscription cancelled successfully');
-      this.getData();
+      getData();
     } catch (e) {
-      const error = await e;
-      message.error(error?.message || 'Error occured, please try again later');
+      message.error(e?.message || 'Error occurred, please try again later');
     }
-  }
+  };
 
-  async activeSubscription(subscription: ISubscription) {
-    const { currentUser } = this.props;
-    const { performerInfo: performer } = subscription;
-    if (currentUser.isPerformer || !performer) return;
-    this.setState({ openSubscriptionModal: true, selectedSubscription: subscription });
-  }
-
-  async subscribe(currency: string, subType: string) {
-    currency === 'USD' ? await this.subscribeFiat(subType) : await this.subscribeFiat(subType); //await this.subscribeCrypto(currency, subType);
-  }
-
-  async subscribeFiat(subType: string) {
-    const { selectedSubscription } = this.state;
-    const { performerInfo: performer } = selectedSubscription;
-    const { currentUser, settings } = this.props;
-    if (!currentUser._id) {
-      message.error('Please log in!');
-      Router.push('/login');
-      return;
-    }
-    if (settings.paymentGateway === 'stripe' && !currentUser.stripeCardIds.length) {
-      message.error('Please add a payment card');
-      Router.push('/user/account');
-      return;
-    }
-    try {
-      await this.setState({ submiting: true });
-      const resp = await paymentService.subscribePerformer({
-        type: subType,
-        performerId: performer._id,
-        paymentGateway: settings.paymentGateway
-      });
-      if (resp?.data?.stripeConfirmUrl) {
-        window.location.href = resp?.data?.stripeConfirmUrl;
-      }
-      if (settings.paymentGateway === '-ccbill') {
-        window.location.href = resp?.data?.paymentUrl;
-      } else {
-        this.setState({ openSubscriptionModal: false });
-      }
-    } catch (e) {
-      const err = await e;
-      message.error(err.message || 'error occured, please try again later');
-      this.setState({ submiting: false, openSubscriptionModal: false });
-    }
-  }
-
-  /*async subscribeCrypto(currency: string, subType: string) {
-    const { selectedSubscription } = this.state;
-    const { performerInfo: performer } = selectedSubscription;
-    const { currentUser } = this.props;
-    if (!currentUser._id) {
-      message.error('Please log in!');
-      Router.push('/login');
-      return;
-    }
-    try {
-      let type: SubType;
-      let amount: number;
-
-      if (subType === 'monthly') {
-        type = { monthly: null };
-        amount = performer?.monthlyPrice;
-      } else if (subType === 'yearly') {
-        type = { yearly: null };
-        amount = performer?.yearlyPrice;
-      } else {
-        // if subType === free
-        type = { monthly: null };
-        amount = performer?.monthlyPrice;
-      }
-      this.setState({ submiting: true });
-      await subscriptions.subscribe(
-        Principal.fromText(performer?.wallet_icp),
-        Principal.fromText(currentUser.wallet_icp),
-        amount,
-        currency,
-        type
-      );
-
-      this.setState({ openSubscriptionModal: false });
-      message.success(`Payment successfull! You are now a subscriber to ${performer?.username}`);
-    } catch (e) {
-      const err = await e;
-      message.error(err.message || 'error occured, please try again later');
-      this.setState({ openSubscriptionModal: false, submiting: false });
-    } finally {
-      this.setState({ submiting: false });
-    }
-  }*/
-
-  render() {
-    const {
-      subscriptionList, pagination, loading, submiting, openSubscriptionModal, selectedSubscription
-    } = this.state;
-    const { ui, settings, user } = this.props;
-    return (
-      <Layout>
-        <Head>
-          <title>{`${ui?.siteName} | My Subscriptions`}</title>
-        </Head>
-        <div className="main-container">
-          <div className="table-responsive">
-            <TableListSubscription
-              dataSource={subscriptionList}
-              pagination={pagination}
-              loading={loading}
-              onChange={this.handleTabChange.bind(this)}
-              rowKey="_id"
-              cancelSubscription={this.cancelSubscription.bind(this)}
-              activeSubscription={this.activeSubscription.bind(this)}
-            />
-          </div>
-
-          <Modal
-            key="subscribe_performer"
-            className="subscription-modal"
-            width={420}
-            centered
-            title={null}
-            open={openSubscriptionModal}
-            footer={null}
-            onCancel={() => this.setState({ openSubscriptionModal: false })}
-            destroyOnClose
-          >
-            <ConfirmSubscriptionPerformerForm
-              type={selectedSubscription?.subscriptionType || 'monthly'}
-              performer={selectedSubscription?.performerInfo}
-              submiting={submiting}
-              onFinish={this.subscribe.bind(this)}
-              user={user}
-            />
-          </Modal>
-          {submiting && (
-            <Loader customText="We are processing your payment, please do not reload this page until it's done." />
+  return (
+    <Layout>
+      <Head>
+        <title>{`${ui?.siteName} | My Subscriptions`}</title>
+      </Head>
+      <div className="lg:w-5/6 md:pl-6 pl-4">
+        <InfiniteScroll
+          dataLength={subscriptionList.length}
+          next={getData}
+          hasMore={hasMore}
+          loader={<h4>Loading...</h4>}
+        >
+          {subscriptionList.map((subscription) => (
+            <div key={subscription._id} style={{maxWidth: '50rem'}} className="flex justify-between items-center p-2 text-sm">
+              <div className="flex items-center space-x-3">
+                <Link href={`/${subscription.performerInfo?.username}`}>
+                  <Avatar src={subscription.performerInfo?.avatar || '/static/no-avatar.png'} />
+                </Link>
+                <div>
+                  <Link href={`/${subscription.performerInfo?.username}`}>
+                    <div className='text-trax-white hover:text-trax-lime-500'>
+                      {subscription.performerInfo?.name || subscription.performerInfo?.username || 'N/A'}
+                    </div>
+                  </Link>
+                  <div className="text-trax-gray-500">Member since {formatDateNoTime(subscription.createdAt)}</div>
+                </div>
+              </div>
+              <div>
+              <Button
+                className="rounded-2xl border-none bg-trax-gray-800 text-trax-red-600 hover:bg-trax-gray-300"
+                onClick={() => cancelSubscription(subscription)}
+              >
+                Cancel
+              </Button>
+              </div>
+            </div>
+          ))}
+          {noSubscriptionsMessage && (
+            <div style={{maxWidth: '50rem'}} className="text-center mt-4 text-trax-gray-500">{noSubscriptionsMessage}</div>
           )}
-        </div>
-      </Layout>
-    );
-  }
-}
+        </InfiniteScroll>
+      </div>
+    </Layout>
+  );
+};
 
-const mapState = (state: any) => ({
-  ui: { ...state.ui },
-  currentUser: { ...state.user.current },
-  settings: { ...state.settings }
-});
-const mapDispatch = {};
-export default connect(mapState, mapDispatch)(SubscriptionPage);
+SubscriptionPage.authenticate = true;
+
+export default SubscriptionPage;

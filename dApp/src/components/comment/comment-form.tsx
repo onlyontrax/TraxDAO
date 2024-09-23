@@ -8,6 +8,7 @@ import { PureComponent, createRef } from 'react';
 import { IUser } from 'src/interfaces';
 import { ICreateComment } from 'src/interfaces/comment';
 import styles from './comment.module.scss';
+import { spawn } from 'child_process';
 
 interface IProps {
   objectId: string;
@@ -73,21 +74,19 @@ export class CommentForm extends PureComponent<IProps> {
           <div className="comment-form">
             <div className="cmt-area">
               <Form.Item name="content">
-                <div className="add-comment-wrapper">
-                  <Avatar
+                <div className="add-comment-wrapper pt-3 pr-0">
+                  {/* <Avatar
                     alt="per_atv"
                     src={creator?.avatar || '/static/no-avatar.png'}
                     className="comment-avatar"
                     size={25}
-                  />
+                  /> */}
                   <TextArea
                     className="cmt-text-area"
                     disabled={!creator || !creator._id}
-                    maxLength={1000}
                     style={{ width: '100%' }}
-                    showCount
-                    minLength={1}
-                    rows={!isReply ? 2 : 1}
+                    minLength={2}
+                    rows={1}
                     placeholder={!isReply ? 'Add a comment...' : 'Add a reply here'}
                   />
                 </div>
@@ -97,9 +96,15 @@ export class CommentForm extends PureComponent<IProps> {
               className={!isReply ? 'submit-btn' : 'reply-btn'}
               style={{ background: '' }}
               htmlType="submit"
-              disabled={requesting}
+              disabled={!creator || !creator._id || requesting}
             >
-              {!isReply ? <SendOutlined /> : 'Reply'}
+              {!isReply ? (
+                <span className='text-sm text-trax-white font-light'>Post</span>
+
+                ): (
+                  <span className='text-sm text-trax-white font-light'>Reply</span>
+
+                  )}
             </Button>
           </div>
         </Form>

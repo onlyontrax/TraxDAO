@@ -10,7 +10,7 @@ interface IProps {
 }
 
 function SocialSharePerformer({ performer, siteName }: IProps) {
-  const shareUrl = `${window.location.origin}/artist/profile?id=${performer?.username || performer?._id}`;
+  const shareUrl = `${window.location.origin}/${performer?.username || performer?._id}`;
   return (
     <div className={styles.componentsPerformerVerificationFormModule}>
       <div className="social-share-btns">

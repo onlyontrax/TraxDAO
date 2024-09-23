@@ -28,12 +28,48 @@ export class UserService extends APIRequest {
     return this.put('/users/setICPWallet', data);
   }
 
+  setFIATCurrency(data: any){
+    return this.put('/users/setFIATCurrency', data);
+  }
+
   disconnectWalletPrincipal() {
     return this.put('/users/disconnectICPWallet');
   }
 
   unsubscribe(data: any) {
     return this.put('/auth/unsubscribe', data);
+  }
+
+  getQRCode(id: string) {
+    return this.get(`/users/${id}/generateQRCode`);
+  }
+
+  enable2FA(id: string) {
+    return this.put(`/users/${id}/enableTwoFactorSecret`);
+  }
+
+  disable2FA(id: string) {
+    return this.put(`/users/${id}/disableTwoFactorSecret`);
+  }
+
+  verify2FA(id: string, payload: any) {
+    return this.put(`/users/${id}/verify2FATokenForUser`, payload);
+  }
+
+  getSMSCode(id: string) {
+    return this.get(`/users/${id}/generateSMSCode`);
+  }
+
+  enableSms(id: string) {
+    return this.put(`/users/${id}/enableSmsAuthSecret`);
+  }
+
+  disableSms(id: string) {
+    return this.put(`/users/${id}/disableSmsAuthSecret`);
+  }
+
+  verifySms(id: string, payload: any) {
+    return this.put(`/users/${id}/verifySMSTokenForUser`, payload);
   }
 }
 

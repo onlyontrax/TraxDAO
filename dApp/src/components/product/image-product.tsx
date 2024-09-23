@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { PureComponent } from 'react';
 import { IProduct } from 'src/interfaces';
+import styles from './product.module.scss';
 
 interface IProps {
   product?: IProduct;
@@ -13,7 +14,10 @@ export class ImageProduct extends PureComponent<IProps> {
   render() {
     const { product, style } = this.props;
     const url = product?.image || '/static/no-image.jpg';
-    return <Image alt="" src={url} width={50} height={50} style={style || { width: 50, borderRadius: 3 }} />;
+    return (
+
+      <img alt="" src={url} width={80} height={80} style={style} />
+    );
   }
 }
 

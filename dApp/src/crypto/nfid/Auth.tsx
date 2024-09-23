@@ -3,20 +3,23 @@ import { AnyIfEmpty, useDispatch } from 'react-redux';
 import { userService, cryptoService, performerService, authService } from '@services/index';
 import * as crypto from 'crypto';
 import Router from 'next/router';
-import { Button, message } from 'antd';
+import { Button, message, Modal, Input } from 'antd';
 import { loginNfid, loginSuccess } from '@redux/auth/actions';
 import AuthButton from './AuthButton';
 import AuthPlugWallet from './AuthPlugWallet';
 import InternetIdentity from './InternetIdentity';
+import TwoFactorModal from '@components/log-in/two-factor-modal';
+import SmsModal from '@components/log-in/sms-modal';
+import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider, getPrincipalId } from '../mobilePlugWallet';
 
-interface TestProps {
+interface AuthProps {
   onLoggedIn?(loggedIn: boolean): Function;
   from: string
   onSignOut?: Function;
   onAuthenticate?: Function
 }
 
-function Auth({ onSignOut = null, onAuthenticate = null, from, onLoggedIn}: TestProps) {
+function Auth({ onSignOut = null, onAuthenticate = null, from, onLoggedIn}: AuthProps) {
   const dispatch = useDispatch();
   const [isAuthenticatedPlug, setIsAuthenticatedPlug] = useState(false);
   const [isAuthenticatedInternetIdentity, setIsAuthenticatedInternetIdentity] = useState(false);
@@ -26,13 +29,93 @@ function Auth({ onSignOut = null, onAuthenticate = null, from, onLoggedIn}: Test
   const [nfidLoading, setNFIDLoading] = useState(false);
   const [iiLoading, setIILoading] = useState(false);
 
+  // 2FA
+  const [is2FAModalVisible, setIs2FAModalVisible] = useState(false);
+  const [twoFACode, setTwoFACode] = useState('');
+  const [twoFactorError, setTwoFactorError] = useState('');
+  const [walletPayload, setWalletPayload] = useState({});
+  const [enabled2fa, setEnabled2fa] = useState(false);
+
+  const [isSmsModalVisible, setIsSmsModalVisible] = useState(false);
+  const [smsCode, setSmsCode] = useState('');
+  const [smsError, setSmsError] = useState('');
+  const [enabledSms, setEnabledSms] = useState(false);
+
+  const handle2FAInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTwoFACode(e.target.value);
+  };
+
+  const handle2FASubmit = () => {
+    handleSubmit2FA(twoFACode);
+  };
+
+  const handleSubmit2FA = async (pin: string) => {
+    let payload: any = { ...walletPayload, twoFactorKey: twoFACode, smsKey: pin }
+    try {
+      const responseService: any = await authService.loginNFID(payload);
+      const response = await responseService.data;
+
+      if (response.token) {
+        onLoggedIn(true);
+        message.success('Login successful. Please wait for redirect.');
+        await dispatch(loginNfid({ token: response.token, principal: payload.principal }));
+      } else {
+        message.error('There is a problem with authenticating your wallet. Please try again.');
+        setTwoFactorError('Invalid 2FA code. Please try again.');
+        setSmsError('Invalid SMS code. Please try again.');
+        onLoggedIn(false);
+      }
+      setPlugLoading(false);
+      setIILoading(false);
+    } catch (err) {
+      setTwoFactorError('Invalid 2FA code. Please try again.');
+      setSmsError('Invalid SMS code. Please try again.');
+      const error = await err;
+      if (error?.error === 'ENTITY_NOT_FOUND') {
+        message.error('User with this wallet principal was not found. Please register a new account or connect this principal to an existing account.');
+      } else {
+        message.error(error.message);
+      }
+      onLoggedIn(false);
+      setPlugLoading(false);
+      setIILoading(false);
+    }
+  };
+
+  const onGetSmsCode = async () => {
+    let payload: any = { ...walletPayload }
+    try {
+      const responseService: any = await authService.getSmsCode(payload);
+      const response = await responseService.data;
+
+      if (!response) {
+        message.error('There is a problem with sending SMS to your phone. Please try again.');
+      }
+      setPlugLoading(false);
+      setIILoading(false);
+    } catch (err) {
+      setPlugLoading(false);
+      setIILoading(false);
+    }
+  };
+
   const verifyPlugWalletConnection = async () => {
-    // @ts-ignore
-    const isConnected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug.isConnected() : false;
+    const isConnected = await getPlugWalletIsConnected();
     setIsAuthenticatedPlug(isConnected);
-    // @ts-ignore
-    const principalId2 = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.agent?.getPrincipal() : '';
-    setPrincipalIdPlug(principalId2);
+
+    let principalIdPlug2 = await getPrincipalId();
+
+    /*const delegatedIdentity = await plugWalletProvider.getDelegatedIdentity();
+
+    if (delegatedIdentity) {
+      const principal = delegatedIdentity.getPrincipal();
+      console.log('Principal ID:', principal.toText()); // `toText()` converts it to a human-readable string
+      principalIdPlug2 = principal.toText();
+    } else {
+      console.error('No delegated identity found.');
+    }*/
+
+    setPrincipalIdPlug(principalIdPlug2);
   };
 
   const handlePlugWalletConnect = async () => {
@@ -63,6 +146,15 @@ function Auth({ onSignOut = null, onAuthenticate = null, from, onLoggedIn}: Test
         const responseService: any = await authService.loginNFID(payload);
         const response = await responseService.data;
 
+        if (response.message === 'SMS or 2FA key is empty') {
+          setWalletPayload(payload);
+          setEnabled2fa(response.required.enabled2fa);
+          setEnabledSms(response.required.enabledSms);
+
+          response.required.enabled2fa ? setIs2FAModalVisible(true) : setIsSmsModalVisible(true);
+          return;
+        }
+
         if (response.token) {
           onLoggedIn(true);
           message.success('Login successful. Please wait for redirect.');
@@ -88,6 +180,18 @@ function Auth({ onSignOut = null, onAuthenticate = null, from, onLoggedIn}: Test
     }
   };
 
+  const handleSwitchSms2FAChange = async () => {
+    setSmsCode('');
+    setTwoFACode('');
+    if (is2FAModalVisible) {
+      setIs2FAModalVisible(false);
+      setIsSmsModalVisible(true);
+    } else {
+      setIsSmsModalVisible(false);
+      setIs2FAModalVisible(true);
+    }
+  }
+
   const handleInternetIdentityConnect = async (internetIdentity) => {
     setIILoading(true);
     try {
@@ -106,7 +210,6 @@ function Auth({ onSignOut = null, onAuthenticate = null, from, onLoggedIn}: Test
         walletType: 'internetIdentity'
       };
 
-
       if (from === 'sign-up') {
         payload.login = false;
         payload.role = 'user';
@@ -115,6 +218,15 @@ function Auth({ onSignOut = null, onAuthenticate = null, from, onLoggedIn}: Test
       try {
         const responseService: any = await authService.loginNFID(payload);
         const response = await responseService.data;
+
+        if (response.message === 'SMS or 2FA key is empty') {
+          setWalletPayload(payload);
+          setEnabled2fa(response.required.enabled2fa);
+          setEnabledSms(response.required.enabledSms);
+
+          response.required.enabled2fa ? setIs2FAModalVisible(true) : setIsSmsModalVisible(true);
+          return;
+        }
 
         if (response.token) {
           onLoggedIn(true);
@@ -142,6 +254,7 @@ function Auth({ onSignOut = null, onAuthenticate = null, from, onLoggedIn}: Test
   };
 
   const authButtonProps: any = { onSignOut, onAuthenticate, isAuthenticatedPlug };
+  const isMobile = window.innerWidth <= 768;
   return (
     <div>
       <div className={"auth-section"}>
@@ -170,6 +283,27 @@ function Auth({ onSignOut = null, onAuthenticate = null, from, onLoggedIn}: Test
             from={from}
           />
         </div>
+        <TwoFactorModal
+          visible={is2FAModalVisible}
+          onOk={handle2FASubmit}
+          onCancel={() => setIs2FAModalVisible(false)}
+          onInputChange={handle2FAInputChange}
+          twoFactorError={twoFactorError}
+          twoFactorKey={twoFACode}
+          showSms2faButton={enabledSms}
+          onShowSms2faButtonPress={handleSwitchSms2FAChange}
+          isMobile={isMobile}
+        />
+        <SmsModal
+          visible={isSmsModalVisible}
+          onOk={handleSubmit2FA}
+          onCancel={() => setIsSmsModalVisible(false)}
+          smsError={smsError}
+          showSms2faButton={enabled2fa}
+          onShowSms2faButtonPress={handleSwitchSms2FAChange}
+          onGetSmsCode={onGetSmsCode}
+          isMobile={isMobile}
+        />
       </div>
     </div>
   );

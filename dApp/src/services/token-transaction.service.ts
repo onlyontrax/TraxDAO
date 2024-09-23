@@ -13,6 +13,10 @@ export class TokenTransctionService extends APIRequest {
     return this.get('/wallet/charges/ratetrax');
   }
 
+  getExchangeRateFIAT() {
+    return this.get('/wallet/charges/ratefiat');
+  }
+
   sendTip(performerId: string, payload: any) {
     return this.post(`/wallet/charges/tip/${performerId}`, payload);
   }

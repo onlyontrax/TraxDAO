@@ -50,8 +50,8 @@ class Footer extends PureComponent<IProps> {
               </>
             ) : (
               <>
-                <li key="home" className={router.pathname === '/home' ? 'active' : ''}>
-                  <Link href="/home">
+                <li key="home" className={router.pathname === '/' ? 'active' : ''}>
+                  <Link href="/">
                     Home
                   </Link>
                 </li>

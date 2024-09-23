@@ -9,7 +9,9 @@ import { SelectUserDropdown } from '@components/user/select-users-dropdown';
 import {
   PerformerAccountForm,
   PerformerBlockCountriesForm,
+  PerformerSocialLinkForm,
   PerformerSubscriptionForm,
+  PerformerAccountInformationForm,
   PerformerVerificationForm
 } from '@components/performer';
 import { PerformerWalletForm } from '@components/performer/walletsForm';
@@ -23,6 +25,8 @@ import { updateCurrentUserAvatar, updateCurrentUserCover, updatePerformer } from
 import styles from '../../user/index.module.scss';
 import BankingSettings from '../banking';
 import BlockPage from '../block-user';
+import PerformerAuthentication from '../../../src/components/artist/PerformerAuthentication';
+
 
 interface IProps {
   currentUser: IPerformer;
@@ -71,19 +75,33 @@ class AccountSettings extends PureComponent<IProps> {
     totalBlockedUsers: 0,
     openBlockModal: false,
     countries: null,
-    musicInfo: null
+    musicInfo: null,
+    isTablet: false,
+    activeTab: 'basic'
   };
 
   async componentDidMount() {
-    const { countries } = this.state;
+    const { countries, activeTab } = this.state;
+
+    const url = new URL(window.location.href);
+    let tab = url.searchParams.get('tab');
+    if (!tab) tab = activeTab;
     if (countries === null) {
       const data = await this.getData();
+      this.setState({ musicInfo: data.musicInfo, countries: data.countries, activeTab: tab, isTablet: window.innerWidth < 650 }, () => this.updateDataDependencies());
 
-      this.setState({ musicInfo: data.musicInfo, countries: data.countries }, () => this.updateDataDependencies());
+      window.addEventListener('resize', this.updateMedia);
+      return () => window.removeEventListener('resize', this.updateMedia);
     } else {
+      this.setState({ activeTab: tab });
       this.updateDataDependencies();
     }
   }
+
+  updateMedia = () => {
+    // @ts-ignore
+    this.setState({ isTablet: window.innerWidth < 650 });
+  };
 
   updateDataDependencies() {}
 
@@ -177,6 +195,10 @@ class AccountSettings extends PureComponent<IProps> {
     this.setState({ countTime: countTime - 1 });
   }
 
+  onChangeTab(activeTab: any) {
+    this.setState({ activeTab });
+  }
+
   async getBlockList() {
     const { limit, offset } = this.state;
     try {
@@ -201,13 +223,12 @@ class AccountSettings extends PureComponent<IProps> {
       currentUser, updating, ui
     } = this.props;
     const {
-      emailSending, countTime, submiting, openBlockModal, countries, musicInfo
+      emailSending, countTime, submiting, openBlockModal, countries, musicInfo, isTablet, activeTab
     } = this.state;
     const uploadHeaders = {
       authorization: authService.getToken() || ''
     };
-
-    if (countries === null) {
+    if (currentUser === null || currentUser._id === null || countries === null) {
       return <div style={{ margin: 30, textAlign: 'center' }}><Spin /></div>;
     }
     return (
@@ -215,20 +236,38 @@ class AccountSettings extends PureComponent<IProps> {
         <Head>
           <title>{`${ui?.siteName} | Edit Profile`}</title>
         </Head>
-        <div className="main-container user-account" style={{maxWidth: '650px'}}>
+        <div className="main-container user-account-settings" style={{maxWidth: '800px', margin: 'unset'}}>
           {!currentUser.verifiedDocument && (
             <div className="verify-info">
               Your Identity has not been verified yet! You can't post any content right now.
-              <p>Please go <a href="/artist/account/">here</a> to verify your identity.</p>
+              <p>Please go <a href="/artist/account/?tab=verification">here</a> to verify your identity.</p>
               <p>If you have any question, please contact our administrator to get more information.</p>
             </div>
           )}
-          <h1 className="content-heading">Settings</h1>
+          {!isTablet && (
+            <h1 className="content-heading">Settings</h1>
+          )}
+
           <p />
-          <Tabs defaultActiveKey="basic" tabPosition="top" className="account-tabs custom" >
-            <Tabs.TabPane tab={<span>Account</span>} key="basic">
+          <Tabs defaultActiveKey={activeTab} activeKey={activeTab} tabPosition={isTablet ? "top" : "left"} className="" onChange={this.onChangeTab.bind(this)}>
+            <Tabs.TabPane tab={<span className='uppercase font-heading text-xl'>Profile</span>} key="basic">
               <PerformerAccountForm
                 onFinish={this.submit.bind(this)}
+                updating={updating || emailSending}
+                user={currentUser}
+                options={{
+                  uploadHeaders,
+                  avatarUploadUrl: performerService.getAvatarUploadUrl(),
+                  onAvatarUploaded: this.onAvatarUploaded.bind(this),
+                  coverUploadUrl: performerService.getCoverUploadUrl(),
+                  onCoverUploaded: this.onCoverUploaded.bind(this),
+                }}
+                countries={countries}
+                musicInfo={musicInfo}
+              />
+            </Tabs.TabPane>
+            <Tabs.TabPane tab={<span className='uppercase font-heading text-xl'>Account</span>} key="account">
+              <PerformerAccountInformationForm onFinish={this.submit.bind(this)}
                 updating={updating || emailSending}
                 countTime={countTime}
                 onVerifyEmail={this.verifyEmail.bind(this)}
@@ -239,25 +278,32 @@ class AccountSettings extends PureComponent<IProps> {
                   onAvatarUploaded: this.onAvatarUploaded.bind(this),
                   coverUploadUrl: performerService.getCoverUploadUrl(),
                   onCoverUploaded: this.onCoverUploaded.bind(this),
-                  videoUploadUrl: performerService.getVideoUploadUrl()
                 }}
                 countries={countries}
-                musicInfo={musicInfo}
-              />
+                musicInfo={musicInfo} />
             </Tabs.TabPane>
-            <Tabs.TabPane tab={<span>Verification</span>} key="verification">
+            <Tabs.TabPane tab={<span className='uppercase font-heading text-xl'>Social links</span>} key="social">
+              <PerformerSocialLinkForm onFinish={this.submit.bind(this)}
+                updating={updating || emailSending} user={currentUser} />
+            </Tabs.TabPane>
+            <Tabs.TabPane tab={<span className='uppercase font-heading text-xl'>Verification</span>} key="verification">
               <PerformerVerificationForm user={currentUser} />
             </Tabs.TabPane>
-            <Tabs.TabPane tab={<span>Connect wallet</span>} key="wallets">
+            <Tabs.TabPane tab={<span className='uppercase font-heading text-xl'>Crypto</span>} key="wallets">
               <PerformerWalletForm onFinish={this.submit.bind(this)} updating={updating} user={currentUser} />
-            </Tabs.TabPane> 
-            <Tabs.TabPane tab={<span>Pricing</span>} key="subscription">
+            </Tabs.TabPane>
+            <Tabs.TabPane tab={<span className='uppercase font-heading text-xl'>Pricing</span>} key="subscription">
               <PerformerSubscriptionForm onFinish={this.submit.bind(this)} updating={updating} user={currentUser} />
             </Tabs.TabPane>
-            <Tabs.TabPane tab={<span>Banking</span>} key="banking">
+            <Tabs.TabPane tab={<span className='uppercase font-heading text-xl'>Cash out</span>} key="banking">
               <BankingSettings countries={countries} />
             </Tabs.TabPane>
-            <Tabs.TabPane tab={<span>Permissions</span>} key="permission">
+            <Tabs.TabPane tab={<span className='uppercase font-heading text-xl'>Authentication</span>} key="authentication">
+              <PerformerAuthentication onFinish={this.submit.bind(this)}
+                updating={updating || emailSending} user={currentUser} />
+            </Tabs.TabPane>
+
+            {/* <Tabs.TabPane tab={<span>Permissions</span>} key="permission">
               <div className="account-form">
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ width: '100%' }}>
@@ -266,7 +312,7 @@ class AccountSettings extends PureComponent<IProps> {
                 </div>
               </div>
               </div>
-            </Tabs.TabPane>
+            </Tabs.TabPane> */}
           </Tabs>
         </div>
         <Modal

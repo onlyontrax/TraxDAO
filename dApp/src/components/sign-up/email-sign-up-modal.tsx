@@ -2,7 +2,6 @@
 /* eslint-disable react/require-default-props */
 /* eslint-disable react/sort-comp */
 import { PureComponent } from 'react';
-import { BadgeCheckIcon } from '@heroicons/react/solid';
 import { IPerformer } from '@interfaces/index';
 import { tokenTransctionService } from '@services/index';
 import {
@@ -31,12 +30,12 @@ onClose(isOpen: boolean, modal: string): Function;
 class EmailSignUpModal extends PureComponent<IProps> {
   static authenticate = false;
   static layout = 'blank';
-  
+
   state = {
     recaptchaSuccess: false,
     isLoading: false
   };
-  
+
   handleRegister = (data: any) => {
     const { registerFan: handleRegister, onClose: signedUp } = this.props;
     signedUp(false, 'exit')
@@ -57,7 +56,7 @@ class EmailSignUpModal extends PureComponent<IProps> {
     const { requesting: submiting } = registerFanData;
     const { isLoading } = this.state;
     const referralCode = typeof window !== 'undefined' ? localStorage.getItem('referralCode') : '';
-    
+
     return (
       <div className="email-sign-up-container">
         <div className='email-sign-up-logo'>
@@ -187,11 +186,11 @@ class EmailSignUpModal extends PureComponent<IProps> {
             </div>
         </div>
 
-        
+
 
         <div className='sign-up-btn-wrapper'>
             <Form.Item style={{ textAlign: 'center', marginTop:'1rem' }}>
-                <Button 
+                <Button
                     htmlType="submit"
                     disabled={submiting || isLoading}
                     loading={submiting || isLoading}
@@ -202,13 +201,13 @@ class EmailSignUpModal extends PureComponent<IProps> {
             </Form.Item>
         </div>
         </Form>
-        
+
         <div className='log-in-link'>
             <span className='new-to'>Already have a TRAX account? </span> <span onClick={()=> this.props.onClose(false, 'login')} className='get-started'>Log in →</span>
         </div>
-              
+
         <div className='email-sign-up-tc'>
-            <span className='new-to'>By proceeding, you agree to the <Link href="/page?id=terms-of-service" target="_blank" className='get-started'>Terms and Conditions</Link> and <Link href="/page?id=privacy-policy" target="_blank" className='get-started'>Privacy Policy</Link></span> 
+            <span className='new-to'>By proceeding, you agree to the <Link href="/page?id=terms-of-service" target="_blank" className='get-started'>Terms and Conditions</Link> and <Link href="/page?id=privacy-policy" target="_blank" className='get-started'>Privacy Policy</Link></span>
         </div>
       </div>
     );

@@ -8,6 +8,7 @@ import {
 } from 'src/interfaces';
 import { message } from 'antd';
 import { updateCurrentUser } from '../user/actions';
+import { Capacitor } from '@capacitor/core';
 import {
   loginSocial,
   login,
@@ -24,8 +25,15 @@ import {
   forgot,
   forgotSuccess,
   forgotFail,
-  getCurrentUser
+  getCurrentUser,
+  connectPlugWallet,
+  connectPlugWalletSuccess,
+  connectPlugWalletFail,
+  disconnectPlugWallet
 } from './actions';
+
+import { getPlugWalletProvider, getPlugWalletAgent, disconnectPlugWallet as disconnectWallet, getPrincipalId } from 'src/crypto/mobilePlugWallet';
+
 
 const authSagas = [
   {
@@ -34,21 +42,57 @@ const authSagas = [
       try {
         const payload = data.payload as ILogin;
         const resp = (yield authService.login(payload)).data;
-        // store token, update store and redirect to dashboard page
-        yield authService.setToken(resp.token, payload?.remember);
-        const userResp = yield userService.me();
-        yield put(updateCurrentUser(userResp.data));
-        yield put(loginSuccess());
-        if (!userResp?.data?.isPerformer) {
-          Router.push((!userResp.data.email || !userResp.data.username) ? '/user/account' : '/home');
-        }
-        if (userResp?.data?.isPerformer) {
-          (!userResp.data.email || !userResp.data.username) ? Router.push('/artist/account') : Router.push({ pathname: `/artist/profile?id=${userResp.data.username || userResp.data._id}` }, `/artist/profile?id=${userResp.data.username || userResp.data._id}`);
+        if (resp.message === 'SMS or 2FA key is empty') {
+          // Dispatch an action to indicate that 2FA is required
+          yield put({ type: '2FA_REQUIRED', payload: { username: payload.username, password: payload.password, required: resp.required } });
+        } else {
+          // store token, update store and redirect to dashboard page
+          yield authService.setToken(resp.token, payload?.remember);
+          const userResp = yield userService.me();
+          yield put(updateCurrentUser(userResp.data));
+          yield put(loginSuccess());
+          if (!userResp?.data?.isPerformer) {
+            if (!userResp.data.email || !userResp.data.username) {
+              Router.push('/user/account');
+            } else {
+              setTimeout(function(){
+                  location.reload();
+              }, 3000);
+              location.reload();
+            }
+            //Router.push((!userResp.data.email || !userResp.data.username) ? '/user/account' : '/');
+            return;
+          }
+
+          if (userResp?.data?.isPerformer) {
+            if (!userResp.data.email || !userResp.data.username) {
+              Router.push('/artist/account');
+            } else {
+              //console.log("redirectam na /username", `/${userResp.data.username || userResp.data._id}`);
+              /*setTimeout(function(){
+
+              }, 3000);*/
+              if (Capacitor.getPlatform() === 'ios') {
+                // do something
+                //location.href = `/?id=${userResp.data.username || userResp.data._id}`;
+                //location.reload();
+                //Router.push({ pathname: `/?id=${userResp.data.username || userResp.data._id}` }, `/?id=${userResp.data.username || userResp.data._id}`);
+              } else {
+                Router.push({ pathname: `/${userResp.data.username || userResp.data._id}` }, `/${userResp.data.username || userResp.data._id}`);
+              }
+              //location.reload();
+            }
+            return;
+          }
         }
       } catch (e) {
         const error = yield Promise.resolve(e);
-        message.error(error?.message || 'Incorrect credentials!');
-        yield put(loginFail(error));
+        if (error.message === '2FA expired or not correct') {
+          yield put({ type: '2FA_ERROR', payload: error.message, required: error.required });
+        } else {
+          message.error(error?.message || 'Incorrect credentials!');
+          yield put(loginFail(error));
+        }
       }
     }
   },
@@ -63,10 +107,10 @@ const authSagas = [
         yield put(updateCurrentUser(userResp.data));
         yield put(loginSuccess());
         if (!userResp?.data?.isPerformer) {
-          Router.push((!userResp.data.email || !userResp.data.username) ? '/user/account' : '/home');
+          Router.push((!userResp.data.email || !userResp.data.username) ? '/user/account' : '/');
         }
         if (userResp?.data?.isPerformer) {
-          (!userResp.data.email || !userResp.data.username) ? Router.push('/artist/account') : Router.push({ pathname: `/artist/profile?id=${userResp.data.username || userResp.data._id}` }, `/artist/profile?id=${userResp.data.username || userResp.data._id}`);
+          (!userResp.data.email || !userResp.data.username) ? Router.push('/artist/account') : Router.push({ pathname: `/${userResp.data.username || userResp.data._id}` }, `/${userResp.data.username || userResp.data._id}`);
         }
       } catch (e) {
         const error = yield Promise.resolve(e);
@@ -87,10 +131,10 @@ const authSagas = [
         yield put(loginSuccess());
         if (noRedirect !== true) {
           if (!userResp?.data?.isPerformer) {
-            Router.push((!userResp.data.email || !userResp.data.username) ? '/user/account' : '/home');
+            Router.push((!userResp.data.email || !userResp.data.username) ? '/user/account' : '/');
           }
           if (userResp?.data?.isPerformer) {
-            (!userResp.data.email || !userResp.data.username) ? Router.push('/artist/account') : Router.push({ pathname: `/artist/profile?id=${userResp.data.username || userResp.data._id}` }, `/artist/profile?id=${userResp.data.username || userResp.data._id}`);
+            (!userResp.data.email || !userResp.data.username) ? Router.push('/artist/account') : Router.push({ pathname: `/${userResp.data.username || userResp.data._id}` }, `/${userResp.data.username || userResp.data._id}`);
           }
         }
       } catch (e) {
@@ -107,7 +151,7 @@ const authSagas = [
         const payload = data.payload as IFanRegister;
         const resp = (yield authService.register(payload)).data;
         message.success(resp?.message || 'Sign up success!', 10);
-        Router.push('/home');
+        Router.push('/');
         yield put(registerFanSuccess(resp));
       } catch (e) {
         const error = yield Promise.resolve(e);
@@ -175,7 +219,31 @@ const authSagas = [
         // eslint-disable-next-line no-console
       }
     }
-  }
+  },
+  {
+    on: connectPlugWallet,
+    * worker() {
+      try {
+        const agent = yield getPlugWalletAgent();
+        const account = yield getPrincipalId();
+        yield put(connectPlugWalletSuccess(account, agent));
+      } catch (e) {
+        const error = yield Promise.resolve(e);
+        message.error(error?.message || 'Failed to connect to Plug Wallet');
+        yield put(connectPlugWalletFail(error));
+      }
+    }
+  },
+  {
+    on: disconnectPlugWallet,
+    * worker() {
+      try {
+        yield disconnectWallet();
+      } catch (e) {
+        message.error('Failed to disconnect from Plug Wallet');
+      }
+    }
+  },
 ];
 
 export default flatten([createSagas(authSagas)]);

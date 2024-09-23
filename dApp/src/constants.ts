@@ -84,8 +84,53 @@ export const SETTING_KEYS = {
   IC_CANISTERS_TRAX_TOKEN: 'icTraxToken',
   IC_CANISTERS_TRAX_ACCOUNT_PERCENTAGE: 'icTraxAccountPercentage',
   IC_CANISTERS_NFT_TICKET: 'icNFTTicket',
-  IC_CANISTERS_NFT_SONG: 'icNFTSong'
+  IC_CANISTERS_NFT_SONG: 'icNFTSong',
+  WALLET_CONNECT_PROJECT_ID: 'walletConnectProjectId'
 };
+
+export const GENRES = [
+  { value: 'featured', text: 'Featured', short: true },
+  { value: 'acoustic', text: 'Acoustic', short: true },
+  { value: 'alternative', text: 'Alternative', short: true },
+  { value: 'anime', text: 'Anime', short: true },
+  { value: 'ambient', text: 'Ambient', short: true },
+  { value: 'breakbeat', text: 'Breakbeat', short: true },
+  { value: 'classical', text: 'Classical', short: true },
+  { value: 'drum & bass', text: 'Drum and bass', short: true },
+  { value: 'drill', text: 'Drill', short: true },
+  { value: 'dance', text: 'Dance', short: true },
+  { value: 'dub', text: 'Dub', short: true },
+  { value: 'easy listening', text: 'Easy Listening', short: true },
+  { value: 'electronic', text: 'Electronic', short: true },
+  { value: 'electronica', text: 'Electronica', short: false },
+  { value: 'funk', text: 'Funk', short: false },
+  { value: 'garage', text: 'Garage', short: false },
+  { value: 'grime', text: 'Grime', short: false },
+  { value: 'hip-hop/rap', text: 'Hip-Hop/Rap', short: false },
+  { value: 'holiday', text: 'Holiday', short: false },
+  { value: 'house', text: 'House', short: false },
+  { value: 'indie pop', text: 'Indie Pop', short: false },
+  { value: 'jazz', text: 'Jazz', short: false },
+  { value: 'jungle', text: 'Jungle', short: false },
+  { value: 'k-pop', text: 'K-Pop', short: false },
+  { value: 'latin', text: 'Latin', short: false },
+  { value: 'lo-fi', text: 'Lo-fi', short: false },
+  { value: 'metal', text: 'Metal', short: false },
+  { value: 'opera', text: 'Opera', short: false },
+  { value: 'pop', text: 'Pop', short: false },
+  { value: 'reggae', text: 'Reggae', short: false },
+  { value: 'rock', text: 'Rock', short: false },
+  { value: 'r&b', text: 'R&B', short: false },
+  { value: 'soundtrack', text: 'Soundtrack', short: false },
+  { value: 'soul', text: 'Soul', short: false },
+  { value: 'techno', text: 'Techno', short: false },
+  { value: 'trance', text: 'Trance', short: false },
+  { value: 'trap', text: 'Trap', short: false },
+];
+
+export const SHORT_GENRES = GENRES.filter((genre) => genre.short);
+
+export const PICK_GENRES = GENRES.filter((genre) => genre.value !== 'featured');
 
 export const MENU_SECTION = {
   MAIN: 'main',

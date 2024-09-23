@@ -1,4 +1,4 @@
-import { message, Spin } from 'antd';
+import { message, Spin, ConfigProvider } from 'antd';
 import { pick } from 'lodash';
 import { NextPageContext } from 'next';
 import { Provider } from 'react-redux';
@@ -10,7 +10,7 @@ import { updateLiveStreamSettings } from '@redux/streaming/actions';
 import { updateUIValue } from '@redux/ui/actions';
 import { updateCurrentUser } from '@redux/user/actions';
 import withReduxSaga from '@redux/withReduxSaga';
-import { authService, settingService, userService, cryptoService } from '@services/index';
+import { authService, settingService, userService, cryptoService, routerService } from '@services/index';
 import nextCookie from 'next-cookies';
 import App from 'next/app';
 import Head from 'next/head';
@@ -23,11 +23,12 @@ import 'antd/dist/reset.css';
 import Script from 'next/script';
 import { ParallaxProvider } from 'react-scroll-parallax';
 import BaseLayout from '@layouts/base-layout';
-import { plugWalletMobileConnection } from 'src/crypto/mobilePlugWallet';
+//import { plugWalletMobileConnection } from 'src/crypto/mobilePlugWallet';
 import 'video.js/dist/video-js.css';
 import '../styles/antd.css';
 import '../styles/index.scss';
 // import { GoogleMap, useLoadScript, Marker } from "@react-google-maps/api";
+import CookiesBanner from '@components/common/layout/CookiesBanner';
 
 interface CustomNextPageContext extends NextPageContext {
   store: Store;
@@ -92,7 +93,7 @@ async function auth(ctx: CustomNextPageContext, noredirect: boolean, onlyPerform
 
 async function updateSettingsStore(ctx: CustomNextPageContext, settings) {
   const { store } = ctx;
-  
+
   store.dispatch(
     updateUIValue({
       logo: settings.logoUrl || '',
@@ -159,7 +160,8 @@ async function updateSettingsStore(ctx: CustomNextPageContext, settings) {
         SETTING_KEYS.IC_CANISTERS_TRAX_TOKEN,
         SETTING_KEYS.IC_CANISTERS_TRAX_ACCOUNT_PERCENTAGE,
         SETTING_KEYS.IC_CANISTERS_NFT_TICKET,
-        SETTING_KEYS.IC_CANISTERS_NFT_SONG
+        SETTING_KEYS.WALLET_CONNECT_PROJECT_ID,
+        SETTING_KEYS.IC_CANISTERS_NFT_SONG,
       ])
     )
   );
@@ -254,7 +256,8 @@ class Application extends App<IApp> {
   }
 
   async componentDidMount() {
-    plugWalletMobileConnection();
+    await routerService.checkRedirectUrl();
+    //plugWalletMobileConnection();
     const { settings } = this.state;
     if (settings === null) {
       const data = await this.getData();
@@ -322,11 +325,18 @@ class Application extends App<IApp> {
     const state = store.getState();
 
     return (
+      <ConfigProvider
+            theme={{
+                token: {
+                    fontFamily: "NeueMontreal",
+                },
+            }}
+        >
       <ParallaxProvider>
         <Provider store={store}>
           <Head>
             <title>{settings?.siteName}</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+            <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
           </Head>
 
           <Socket>
@@ -340,6 +350,9 @@ class Application extends App<IApp> {
               </InternetIdentityProvider>
             </BaseLayout>
           </Socket>
+
+          <CookiesBanner />
+
           {settings && settings.afterBodyScript && (
             // eslint-disable-next-line react/no-danger
             <div dangerouslySetInnerHTML={{ __html: settings.afterBodyScript }} />
@@ -356,6 +369,7 @@ class Application extends App<IApp> {
           </Script>
         </Provider>
       </ParallaxProvider>
+      </ConfigProvider>
     );
   }
 }

@@ -59,13 +59,13 @@ class BulkUploadVideo extends PureComponent<IProps> {
   }
 
   beforeUpload(file, listFile) {
-    if (file.size / 1024 / 1024 > (process.env.NEXT_PUBLIC_MAX_SIZE_VIDEO as any || 2000)) {
-      message.error(`${file.name} is over ${process.env.NEXT_PUBLIC_MAX_SIZE_VIDEO || 2000}MB`);
+    if (file.size / 1024 / 1024 > (process.env.NEXT_PUBLIC_MAX_SIZE_VIDEO as any || 10000)) {
+      message.error(`${file.name} is over ${process.env.NEXT_PUBLIC_MAX_SIZE_VIDEO || 10000}MB`);
       return false;
     }
     const { fileList } = this.state;
     this.setState({
-      fileList: [...fileList, ...listFile.filter((f) => f.size / 1024 / 1024 < (process.env.NEXT_PUBLIC_MAX_SIZE_VIDEO as any || 2000))]
+      fileList: [...fileList, ...listFile.filter((f) => f.size / 1024 / 1024 < (process.env.NEXT_PUBLIC_MAX_SIZE_VIDEO as any || 10000))]
     });
     return true;
   }
@@ -118,7 +118,7 @@ class BulkUploadVideo extends PureComponent<IProps> {
       }
     }
     message.success('Videos have been uploaded!');
-    Router.push('/artist/my-content');
+    Router.push('/artist/studio');
   }
 
   render() {

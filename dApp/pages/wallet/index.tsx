@@ -17,7 +17,7 @@ import {
 import { connect } from 'react-redux';
 import Router from 'next/router';
 import Loader from '@components/common/base/loader';
-import { CurrencyDollarIcon } from '@heroicons/react/solid';
+import { CurrencyDollarIcon } from '@heroicons/react/24/solid';
 import { SiBitcoin } from 'react-icons/si';
 import Image from 'next/image';
 import { HttpAgent } from '@dfinity/agent';
@@ -101,12 +101,12 @@ class TokenPackages extends PureComponent<IProps> {
           agent,
           canisterId: ckBTCLedgerCanID
         });
-     
+
       } else {
         agent = new HttpAgent({
           host
         });
-      
+
         ledgerActor = await createLedgerActor(agent, ledgerCanID);
         ledgerActorCKBTC = IcrcLedgerCanister.create({
           agent,
@@ -137,7 +137,7 @@ class TokenPackages extends PureComponent<IProps> {
       const amountCKBTCUSD = ckbtcPrice * ckbtcFormattedBalance;
       const total = amountCKBTCUSD + amountICPUSD + user.balance;
 
-      this.setState({ 
+      this.setState({
         balanceICPUSD: amountICPUSD,
         balanceCKBTCUSD: amountCKBTCUSD,
         balanceICP: formattedBalance,
@@ -155,7 +155,7 @@ class TokenPackages extends PureComponent<IProps> {
     } = this.state;
     if (settings.paymentGateway === 'stripe' && !user?.stripeCardIds?.length) {
       message.error('Please add a payment card to complete your purchase');
-      Router.push('/user/account');
+      Router.push('/user/account/?tab=subscription');
       return;
     }
     try {
@@ -308,10 +308,10 @@ class TokenPackages extends PureComponent<IProps> {
               title={null}
               onCancel={() => this.setState({ openSendModal: false })}
             >
-              
+
                 <SendCrypto user={user} icpBalance={balanceICP} ckbtcBalance={balanceCKBTC} icpPrice={icpPrice} ckbtcPrice={ckbtcPrice}/>
-              
-              
+
+
             </Modal>
 
             <Modal

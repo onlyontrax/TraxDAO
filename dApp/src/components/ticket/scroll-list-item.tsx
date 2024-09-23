@@ -29,11 +29,17 @@ export class ScrollListTicket extends PureComponent<IProps> {
         scrollThreshold={0.9}
       >
         <PerformerListTicket tickets={items} />
-        {!loading && !items?.length && (
+        {!items.length && !loading && 
+        <div className="main-container custom">
+          <div>
+            <Alert className="no-object-found" message={'This artist has no upcoming events'} type="info" />
+          </div>
+        </div>}
+        {/* {!loading && !items?.length && (
           <div className="main-container custom">
             <Alert className="text-center" type="info" message={notFoundText || 'No ticket was found'} />
           </div>
-        )}
+        )} */}
         {loading && <div className="text-center"><Spin /></div>}
       </InfiniteScroll>
     );

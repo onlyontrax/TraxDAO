@@ -11,10 +11,10 @@ export class PerformerListTicket extends PureComponent<IProps> {
   render() {
     const { tickets } = this.props;
     return (
-      <Row style={{rowGap: '3rem'}}>
+      <Row  className='flex justify-center sm:justify-start gap-y-8 gap-x-4	sm:gap-x-0'>
         {tickets.length > 0
           && tickets.map((ticket: ITicket) => (
-            <Col xs={12} sm={12} md={8} lg={6} key={ticket._id}>
+            <Col xs={11.5} sm={11} md={8} lg={8} key={ticket._id} className='flex justify-center'>
               <TicketCard
                 ticket={ticket}
               />

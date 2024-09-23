@@ -19,7 +19,7 @@ import {
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { IProduct } from 'src/interfaces';
+import { ITicket } from 'src/interfaces';
 import { FileAddOutlined, CameraOutlined } from '@ant-design/icons';
 import { FormInstance } from 'antd/lib/form';
 import {BsCheckCircleFill} from 'react-icons/bs';
@@ -30,7 +30,7 @@ import { faXmark, faBullhorn, faImage, faVideo, faSquarePollHorizontal, faTrash 
 import Places from './places'
 
 interface IProps {
-  product?: IProduct;
+  ticket?: ITicket;
   submit?: Function;
   beforeUpload?: Function;
   uploading?: boolean;
@@ -50,7 +50,7 @@ const validateMessages = {
 
 export class FormTicket extends PureComponent<IProps> {
   state = {
-    previewImageProduct: null,
+    previewImageTicket: null,
     digitalFileAdded: false,
     stage: 0,
     tiers: [],
@@ -63,24 +63,39 @@ export class FormTicket extends PureComponent<IProps> {
     active: true,
     locationLat: 0,
     locationLng: 0,
-    address: ''
+    address: '',
+
   };
 
   formRef: any;
 
   componentDidMount() {
     if (!this.formRef) this.formRef = createRef();
-    const { product } = this.props;
-    if (product) {
-      const shippingFees = {};
-      for (const fee of product.shippingFees) {
-        shippingFees[fee.type] = fee.fee;
-      }
+    const { ticket } = this.props;
+    if (ticket) {
+      // const shippingFees = {};
+      // for (const fee of product.shippingFees) {
+      //   shippingFees[fee.type] = fee.fee;
+      // }
+      const {ticket} = this.props;
+
       this.setState({
-        previewImageProduct: product?.image || '/static/no-image.jpg',
-        digitalFileAdded: !!product.digitalFileUrl,
-        shippingOption: 'standard',
-        shippingFees
+        locationLng: ticket.longitude,
+        locationLat: ticket.latitude,
+        address: ticket.address,
+        startTime: ticket.start,
+        endTime: ticket.end,
+        eventDate: `${ticket.date}23:00:00 GMT`,
+        // eventDate: new Date(ticket.date),
+        tiers: ticket.tiers
+      })
+
+
+
+      this.setState({
+        previewImageTicket: ticket?.image || '/static/no-image.jpg',
+        digitalFileAdded: !!ticket.digitalFileUrl,
+        shippingOption: 'standard'
       });
     }
   }
@@ -91,7 +106,7 @@ export class FormTicket extends PureComponent<IProps> {
       [field]: val
     });
     if (field === 'type') {
-      this.setState({ isDigitalProduct: val === 'digital' });
+      this.setState({ isDigitalticket: val === 'digital' });
     }
   }
 
@@ -110,7 +125,7 @@ export class FormTicket extends PureComponent<IProps> {
   beforeUploadThumb(file) {
     const { beforeUpload } = this.props;
     const reader = new FileReader();
-    reader.addEventListener('load', () => this.setState({ previewImageProduct: reader.result }));
+    reader.addEventListener('load', () => this.setState({ previewImageTicket: reader.result }));
     reader.readAsDataURL(file);
     const isValid = file.size / 1024 / 1024 < (process.env.NEXT_PUBLIC_MAX_SIZE_FILE as any || 100);
     if (!isValid) {
@@ -147,7 +162,7 @@ export class FormTicket extends PureComponent<IProps> {
     const day = String(currentDate.getDate()).padStart(2, '0');
     const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // Months are 0-based
     const year = currentDate.getFullYear();
-  
+
     return `${year}-${month}-${day}`;
   }
 
@@ -171,9 +186,9 @@ export class FormTicket extends PureComponent<IProps> {
 
       if(isNameValid){
         this.setState({
-          tiers: [...tiers, newTier], 
-          tierName: '', 
-          tierSupply: '', 
+          tiers: [...tiers, newTier],
+          tierName: '',
+          tierSupply: '',
           tierPrice: ''
         });
       }else{
@@ -198,8 +213,11 @@ export class FormTicket extends PureComponent<IProps> {
   };
 
   handleLocation = (val) => {
-    this.setState({locationLat: val.lat})
-    this.setState({locationLng: val.lng})
+    if(val){
+      this.setState({locationLat: val.lat})
+      this.setState({locationLng: val.lng})
+
+    }
   }
 
   handleAddress = (val) => {
@@ -209,12 +227,15 @@ export class FormTicket extends PureComponent<IProps> {
   render() {
     if (!this.formRef) this.formRef = createRef();
     const {
-      product, submit, uploading, uploadPercentage
+      ticket, submit, uploading, uploadPercentage
     } = this.props;
     const {
-      previewImageProduct, digitalFileAdded, stage, tiers, active, locationLat, eventDate, locationLng, startTime, endTime, address
+      previewImageTicket, digitalFileAdded, stage, tiers, active, locationLat, eventDate, locationLng, startTime, endTime, address
     } = this.state;
-    const haveProduct = !!product;
+    const haveTicket = !!ticket;
+
+
+
 
     return (
       <div className='create-product-container'>
@@ -228,18 +249,18 @@ export class FormTicket extends PureComponent<IProps> {
           <div style={{borderTopRightRadius: 10, borderBottomRightRadius: 10}} className={`${stage >= 5 ? 'active' : ''}`} />
         </div>
         <div className='create-product-preview-wrapper'>
-          <div className='create-product-preview' style={{backgroundImage: previewImageProduct ? `url('${previewImageProduct}')`: ""}}>
+          <div className='create-product-preview' style={{backgroundImage: previewImageTicket ? `url('${previewImageTicket}')`: ""}}>
             <div className='create-product-blur'>
-              {!previewImageProduct && (
+              {!previewImageTicket && (
                   <div className='preview-msg'>
                       <span >Preview</span>
                   </div>
               )}
             </div>
 
-            {previewImageProduct && (
-              <img 
-                src={previewImageProduct}
+            {previewImageTicket && (
+              <img
+                src={previewImageTicket}
                 alt="file"
                 className='create-product-img'
               />
@@ -267,7 +288,7 @@ export class FormTicket extends PureComponent<IProps> {
             ref={this.formRef}
             validateMessages={validateMessages}
             initialValues={
-              product || ({
+              ticket || ({
                 name: '',
                 price: 1,
                 description: '',
@@ -349,8 +370,8 @@ export class FormTicket extends PureComponent<IProps> {
                   </div>
                 </div>
               </div>
-            
-              
+
+
               </div>
 
               <div className={stage === 1 ? 'display-contents' : 'no-display'}>
@@ -380,7 +401,7 @@ export class FormTicket extends PureComponent<IProps> {
                       Continue
                     </Button>
                   </div>
-                </div>   
+                </div>
 
                 <div className='form-middle-wrapper' style={{width: '100%', borderBottom: 'none', minHeight: '42rem', display: 'flex', justifyContent: 'center'}}>
                   <div className='form-access-wrapper' style={{width: '100%'}}>
@@ -400,10 +421,16 @@ export class FormTicket extends PureComponent<IProps> {
                           customRequest={() => false}
                         >
                           <div>
-                            <img src="/static/add-photo.png" className='upload-photos-img' width={70} style={{width: '70px'}}/> 
+                            <img src="/static/add-photo.png" className='upload-photos-img' width={70} style={{width: '70px'}}/>
                             <span className='span-upload-msg'>Upload a cover photo</span>
                             <br />
                             <span className='span-upload-sub-msg'>File should be less than 1GB</span>
+                            {previewImageTicket &&
+                              <div className='uploaded-tag' >
+                                <BsCheckCircleFill/>
+                                <span>Uploaded</span>
+                              </div>
+                            }
                           </div>
                         </Upload>
                       </Form.Item>
@@ -412,8 +439,8 @@ export class FormTicket extends PureComponent<IProps> {
                 </div>
               </div>
 
-              
-              
+
+
               <div className={stage === 2 ? 'display-contents' : 'no-display'}>
                 <div className='form-top-wrapper' style={{width: '100%'}}>
                   <div className="new-post-create-btn-wrapper">
@@ -443,13 +470,13 @@ export class FormTicket extends PureComponent<IProps> {
                 </div>
 
                 <div className='form-middle-wrapper' style={{width: '100%', borderBottom: 'none', minHeight: '42rem'}}>
-                  <Places location={this.handleLocation} address={this.handleAddress}/>
-                
+                  <Places location={this.handleLocation} address={this.handleAddress} ticket={ticket}/>
+
                   <div className='form-access-wrapper' style={{ marginTop: '0.5rem' }}>
                       <p className="create-post-subheading">Event date</p>
-                
+
                   <Form.Item
-                  
+
                     validateTrigger={['onChange', 'onBlur']}
                     rules={[
                       {
@@ -458,30 +485,33 @@ export class FormTicket extends PureComponent<IProps> {
                       }
                     ]}
                   >
-                    
-                      
+
+
                         <DatePicker
                           style={{ width: '100%', background: '#141414' }}
                           disabledDate={(currentDate) => currentDate && currentDate < moment().endOf('day')}
                           placeholder={this.getCurrentDate()}
                           onChange={(val) => this.onChangeDate(val)}
                           className='upload-date-picker'
+                          defaultValue={ticket && dayjs(ticket.date)}
+
+
                         />
-                    
+
                   </Form.Item>
                   </div>
                   <div style={{display: 'flex', flexDirection: 'row', padding: '5px'}}>
                     <div className='form-access-wrapper' style={{width: '100%'}}>
                     <p className="create-post-subheading">Add a start time</p>
                       <Form.Item >
-                        <TimePicker className='time-picker-ticker' onChange={this.onChangeStartTime.bind(this)} format='HH:mm' defaultValue={dayjs('00:00:00', 'HH:mm')} />
+                        <TimePicker className='time-picker-ticker' onChange={this.onChangeStartTime.bind(this)} format='HH:mm' defaultValue={ticket ? dayjs(ticket.start, 'HH:mm') : dayjs('00:00:00', 'HH:mm')} />
                       </Form.Item>
                     </div>
-                    
+
                     <div className='form-access-wrapper' style={{width: '100%'}}>
                     <p className="create-post-subheading">Add an end time </p>
                       <Form.Item>
-                        <TimePicker className='time-picker-ticker' onChange={this.onChangeFinishTime.bind(this)} format='HH:mm' defaultValue={dayjs('00:00:00', 'HH:mm')} />
+                        <TimePicker className='time-picker-ticker' onChange={this.onChangeFinishTime.bind(this)} format='HH:mm' defaultValue={ticket ? dayjs(ticket.end, 'HH:mm') : dayjs('00:00:00', 'HH:mm')} />
                       </Form.Item>
                     </div>
                   </div>
@@ -534,13 +564,13 @@ export class FormTicket extends PureComponent<IProps> {
                               </div>
 
                               <div className='remove-tier-icon-wrapper'>
-                                <FontAwesomeIcon 
-                                  icon={faTrash} 
+                                <FontAwesomeIcon
+                                  icon={faTrash}
                                   className='remove-tier-icon'
                                   onClick={()=> this.setState({ tiers: tiers.filter(function(tier){
                                       return tier.name !== item.name
                                     })
-                                  })} 
+                                  })}
                                 />
                               </div>
                             </div>
@@ -556,10 +586,10 @@ export class FormTicket extends PureComponent<IProps> {
                           value={this.state.tierName}
                           onChange={(e) => this.setState({tierName: e.target.value})}
                         />
-                        
+
                         <InputNumber type="number" placeholder='0' min={1} onChange={(e) => this.setState({tierSupply: e})} className='input-supply-tier'/>
                         <InputNumber type="number" prefix="$" placeholder='0.00' onChange={(e) => this.setState({tierPrice: e})} className='input-price-tier'/>
-                        
+
                       </div>
                       <Button className='add-tier-btn' onClick={this.addItem}>Add tier</Button>
                     </Form.Item>
@@ -595,7 +625,7 @@ export class FormTicket extends PureComponent<IProps> {
                       Upload
                     </Button>
                   </div>
-                </div>  
+                </div>
                 <div className='form-middle-wrapper' style={{width: '100%', borderBottom: 'none', minHeight: '42rem', display: 'flex', justifyContent:'center'}}>
                   <div className='form-access-wrapper' style={{width: '100%'}}>
                   <div  className='form-upload-wrapper'>
@@ -613,24 +643,24 @@ export class FormTicket extends PureComponent<IProps> {
                         customRequest={() => false}
                       >
                         <div>
-                          <img src="/static/add-file.png" className='upload-photos-img' width={70} style={{width: '84px'}}/> 
+                          <img src="/static/add-file.png" className='upload-photos-img' width={70} style={{width: '84px'}}/>
                           <span className='span-upload-msg'>Upload a ticket file</span>
                           <br />
                           <span className='span-upload-sub-msg'>This file will be sent to attendees to show at the door</span>
                           <br />
-                          {digitalFileAdded && 
-                            <div style={{fontSize: 17, marginTop:7, color: '#c8fd01'}}>
-                              <BsCheckCircleFill style={{fontSize: 17, marginTop:7, color: '#c8fd01'}}/>
+                          {digitalFileAdded &&
+                            <div className='uploaded-tag' >
+                              <BsCheckCircleFill/>
                               <span>Uploaded</span>
                             </div>
                           }
                         </div>
                       </Upload>
-                      {product?.digitalFileUrl && <div className="ant-form-item-explain" style={{ textAlign: 'left' }}><a download target="_blank" href={product?.digitalFileUrl} rel="noreferrer">Click to download</a></div>}
+
                     </Form.Item>
                     </div>
                   </div>
-                  
+
                   {/* <div className='form-option-wrapper' style={{ marginTop: '0.5rem', marginBottom: '1rem', padding: '6px'}}>
                     <div>
                       <p className="create-post-subheading">Active</p>
@@ -650,7 +680,7 @@ export class FormTicket extends PureComponent<IProps> {
                         />
                     </Form.Item>
                   </div> */}
-                
+
                 </div>
               </div>
             </Row>

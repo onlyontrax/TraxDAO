@@ -1,0 +1,320 @@
+// -------- Colors -----------
+@font-face {
+  font-family: "Roboto";
+  src: url("/fonts/Roboto-Regular.ttf");
+}
+
+
+@font-face {
+  font-family: "Monoska";
+  src: url("/fonts/Monoska/Monoska.eot");
+  src: url("/fonts/Monoska/Monoska.eot?#iefix") format("embedded-opentype"),
+    url("/fonts/Monoska/Monoska.woff2") format("woff2"), url("/fonts/Monoska/Monoska.woff") format("woff"),
+    url("/fonts/Monoska/Monoska.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("/fonts/Space_Grotesk/SpaceGrotesk-VariableFont_wght.ttf");
+}
+
+
+
+
+
+
+// ********************************
+// ***** NEUE MONTREAL NORMAL *****
+// ********************************
+
+// Comment out when used
+// @font-face {
+//   font-family: "NeueMontreal";
+//   font-style: normal;
+//   font-weight: 200;
+//   src: url("/fonts/NeueMontreal/NeueMontreal-Light.otf") format("truetype");
+//   font-display: swap;
+// }
+
+@font-face {
+  font-family: "NeueMontreal";
+  font-style: normal;
+  font-weight: 300;
+  src: url("/fonts/NeueMontreal/NeueMontreal-Regular.otf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "NeueMontreal";
+  font-style: normal;
+  font-weight: 500;
+  src: url("/fonts/NeueMontreal/NeueMontreal-Medium.otf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "NeueMontreal";
+  font-style: normal;
+  font-weight: 600;
+  src: url("/fonts/NeueMontreal/NeueMontreal-Bold.otf") format("truetype");
+  font-display: swap;
+}
+
+// ********************************
+// ***** NEUE MONTREAL ITALIC *****
+// ********************************
+
+// Comment out when used
+// @font-face {
+//   font-family: "NeueMontreal";
+//   font-style: italic;
+//   font-weight: 200;
+//   src: url("/fonts/NeueMontreal/NeueMontreal-LightItalic.otf") format("truetype");
+//   font-display: swap;
+// }
+
+// @font-face {
+//   font-family: "NeueMontreal";
+//   font-style: italic;
+//   font-weight: 300;
+//   src: url("/fonts/NeueMontreal/NeueMontreal-RegularItalic.otf") format("truetype");
+//   font-display: swap;
+// }
+
+// @font-face {
+//   font-family: "NeueMontreal";
+//   font-style: italic;
+//   font-weight: 500;
+//   src: url("/fonts/NeueMontreal/NeueMontreal-MediumItalic.otf") format("truetype");
+//   font-display: swap;
+// }
+
+// @font-face {
+//   font-family: "NeueMontreal";
+//   font-style: italic;
+//   font-weight: 600;
+//   src: url("/fonts/NeueMontreal/NeueMontreal-BoldItalic.otf") format("truetype");
+//   font-display: swap;
+// }
+
+
+
+
+// ******************************
+// ***** HEADING PRO ITALIC *****
+// ******************************
+
+// Comment out when used
+// @font-face {
+//   font-family: "HeadingPro";
+//   font-style: italic;
+//   font-weight: 100;
+//   src: url("/fonts/HeadingPro/Heading-Pro-Thin-Italic.ttf") format("truetype");
+//   font-display: swap;
+// }
+
+// @font-face {
+//   font-family: "HeadingPro";
+//   font-style: italic;
+//   font-weight: 200;
+//   src: url("/fonts/HeadingPro/Heading-Pro-Extralight-Italic.ttf") format("truetype");
+//   font-display: swap;
+// }
+
+// @font-face {
+//   font-family: "HeadingPro";
+//   font-style: italic;
+//   font-weight: 300;
+//   src: url("/fonts/HeadingPro/Heading-Pro-Light-Italic.ttf") format("truetype");
+//   font-display: swap;
+// }
+
+// @font-face {
+//   font-family: "HeadingPro";
+//   font-style: italic;
+//   font-weight: 400;
+//   src: url("/fonts/HeadingPro/Heading-Pro-Italic.ttf") format("truetype");
+//   font-display: swap;
+// }
+
+// @font-face {
+//   font-family: "HeadingPro";
+//   font-style: italic;
+//   font-weight: 500;
+//   src: url("/fonts/HeadingPro/Heading-Pro-Book-Italic.ttf") format("truetype");
+//   font-display: swap;
+// }
+
+// @font-face {
+//   font-family: "HeadingPro";
+//   font-style: italic;
+//   font-weight: 600;
+//   src: url("/fonts/HeadingPro/Heading-Pro-Bold-Italic.ttf") format("truetype");
+//   font-display: swap;
+// }
+
+// @font-face {
+//   font-family: "HeadingPro";
+//   font-style: italic;
+//   font-weight: 700;
+//   src: url("/fonts/HeadingPro/Heading-Pro-Extrabold-Italic.ttf") format("truetype");
+//   font-display: swap;
+// }
+
+// @font-face {
+//   font-family: "HeadingPro";
+//   font-style: italic;
+//   font-weight: 800;
+//   src: url("/fonts/HeadingPro/Heading-Pro-Heavy-Italic.ttf") format("truetype");
+//   font-display: swap;
+// }
+
+
+
+// ******************************
+// ***** HEADING PRO NORMAL *****
+// ******************************
+
+// Comment out when used
+// @font-face {
+//   font-family: "HeadingPro";
+//   font-style: normal;
+//   font-weight: 100;
+//   src: url("/fonts/HeadingPro/Heading-Pro-Thin.ttf") format("truetype");
+//   font-display: swap;
+// }
+
+// @font-face {
+//   font-family: "HeadingPro";
+//   font-style: normal;
+//   font-weight: 200;
+//   src: url("/fonts/HeadingPro/Heading-Pro-Extralight.ttf") format("truetype");
+//   font-display: swap;
+// }
+
+@font-face {
+  font-family: "HeadingPro";
+  font-style: normal;
+  font-weight: 300;
+  src: url("/fonts/HeadingPro/Heading-Pro-Light.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HeadingPro";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/fonts/HeadingPro/Heading-Pro-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HeadingPro";
+  font-style: normal;
+  font-weight: 500;
+  src: url("/fonts/HeadingPro/Heading-Pro-Book.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HeadingPro";
+  font-style: normal;
+  font-weight: 600;
+  src: url("/fonts/HeadingPro/Heading-Pro-Bold.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HeadingPro";
+  font-style: normal;
+  font-weight: 700;
+  src: url("/fonts/HeadingPro/Heading-Pro-Extrabold.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "HeadingPro";
+  font-style: normal;
+  font-weight: 800;
+  src: url("/fonts/HeadingPro/Heading-Pro-Heavy.ttf") format("truetype");
+  font-display: swap;
+}
+
+
+
+
+
+
+
+
+
+
+$theme-color: #1ea2f1;
+$primary-color: #c8ff00;
+$secondary-color: #ff0066;
+$orange-color: #ffa75c;
+$light-color: #ccf1ff;
+$message-color: #fff6d9;
+$background-conversation: #f5f5f5;
+$info-color: #1ea2f1;
+$success-color: #4ec52a;
+$processing-color: #00a2ae;
+$error-color: #f04134;
+$highlight-color: #f04134;
+$warning-color: #ffbf00;
+$normal-color: #d9d9d9;
+$placeholder-input: #fff4fa;
+$white: #fff;
+$off-white: #f3f3f3;
+$black: #333;
+$true-black: #000;
+$dark-grey: #666;
+$grey-color: #8a96a3;
+$gray: #888;
+$light-grey: #eee;
+$light-blue: #f7f7f7;
+$light-card: #e6e3e3;
+$lime-green: #c8ff00;
+$twitter-color: #1ea2f1;
+$aliceblue: #f0f8ff;
+$border-select: #ced4da;
+$border-radius-base: 3px;
+$border-radius-sm: 2px;
+$shadow-color: rgba(0, 0, 0, 0.05);
+$shadow-1-down: 4px 4px 40px $shadow-color;
+$border-color-split: #dee2e6;
+$border-color-base: #e5e5e5;
+$font-size-base: 13px;
+$text-color: #dfdfdf;
+$hover-color: $primary-color;
+$main-background-color: #fff;
+$card-theme-color: rgba(7, 0, 115, 0.65);
+
+$darkmode-main-background: #232626;
+$darkmode-second-background: #3a3b3c;
+$darkmode-body-background: #191a1b;
+$darkmode-color: #fafafa;
+$darkmode-second-color: #a0a1a6;
+
+$tablet-screen: 769px;
+$mobile-screen: 500px;
+
+$primary-font: "NeueMontreal";
+$primary-font-bold: "NeueMontreal";
+$secondary-font: "NeueMontreal";
+$grotesk-font: "Space Grotesk";
+$special-font: "Monoska";
+$other-font: "Space Grotesk";
+
+$apple-font: "Inter";
+
+$group-status-color: #ffbf00;
+$public-status-color: #00c12c;
+$private-status-color: #f04134;
+$offline-status-color: #e2e8ec;
+// $primary-font: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji !important';
+// $primary-font-bold: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji !important';
+// $secondary-font: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji !important';

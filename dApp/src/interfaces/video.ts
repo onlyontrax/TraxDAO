@@ -7,6 +7,9 @@ export interface IVideo {
   performerId: string;
   isSale: string;
   price: number;
+  limitSupply: boolean;
+  supply: number;
+  stock: number;
   isCrypto: boolean;
   isCryptoPayment: boolean;
   performerWalletAddress: string;
@@ -55,4 +58,5 @@ export interface IVideo {
   teaserId: string;
   fileId: string;
   thumbnailId: string;
+  selectedCurrency: string;
 }

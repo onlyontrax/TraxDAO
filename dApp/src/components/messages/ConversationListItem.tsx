@@ -1,7 +1,7 @@
 import { Badge, Avatar } from 'antd';
 import { formatDateFromnow } from '@lib/index';
 import { IConversation } from '@interfaces/message';
-import { BadgeCheckIcon } from '@heroicons/react/solid';
+import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import styles from './ConversationListItem.module.scss';
 
 interface IProps {
@@ -30,7 +30,7 @@ export default function ConversationListItem(props: IProps) {
           <h1 className="conversation-title">
             <span className="re-name" title={recipientInfo?.name || recipientInfo?.username || 'N/A'}>
               {recipientInfo?.name || recipientInfo?.username || 'N/A'}
-              {recipientInfo?.verifiedAccount && <BadgeCheckIcon className="feed-v-badge" />}
+              {recipientInfo?.verifiedAccount && <CheckBadgeIcon className="feed-v-badge" />}
             </span>
             <span className="conversation-time">{formatDateFromnow(lastMessageCreatedAt || updatedAt)}</span>
           </h1>

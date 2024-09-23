@@ -190,7 +190,7 @@ export default class FeedForm extends PureComponent<IProps> {
         ? await feedService.create({ ...values, type })
         : await feedService.update(feed._id, { ...values, type: feed.type });
       message.success('Posted successfully!');
-      Router.push('/artist/my-content');
+      Router.push('/artist/studio');
     } catch {
       message.success('Something went wrong, please try again later');
       this.setState({ uploading: false });
@@ -797,7 +797,6 @@ export default class FeedForm extends PureComponent<IProps> {
                       )}
                     </div>
                     </div>
-                  
                 )}
                 </Row>
             <div className='form-middle-wrapper' style={{borderBottom: shareTip ? '' : 'none'}}>
@@ -815,7 +814,7 @@ export default class FeedForm extends PureComponent<IProps> {
                   className='track-type-form'
                 >
                   <Select.Option value="free">Free for everyone</Select.Option>
-                  <Select.Option value="subscription">Subscribers</Select.Option>
+                  <Select.Option value="subscription">Subscribers only</Select.Option>
                   <Select.Option value="pay">Pay-to-access</Select.Option>
                 </Select>
               </Form.Item>

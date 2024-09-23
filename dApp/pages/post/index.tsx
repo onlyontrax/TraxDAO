@@ -1,5 +1,5 @@
 import FeedCard from '@components/post/post-card';
-import { ArrowLeftIcon } from '@heroicons/react/outline';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import {
   IError, IFeed, IUIConfig, IUser
 } from '@interfaces/index';

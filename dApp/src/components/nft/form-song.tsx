@@ -213,7 +213,7 @@ class CreateSongNftForm extends PureComponent<IProps> {
             const id = await nftActor.createSong(await nftActor.getCallerId(), params);
 
             message.success('Posted successfully!');
-            Router.push('/artist/my-content');
+            Router.push('/artist/studio');
           }
         });
 
@@ -253,7 +253,7 @@ class CreateSongNftForm extends PureComponent<IProps> {
             });
             
             message.success('Posted successfully!');
-            Router.push('/artist/my-content');
+            Router.push('/artist/studio');
           }
         });
       }

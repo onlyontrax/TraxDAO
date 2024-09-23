@@ -18,6 +18,8 @@ export class PaymentProductModel {
   productId: string;
   
   purchasedTier?: string;
+
+  limitSupply?: boolean;
 }
 
 export class PaymentTicketModel {

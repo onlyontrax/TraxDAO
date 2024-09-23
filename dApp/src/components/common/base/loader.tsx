@@ -36,10 +36,8 @@ class Loader extends PureComponent<IProps> {
     return (
       <div className={styles.componentsCommonBaseLoaderModule}>
         <div className="loading-screen">
-          <div style={{ textAlign: 'center' }}> 
-            {/* <video src="/static/traxLogoAnimate2.mp4" autoPlay loop style={{width: isMobile ? '390px' : '500px'}}/>
-            {customText && <p>{customText}</p>} */}
-            <Image src="/static/traxLogoAnimateGIF.gif" alt="Loading..." />
+          <div style={{ textAlign: 'center' }}>
+            <Image src="/static/trax_loading_optimize.gif" alt="Loading..." />
             {customText && <p>{customText}</p>}
           </div>
         </div>

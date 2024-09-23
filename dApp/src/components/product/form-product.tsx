@@ -55,16 +55,22 @@ export class FormProduct extends PureComponent<IProps> {
     if (!this.formRef) this.formRef = createRef();
     const { product } = this.props;
     if (product) {
-      const shippingFees = {};
-      for (const fee of product.shippingFees) {
-        shippingFees[fee.type] = fee.fee;
+      
+      if(product?.shippingFees && product.type !== 'digital'){
+        const shippingFees = {};
+        for (const fee of product?.shippingFees) {
+          shippingFees[fee.type] = fee.fee;
+          this.setState({
+            shippingOption: 'standard',
+            shippingFees
+          });
+        }
       }
+      
       this.setState({
         isDigitalProduct: product.type === 'digital',
         previewImageProduct: product?.image || '/static/no-image.jpg',
         digitalFileAdded: !!product.digitalFileUrl,
-        shippingOption: 'standard',
-        shippingFees
       });
     }
   }
@@ -262,8 +268,15 @@ export class FormProduct extends PureComponent<IProps> {
                       <img src="/static/add-photo.png" className='upload-photos-img' width={70} style={{width: '70px'}}/> 
                       <span className='span-upload-msg'>Upload a photo</span>
                       <br />
-                        <span className='span-upload-sub-msg'> File should be 1GB or less</span>
+                      <span className='span-upload-sub-msg'> File should be 1GB or less</span>
+                      {previewImageProduct && 
+                        <div className='uploaded-tag' >
+                          <BsCheckCircleFill/>
+                          <span>Uploaded</span>
                         </div>
+                      }
+                        
+                    </div>
                   </Upload>
                 </Form.Item>
                 </div></div>
@@ -288,14 +301,14 @@ export class FormProduct extends PureComponent<IProps> {
                       <br />
                         <span className='span-upload-sub-msg'> File should be 1GB or less</span>
                         <br />
-                        {digitalFileAdded && 
-                          <div style={{fontSize: 17, marginTop:7, color: '#c8fd01'}}>
-                          <BsCheckCircleFill style={{fontSize: 17, marginTop:7, color: '#c8fd01'}}/>
-                          <span>Uploaded</span>
-                          </div>}
+                          {digitalFileAdded && 
+                            <div className='uploaded-tag' >
+                              <BsCheckCircleFill/>
+                              <span>Uploaded</span>
+                            </div>
+                          }
                         </div>
                       </Upload>
-                      {product?.digitalFileUrl && <div className="ant-form-item-explain" style={{ textAlign: 'left' }}><a download target="_blank" href={product?.digitalFileUrl} rel="noreferrer">Click to download</a></div>}
                     </Form.Item>
                     </div>
                     </div>
@@ -312,8 +325,6 @@ export class FormProduct extends PureComponent<IProps> {
                       style={{ marginRight: 10, marginTop: 3 }}
                       onClick={() => this.setState({ stage: 0 })}
                     >
-                      {/* <PlusIcon />
-                      {' '} */}
                       Back
                     </Button>
                   </div>

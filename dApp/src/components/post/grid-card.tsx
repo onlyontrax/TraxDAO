@@ -50,7 +50,7 @@ export class FeedGridCard extends PureComponent<IProps> {
               </div>
             )}
             {!canView && isVideo && (
-              <div className="card-bg" style={{ backgroundImage: `url(${feed?.thumbnail?.url ? feed?.thumbnail?.url : '/static/placeholder-trax.jpeg'})`, filter: (feed?.isSale === 'subscription' && !feed?.isSubscribed) || (feed?.isSale === 'pay' && !feed?.isBought) ? 'blur(7px)' : 'blur(0px)' }} />
+              <div className="card-bg" style={{ backgroundImage: `url(${feed?.thumbnail?.url ? feed?.thumbnail?.url : '/static/placeholder-trax.jpg'})`, filter: (feed?.isSale === 'subscription' && !feed?.isSubscribed) || (feed?.isSale === 'pay' && !feed?.isBought) ? 'blur(7px)' : 'blur(0px)' }} />
             )}
             {isImage && (
               <div className="card-bg" style={{ backgroundImage: `url(${thumbUrl})`, filter: (feed?.isSale === 'subscription' && !feed?.isSubscribed) || (feed?.isSale === 'pay' && !feed?.isBought) ? 'blur(7px)' : 'blur(0px)' }} />

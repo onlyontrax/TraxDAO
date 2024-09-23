@@ -11,17 +11,8 @@ import { LoadingOutlined } from '@ant-design/icons';
 import { PureComponent } from "react";
 import { connect } from "react-redux";
 import { cryptoService } from '@services/crypto.service';
+import { debounce } from 'lodash';
 import Head from "next/head";
-import {
-  InstagramOutlined, TwitterOutlined
-} from '@ant-design/icons';
-import { GrSoundcloud, GrSpotify } from 'react-icons/gr';
-import { SiApplemusic } from 'react-icons/si';
-import { FaSoundcloud } from "react-icons/fa";
-import { BsTwitterX } from "react-icons/bs";
-import { FaInstagram } from "react-icons/fa";
-
-
 
 import {
   authService,
@@ -32,24 +23,22 @@ import {
   performerService,
   tokenTransctionService,
   utilsService,
+  routerService,
 } from "src/services";
-import { DollarOutlined, EditOutlined, LeftOutlined } from "@ant-design/icons";
-import { VideoPlayer } from "@components/common";
+import { DollarOutlined } from "@ant-design/icons";
+
 import { ConfirmSubscriptionPerformerForm } from "@components/performer";
 import TipPerformerForm from "@components/performer/tip-form";
 import { PerformerInfo } from "@components/performer/table-info";
-import ScrollListFeed from "@components/post/scroll-list";
-import SearchPostBar from "@components/post/search-bar";
-import { ScrollListProduct } from "@components/product/scroll-list-item";
-import { ScrollListTicket } from "@components/ticket/scroll-list-item";
+
 import { ScrollListVideo } from "@components/video/scroll-list-item";
-import { BadgeCheckIcon } from "@heroicons/react/solid";
-import { shortenLargeNumber } from "@lib/index";
+import { ScrollListMusic } from "@components/video/scroll-list-music";
+
 import Error from "next/error";
 import Link from "next/link";
 import Router from "next/router";
 import { Parallax, ParallaxBanner } from "react-scroll-parallax";
-import { MessageIcon } from "src/icons";
+
 import { ICountry, IFeed, IPerformer, ISettings, IUIConfig, IUser } from "src/interfaces";
 
 import { FastAverageColor } from "fast-average-color";
@@ -68,16 +57,21 @@ import type {
 } from "../../../src/smart-contracts/declarations/tipping/tipping2.did";
 import { TransferArgs, Tokens, TimeStamp } from "src/smart-contracts/declarations/ledger/ledger2.did";
 import styles from "../../../src/components/performer/performer.module.scss";
-/*import { subscriptions } from "../../../src/smart-contracts/declarations/subscriptions";
-import { SubType } from "../../../src/smart-contracts/declarations/subscriptions/subscriptions.did";*/
+
 import { idlFactory as idlFactoryTipping } from "../../../src/smart-contracts/declarations/tipping/tipping.did.js";
 import { IcrcLedgerCanister, TransferParams } from "@dfinity/ledger";
-import { ScrollListNft } from "@components/nft/scroll-list-item";
-import FollowerSubscriberModal from "@components/artist/follower-subscriber-modal";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faInstagram, faSoundcloud, faXTwitter, faSpotify } from '@fortawesome/free-brands-svg-icons'
-import { faCheck } from '@fortawesome/free-solid-svg-icons'
 import PaymentProgress from '../../../src/components/user/payment-progress';
+
+import {
+  requestConnectPlug,
+  transferPlug,
+
+  sendTipPlug,
+
+  requestPlugBalance
+} from "../../../src/crypto/transactions/plug-tip";
+import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider, getPrincipalId, createPlugwalletActor } from '../../../src/crypto/mobilePlugWallet';
+
 
 interface IProps {
   ui: IUIConfig;
@@ -118,20 +112,19 @@ class PerformerProfile extends PureComponent<IProps> {
   static noredirect = true;
 
   state = {
-    itemPerPage: 12,
+    itemPerPage: 100,
     videoPage: 0,
     productPage: 0,
     ticketPage: 0,
     feedPage: 0,
     galleryPage: 0,
-    showWelcomVideo: false,
     openTipModal: false,
     openTipSuccessModal: false,
     submiting: false,
     isBookMarked: false,
     requesting: false,
     openSubscriptionModal: false,
-    tab: "post",
+    tab: "video",
     filter: initialFilter,
     isGrid: false,
     subscriptionType: 'monthly',
@@ -147,6 +140,9 @@ class PerformerProfile extends PureComponent<IProps> {
     dataLoaded: false,
     isOpenFollowersModal: false,
     isOpenSubscribersModal: false,
+    _videos: [],
+    music: [],
+    confetti: false
   };
 
   async getData() {
@@ -160,11 +156,17 @@ class PerformerProfile extends PureComponent<IProps> {
         }),
         utilsService.countriesList(),
       ]);
+
       return {
         performer: performer?.data,
         countries: countries?.data || [],
       };
     } catch (e) {
+      if (e.message === 'Entity is not found') {
+        message.error("Artist not found.");
+      }
+      console.log("performer fetch error", e);
+      console.log("performer fetch error2", await e);
       return {
         performer: null,
         countries: null,
@@ -172,23 +174,58 @@ class PerformerProfile extends PureComponent<IProps> {
     }
   }
 
+
+  getMusic = debounce(async () => {
+    const { videoState, getVideos: handleGetVids, performer } = this.props;
+    const { filter} = this.state;
+    let vids = videoState.item
+    if(vids){
+      let videosArr = []
+      let audioArr = []
+      vids.map((vid)=>{
+        if(vid.trackType === 'video'){
+          videosArr.push(vid)
+        }else{
+          audioArr.push(vid)
+        }
+      });
+
+      const query = {
+        limit: 10,
+        offset: 0,
+        performerId: performer?._id,
+        q: filter.q || "",
+        fromDate: filter.fromDate || "",
+        toDate: filter.toDate || ""
+      };
+
+      // this.setState({_videos: videosArr, music: audioArr});
+      handleGetVids({
+        ...query,
+      })
+    }
+  });
+
   async componentDidMount() {
     const { performer } = this.state;
+
     if (performer === null) {
       const data = await this.getData();
-
-      this.setState({ performer: data.performer, countries: data.countries }, () => this.updateDataDependencies());
+      routerService.changeUrlPath();
+      this.getMusic();
+      this.setState({ performer: data.performer, countries: data.countries, dataLoaded: true }, () => this.updateDataDependencies());
     } else {
       this.updateDataDependencies();
+      routerService.changeUrlPath();
     }
   }
 
   animateButton = (e) => {
     e.preventDefault();
-    
+
     // Reset animation
     e.target.classList.remove('animate');
-    
+
     e.target.classList.add('animate');
     setTimeout(function(){
       e.target.classList.remove('animate');
@@ -210,7 +247,7 @@ class PerformerProfile extends PureComponent<IProps> {
   //   }
   // }
 
- 
+
 
 
 
@@ -219,9 +256,6 @@ class PerformerProfile extends PureComponent<IProps> {
     const { settings } = this.props;
     if (performer === null) return;
     this.checkWindowInnerWidth();
-    const notShownWelcomeVideos = typeof window !== "undefined" ? localStorage.getItem("notShownWelcomeVideos") : null;
-    const showWelcomVideo =
-      !notShownWelcomeVideos || (notShownWelcomeVideos && !notShownWelcomeVideos.includes(performer._id));
     window.addEventListener("resize", this.updateMedia);
     () => window.removeEventListener("resize", this.updateMedia);
 
@@ -229,7 +263,6 @@ class PerformerProfile extends PureComponent<IProps> {
       {
         dataLoaded: true,
         isBookMarked: performer.isBookMarked,
-        showWelcomVideo,
         isFollowed: !!performer.isFollowed,
         isDesktop: window.innerWidth > 500,
       },
@@ -251,19 +284,6 @@ class PerformerProfile extends PureComponent<IProps> {
   updateMedia = () => {
     this.setState({ isDesktop: window.innerWidth > 500 });
   };
-
-  // eslint-disable-next-line react/sort-comp
-  handleViewWelcomeVideo() {
-    const { performer } = this.state;
-    if (performer === null) return;
-    const notShownWelcomeVideos = typeof window !== "undefined" ? localStorage.getItem("notShownWelcomeVideos") : null;
-    if (notShownWelcomeVideos && !notShownWelcomeVideos?.includes(performer._id)) {
-      const Ids = JSON.parse(notShownWelcomeVideos || "[]");
-      const values = Array.isArray(Ids) ? Ids.concat([performer._id]) : [performer._id];
-      localStorage.setItem("notShownWelcomeVideos", JSON.stringify(values));
-    }
-    this.setState({ showWelcomVideo: false });
-  }
 
   async handleDeleteFeed(feed: IFeed) {
     const { user, removeFeedSuccess: handleRemoveFeed } = this.props;
@@ -497,7 +517,7 @@ class PerformerProfile extends PureComponent<IProps> {
       await this.sendTipFiat(price);
     } else {
       if (paymentOption === "plug") {
-        await this.sendTipPlug(price, ticker);
+        await this.beforeSendTipPlug(price, ticker);
       } else {
         await this.sendTipCrypto(price, ticker);
       }
@@ -510,7 +530,7 @@ class PerformerProfile extends PureComponent<IProps> {
     if (performer === null) return;
     if (user.balance < price) {
       message.error("You have an insufficient wallet balance. Please top up.");
-      Router.push("/user/my-payments/");
+      Router.push("/user/wallet/");
       return;
     }
     try {
@@ -537,7 +557,7 @@ class PerformerProfile extends PureComponent<IProps> {
     const { performer } = this.state;
     if (performer === null) return;
 
-    this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 25 });
+    this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 1 });
 
     const tippingCanisterAI = AccountIdentifier.fromPrincipal({
       principal: tippingCanID,
@@ -656,16 +676,16 @@ class PerformerProfile extends PureComponent<IProps> {
     participants.push(obj2);
 
     const participantArgs: TippingParticipants = participants;
-    this.setState({ tipProgress: 50 });
+    this.setState({ tipProgress: 2 });
     await ledgerActor
       .transfer(ticker === "ICP" ? transferArgs : transferParams)
       .then(async res => {
-        this.setState({ tipProgress: 75 });
+        this.setState({ tipProgress: 3 });
 
         await tippingActor
           .sendTip(ticker === "ICP" ? res.Ok : res, participantArgs, amountToSend, ticker)
           .then(() => {
-            this.setState({ tipProgress: 100 });
+            this.setState({ tipProgress: 4 });
             tokenTransctionService
               .sendCryptoTip(performer?._id, {
                 performerId: performer?._id,
@@ -709,201 +729,65 @@ class PerformerProfile extends PureComponent<IProps> {
       });
   }
 
-  
 
-  async sendTipPlug(amount: number, ticker: string) {
+
+  async beforeSendTipPlug(amount: number, ticker: string) {
     const { performer } = this.state;
     const { settings } = this.props;
-    let transfer;
-    let amountToSend = BigInt(Math.trunc(Number(amount) * 100000000));
-    this.setState({
-      requesting: false,
-      submiting: false,
-      openTipProgressModal: false,
-      tipProgress: 0,
-    });
-    const tippingCanID = settings.icTipping;
-    const ledgerCanID = settings.icLedger;
-    const ckBTCLedgerCanID = settings.icCKBTCMinter;
 
+    this.setState({requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0});
+    let currentCanId, transfer;
+    let amountToSend = BigInt(Math.trunc(Number(amount) * 100000000));
+    const tippingCanID = settings.icTipping;
     const whitelist = [tippingCanID];
 
-    if (typeof window !== "undefined" && "ic" in window) {
-      const connected =
-        typeof window !== "undefined" && "ic" in window
-          ? // @ts-ignore
-            await window?.ic?.plug?.requestConnect({
-              whitelist,
-              host: settings.icHost
+    try{
+      ticker === "ICP" && (currentCanId = null)
+      ticker === "ckBTC" && (currentCanId = settings.icCKBTCMinter)
+      ticker === "TRAX" && (currentCanId = settings.icTraxToken)
+
+      const mobileProvider = await getPlugWalletProvider();
+      const agent = await getPlugWalletAgent("icTipping");
+      const delegatedIdentity = await mobileProvider?.delegatedIdentity;
+
+      if (agent) {
+        let connected = await getPlugWalletIsConnected();
+        if (connected) {
+          let tippingActor:any = createPlugwalletActor(idlFactoryTipping, tippingCanID, settings.icHost, delegatedIdentity, agent);
+
+          /*let tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
+            agent: (window as any).ic.plug.agent,
+            canisterId: tippingCanID,
+          });*/
+
+          this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 1 });
+
+            transfer = await transferPlug(tippingCanID, amount.toString(), Number(amountToSend), ticker, currentCanId);
+            this.setState({ tipProgress: 2 });
+            if(!transfer){
+              message.error(`Transaction failed, please try again.`);
+              this.setState({ requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0 });
+            }
+
+
+          if (transfer) {
+            this.setState({ tipProgress: 3 });
+
+            await sendTipPlug(Principal.fromText(performer?.wallet_icp), tippingActor, transfer, amountToSend, ticker, performer?._id).then(()=>{
+              this.setState({confetti: true})
+            message.success(`Payment successful! ${performer.name} has recieved your tip`);
+              this.setState({ tipProgress: 5, requesting: false, submiting: false});
             })
-          : false;
-
-      !connected && message.info("Failed to connected to canister. Please try again later or contact us. ");
-
-      
-
-      // @ts-ignore
-      if (!window?.ic?.plug?.agent && connected) {
-        // @ts-ignore
-        await window.ic.plug.createAgent({
-          whitelist,
-          host: settings.icHost
-        });
-      }
-
-      let tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
-        agent: (window as any).ic.plug.agent,
-        canisterId: tippingCanID,
-      });
-
-      const participants = [];
-
-      if (connected) {
-        this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 25 });
-        //@ts-ignore
-        const requestBalanceResponse = await window.ic?.plug?.requestBalance();
-        let icp_balance;
-        let ckBTC_balance;
-        let TRAX_balance;
-        for(let i = 0; i < requestBalanceResponse.length; i++){
-          if(requestBalanceResponse[i]?.symbol === 'ICP'){
-            icp_balance = requestBalanceResponse[i]?.amount;
-          }
-          if(requestBalanceResponse[i]?.symbol === 'ckBTC'){
-            ckBTC_balance = requestBalanceResponse[i]?.amount;
-          }
-          if(requestBalanceResponse[i]?.symbol === 'TRAX'){
-            TRAX_balance = requestBalanceResponse[i]?.amount;
-          }
-
-        };
-
-        if (ticker === "ckBTC") {
-          if (ckBTC_balance >= amount) {
-            this.setState({ tipProgress: 50 });
-            const params = {
-              to: tippingCanID,
-              strAmount: amount,
-              token: ckBTCLedgerCanID,
-            };
-            //@ts-ignore
-            transfer = await window.ic.plug.requestTransferToken(params).catch(error => {
-              message.error(`Transaction failed. ${error}`);
-              console.log(error)
-              this.setState({ requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0 });
-            });
-
 
           } else {
-            this.setState({
-              requesting: false,
-              submiting: false,
-              openTipProgressModal: false,
-              tipProgress: 0,
-            });
-            message.error("Insufficient balance, please top up your wallet and try again.");
+            message.error("Transaction failed. Please try again later.");
           }
-        }
-
-        if (ticker === "TRAX") {
-          if (TRAX_balance >= amount) {
-            this.setState({ tipProgress: 50 });
-            const params = {
-              to: tippingCanID,
-              strAmount: amount,
-              token: process.env.NEXT_PUBLIC_TRAX_CANISTER_ID as string,
-            };
-            //@ts-ignore
-            transfer = await window.ic.plug.requestTransferToken(params).catch(error => {
-              message.error(`Transaction failed. ${error}`);
-              console.log(error)
-              this.setState({ requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0 });
-            });
-          } else {
-            this.setState({
-              requesting: false,
-              submiting: false,
-              openTipProgressModal: false,
-              tipProgress: 0,
-            });
-            message.error("Insufficient balance, please top up your wallet and try again.");
-          }
-        }
-
-        if (ticker === "ICP") {
-          
-          if (icp_balance >= amount) {
-            this.setState({ tipProgress: 50 });
-            const requestTransferArg = {
-              to: tippingCanID,
-              amount: Math.trunc(Number(amount) * 100000000),
-            };
-            //@ts-ignore
-            transfer = await window.ic?.plug?.requestTransfer(requestTransferArg).catch(error => {
-              message.error(`Transaction failed. ${error}`);
-              console.log(error)
-              this.setState({ requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0 });
-            });
-
-          } else {
-            this.setState({
-              requesting: false,
-              submiting: false,
-              openTipProgressModal: false,
-              tipProgress: 0,
-            });
-            message.error("Insufficient balance, please top up your wallet and try again.");
-          }
-        }
-
-       
-        if (transfer.height) {
-          this.setState({ tipProgress: 75 });
-
-          const obj2: Participants = {
-            participantID: Principal.fromText(performer?.wallet_icp),
-            participantPercentage: 1,
-          };
-          participants.push(obj2);
-          const participantArgs: TippingParticipants = participants;
-
-          await tippingActor
-            .sendTip(transfer.height, participantArgs, amountToSend, ticker)
-            .then(() => {
-              this.setState({ tipProgress: 100 });
-              tokenTransctionService
-                .sendCryptoTip(performer?._id, {
-                  performerId: performer?._id,
-                  price: Number(amountToSend),
-                  tokenSymbol: ticker,
-                })
-                .then(() => {});
-              setTimeout(
-                () =>
-                  this.setState({
-                    requesting: false,
-                    submiting: false,
-                    
-                  }),
-                1000
-              );
-              message.success(`Payment successful! ${performer?.name} has recieved your tip`);
-              this.setState({ requesting: false, submiting: false });
-            })
-            .catch(error => {
-              this.setState({
-                requesting: false,
-                submiting: false,
-                openTipProgressModal: false,
-                tipProgress: 0,
-              });
-              message.error(error.message || "error occured, please try again later");
-              return error;
-            });
-        } else {
-          message.error("Transaction failed. Please try again later.");
         }
       }
+    }catch(error){
+      console.log(error)
+      message.error("Transaction failed. Please try again later.");
+      this.setState({ requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0});
     }
   }
 
@@ -1132,25 +1016,30 @@ class PerformerProfile extends PureComponent<IProps> {
       .catch(() => {});
   }
 
+  closeSubModal(val){
+    this.setState({openSubscriptionModal: val})
+  }
+
   render() {
     const { error, ui, user, feedState, videoState, productState, settings, ticketState } = this.props;
-    const { performer, countries } = this.state;
-    if (performer === null) {
+    const { performer, countries, dataLoaded } = this.state;
+    if (dataLoaded === false) {
       return (
         <div style={{ margin: 30, textAlign: "center" }}>
           <Spin />
         </div>
       );
     }
-    if (error) {
-      return <Error statusCode={error?.statusCode || 404} title={error?.message || "Sorry, we can't find this page"} />;
+    if (error || performer === null || performer.length === 0) {
+      return <Error statusCode={error?.statusCode || 404} title={error?.message || "Artist not found"} />;
     }
+
+
     const { items: feeds = [], total: totalFeed = 0, requesting: loadingFeed } = feedState;
     const { items: videos = [], total: totalVideos = 0, requesting: loadingVideo } = videoState;
     const { items: products = [], total: totalProducts = 0, requesting: loadingPrd } = productState;
     const { items: tickets = [], total: totalTickets = 0, requesting: loadingTick } = ticketState;
     const {
-      showWelcomVideo,
       openTipModal,
       openTipSuccessModal,
       submiting,
@@ -1165,22 +1054,26 @@ class PerformerProfile extends PureComponent<IProps> {
       tipProgress,
       nfts,
       loadNft,
+      _videos,
+      music,
+      confetti
     } = this.state;
 
     return (
       <Layout
         className={styles.componentsPerformerVerificationFormModule}
-        style={{
-          background: `${
-            isDesktop
-              ? !user.isPerformer
-                ? `linear-gradient(${colorHex} 27rem, #000000 40rem)`
-                : `linear-gradient(${colorHex} 27rem, #000000 40rem)`
-              : !user.isPerformer
-                ? "#000000"
-                : "#000000"
-          }`,
-        }}
+        style={{marginTop: -55}}
+        // style={{
+        //   background: `${
+        //     isDesktop
+        //       ? !user.isPerformer
+        //         ? `linear-gradient(${colorHex} 27rem, #000000 40rem)`
+        //         : `linear-gradient(${colorHex} 27rem, #000000 40rem)`
+        //       : !user.isPerformer
+        //         ? "#000000"
+        //         : "#000000"
+        //   }`,
+        // }}
       >
         <Head>
           <title>{`${ui?.siteName} | ${performer?.name || performer?.username}`}</title>
@@ -1197,7 +1090,7 @@ class PerformerProfile extends PureComponent<IProps> {
         </Head>
         <div className="top-profile">
           <ParallaxBanner
-            layers={[{ image: `${performer?.cover || "/static/banner-image.jpg"}`, scale: [1.2, 1], speed: -14 }]}
+            layers={[{ image: `${performer?.cover || "/static/banner-image.jpg"}`, scale: [1.1, 1], speed: -14 }]}
             className="parallax-banner-profile"
           >
             <div className="bg-2nd">
@@ -1207,7 +1100,7 @@ class PerformerProfile extends PureComponent<IProps> {
                     <LeftOutlined />
                   </div> */}
                 </a>
-                <div className="top-right-wrapper">
+                {/* <div className="top-right-wrapper">
                   <div className="profile-genres-row">
                     {performer?.genreOne && performer?.genreOne !== "Unset" && (
                       <span className="genre-profile-val">{performer?.genreOne}</span>
@@ -1241,10 +1134,10 @@ class PerformerProfile extends PureComponent<IProps> {
                     </div>
                   )}
 
-                 
 
-                </div>
-                
+
+                </div> */}
+
               </div>
             </div>
           </ParallaxBanner>
@@ -1257,24 +1150,6 @@ class PerformerProfile extends PureComponent<IProps> {
                   <div className="btn-grp" key="btn-grp">
                     {!user.isPerformer && (
                       <div className="msg-tip-wrapper" style={{ display: "flex" }}>
-                        <Tooltip title="Send Message">
-                          <button
-                            type="button"
-                            className="msg-btn"
-                            disabled={!user._id || user.isPerformer}
-                            onClick={() =>
-                              Router.push({
-                                pathname: "/messages",
-                                query: {
-                                  toSource: "performer",
-                                  toId: performer?._id || "",
-                                },
-                              })
-                            }
-                          >
-                            <MessageIcon />
-                          </button>
-                        </Tooltip>
 
                         <Tooltip title="Send Tip">
                           <button
@@ -1285,29 +1160,29 @@ class PerformerProfile extends PureComponent<IProps> {
                           >
                             <DollarOutlined />
                           </button>
+
+
+
+
                         </Tooltip>
                       </div>
                     )}
                     {!user.isPerformer && (
                       <div style={{ display: "flex" }}>
                         <Button
-                        
-                          className={`${performer?.isSubscribed ? "subbed-btn" : "sub-btn"}`}
-                          disabled={!user._id || user.isPerformer}
-                          onClick={(e) => {
-                            this.setState({ openSubscriptionModal: true, subscriptionType: "monthly" })
-                            
-                          }}
-                        >
-                          {performer?.isSubscribed ? "Subscribed" : "Subscribe"}
-                        </Button>
-                        <Button
-                          disabled={!user._id || user.isPerformer}
+                          disabled={!user._id}
                           className={`${isFollowed ? "profile-following-btn" : "profile-follow-btn"}`}
                           onClick={(e) => this.handleFollow()}
                         >
                           <p>{isFollowed ? "Following" : "Follow"}</p>
                         </Button>
+                          <Button
+                            className={`${performer?.isSubscribed ? "subbed-btn" : "sub-btn"}`}
+                            disabled={!user._id}
+                            onClick={(e) => { this.setState({ openSubscriptionModal: true, subscriptionType: "monthly" }) }}
+                          >
+                            {performer?.isSubscribed ? "Subscribed" : "Subscribe"}
+                          </Button>
                         {/* <button className="bubbly-button" onClick={(e)=> this.animateButton(e)}>Click me!</button> */}
                       </div>
                     )}
@@ -1315,16 +1190,12 @@ class PerformerProfile extends PureComponent<IProps> {
                 ]}
               </Parallax>
               <div className={user.isPerformer ? "m-user-name-artist" : "m-user-name"}>
+
                 <div className="profile-heading-col">
                   <Parallax speed={0} easing="easeInQuad">
-                  
+
                     <h4>
                       {performer?.name || "N/A"}
-                      {/* {performer?.verifiedAccount && <BadgeCheckIcon className="profile-v-badge" />}
-                      &nbsp;
-                      {performer?.wallet_icp && (
-                        <Img preview={false} src="/static/infinity-symbol.png" className="profile-icp-badge" />
-                      )} */}
                       &nbsp;
                       {performer?.live > 0 && user?._id !== performer?._id && (
                         <a aria-hidden onClick={this.handleJoinStream} className="live-status">
@@ -1332,199 +1203,102 @@ class PerformerProfile extends PureComponent<IProps> {
                         </a>
                       )}
                     </h4>
+                    {performer.promoMsg && (
+                      <div className="performer-profile-desc">
+                            <span>{performer.promoMsg}</span>
+                      </div>
+                    )}
+
                     <div className="follow-sub-stats-container">
                     <div className="follow-sub-stats-wrapper">
-                      <div className="sub-stats" key="sub-stats">
+                      {/* <div className="sub-stats" key="sub-stats">
                         {shortenLargeNumber(performer?.stats?.followers || 0)}{" "}
                         <span>
                           {performer?.stats?.followers > 1 || performer?.stats?.followers === 0
                             ? "followers"
                             : "follower"}
                         </span>
-                      </div>
-                      
+                      </div> */}
+
+
+
                       {user._id == performer._id && (
                         <div className="follow-stats" key="follow-stats-edit">
                           <Link href="/artist/account" className="edit-profile-link">
-                            <span>Edit profile</span>
+                            <span className="">Edit profile</span>
                           </Link>
                         </div>
                       )}
 
-                    
-                    <div className="profile-social-links-wrapper" style={{marginLeft: '12px'}}>
-                      <div className="profile-social-links">
-                        {performer.spotify && performer.spotify.length > 10 && (
-                          <a target="_blank" href={performer.spotify}>
-                           <FontAwesomeIcon icon={faSpotify} />
-                          </a>
-                        )}
-                        {performer.appleMusic && performer.appleMusic.length > 10 && (
-                          <a target="_blank" href={performer.appleMusic} style={{marginTop: '3px', fontSize: '17px'}}>
-                            <SiApplemusic />
-                          </a>
-                        )}
-                        {performer.soundcloud && performer.soundcloud.length > 10 && (
-                          <a target="_blank" href={performer.soundcloud}>
-                            <FontAwesomeIcon icon={faSoundcloud} />
-                          </a>
-                        )}
-                        {performer.instagram && performer.instagram.length > 10 && (
-                          <a target="_blank" href={performer.instagram}>
-                            <FontAwesomeIcon icon={faInstagram} />
-                          </a>
-                        )}
-                        {performer.twitter && performer.twitter.length > 10 && (
-                          <a target="_blank" href={performer.twitter}>
-                            <FontAwesomeIcon icon={faXTwitter} />
-                          </a>
-                        )}
-                      </div>
+
+
                     </div>
-                    </div>
-                    
+
                     </div>
                   </Parallax>
                 </div>
-                {/* <div className="profile-heading-col">
-                  <Parallax speed={0} easing="easeInQuad">
-                    <div className="follow-sub-stats-wrapper">
-                      <button
-                        onClick={() => this.setState({ isOpenFollowersModal: true })}
-                        disabled={performer.stats.followers <= 0}
-                        className="sub-stats"
-                        key="sub-stats"
-                      >
-                        {shortenLargeNumber(performer?.stats?.followers || 0)}{" "}
-                        <span>
-                          {performer?.stats?.followers > 1 || performer?.stats?.followers === 0
-                            ? "followers"
-                            : "follower"}
-                        </span>
-                      </button>
-                      <FollowerSubscriberModal
-                        userId={this.state.performer._id}
-                        which="follower"
-                        isOpen={this.state.isOpenFollowersModal}
-                        close={() => {
-                          this.setState({ isOpenFollowersModal: false });
-                        }}
-                      />
-                      <span className="sub-stats">·</span>
-                      <button
-                        onClick={() => this.setState({ isOpenSubscribersModal: true })}
-                        disabled={performer.stats.subscribers <= 0}
-                        className="sub-stats"
-                        key="follow-stats"
-                      >
-                        {shortenLargeNumber(performer?.stats?.subscribers || 0)}{" "}
-                        <span>
-                          {performer?.stats?.subscribers > 1 || performer?.stats?.subscribers === 0
-                            ? "Subscribers"
-                            : "Subscriber"}
-                        </span>
-                      </button>
-                      <FollowerSubscriberModal
-                        userId={this.state.performer._id}
-                        which="subscriber"
-                        isOpen={this.state.isOpenSubscribersModal}
-                        close={() => {
-                          this.setState({ isOpenSubscribersModal: false });
-                        }}
-                      />
-                      {user._id == performer._id && (
-                        <div className="follow-stats" key="follow-stats-edit">
-                          <Link href="/artist/account" className="edit-profile-link">
-                            <span>Edit profile</span>
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  </Parallax>
-                </div> */}
+
               </div>
             </div>
           </div>
         </div>
-        {user.isPerformer && <div style={{ marginTop: `${isDesktop ? "-26px" : "-4px"}` }} />}
+        {user.isPerformer && <div style={{ marginTop: `${isDesktop ? "15px" : "-4px"}` }} />}
 
         <div className="main-container" style={{ width: "95% !important", maxWidth: "unset" }}>
           <div className="artist-content">
-            <div className="line-divider"></div>
+            <div className="line-divider"/>
             <Tabs
-              defaultActiveKey="post"
+              defaultActiveKey="music"
+              className="profile-tabs"
               size="large"
               onTabClick={(t: string) => {
                 this.setState({ tab: t, filter: initialFilter, isGrid: false }, () => this.loadItems());
               }}
             >
 
-              <TabPane tab="Posts" key="post">
-                {/* <div className="profile-heading-tab">
-                  <SearchPostBar
-                    searching={loadingFeed}
-                    tab={tab}
-                    handleSearch={this.handleFilterSearch.bind(this)}
-                    handleViewGrid={(val) => this.setState({ isGrid: val })}
-                  />
-                </div> */}
-                <div className={isGrid ? '' : 'custom'}>
-                  <ScrollListFeed
-                    items={feeds}
-                    loading={loadingFeed}
-                    canLoadmore={feeds && feeds.length < totalFeed}
-                    loadMore={this.loadMoreItem.bind(this)}
-                    isGrid={isGrid}
-                    onDelete={this.handleDeleteFeed.bind(this)}
-                  />
-                </div>
-              </TabPane>
-              
-              <TabPane tab="Music" key="video" className="posts-tab-wrapper">
-                <div className="main-container">
-                  <ScrollListVideo
-                    items={videos}
+
+
+              <TabPane tab="Music" key="music" className="posts-tab-wrapper">
+                {/* <div className="performer-container"> */}
+                  <ScrollListMusic
+                    isProfileGrid={true}
+
+                    items={videos.filter((video) => video.trackType === "audio")}
                     loading={loadingVideo}
                     canLoadmore={videos && videos.length < totalVideos}
                     loadMore={this.loadMoreItem.bind(this)}
                   />
-                </div>
+
+
+
+                {/* </div> */}
               </TabPane>
-              <TabPane tab="Merch" key="store" className="posts-tab-wrapper">
-                {/* <div className="heading-tab">
-                  <h4>
-                    {totalProducts > 0 && totalProducts} {totalProducts > 1 ? "PRODUCTS" : "PRODUCT"}
-                  </h4>
-                  <SearchPostBar searching={loadingPrd} tab={tab} handleSearch={this.handleFilterSearch.bind(this)} />
-                </div> */}
-                <ScrollListProduct
-                  items={products}
-                  loading={loadingPrd}
-                  canLoadmore={products && products.length < totalProducts}
-                  loadMore={this.loadMoreItem.bind(this)}
-                />
+
+              <TabPane tab="Video" key="video" className="posts-tab-wrapper">
+                {/* <div className="performer-container"> */}
+                  <ScrollListVideo
+
+                    isProfileGrid={true}
+                    isDesktop={isDesktop}
+                    items={videos.filter((video) => video.trackType === "video")}
+                    loading={loadingVideo}
+                    canLoadmore={videos && videos.length < totalVideos}
+                    loadMore={this.loadMoreItem.bind(this)}
+                  />
+
+
+
+                {/* </div> */}
               </TabPane>
-              <TabPane tab="Events" key="events" className="posts-tab-wrapper">
-                {/* <div className="heading-tab">
-                  <h4>
-                    {totalTickets > 0 && totalTickets} {totalTickets > 1 ? "EVENTS" : "EVENT"}
-                  </h4>
-                  <SearchPostBar searching={loadingPrd} tab={tab} handleSearch={this.handleFilterSearch.bind(this)} />
-                </div> */}
-                <ScrollListTicket
-                  items={tickets}
-                  loading={loadingTick}
-                  canLoadmore={tickets && tickets.length < totalTickets}
-                  loadMore={this.loadMoreItem.bind(this)}
-                />
-              </TabPane>
+
+
 
               <TabPane tab="About" key="about" className="posts-tab-wrapper">
                 <div className="about-container">
                   <div className="about-wrapper">
-                    
+
                     <div className="about-metrics">
-                      
+
                       <div className={user.isPerformer ? 'mar-0 pro-desc' : 'pro-desc'}>
                       <div className="about-img">
                         <img src={performer?.avatar}/>
@@ -1541,53 +1315,6 @@ class PerformerProfile extends PureComponent<IProps> {
             </Tabs>
           </div>
         </div>
-        {performer && performer?.welcomeVideoPath && performer?.activateWelcomeVideo && (
-          <Modal
-            key="welcome-video"
-            className="welcome-video"
-            destroyOnClose
-            closable={false}
-            maskClosable={false}
-            width={767}
-            open={showWelcomVideo}
-            title={null}
-            centered
-            onCancel={() => this.setState({ showWelcomVideo: false })}
-            footer={[
-              <div style={{ display: "flex", justifyContent: "center", flexDirection: "row" }} key="submit-content">
-                <Button
-                  key="close"
-                  className="secondary submit-content-green-standard"
-                  onClick={() => this.setState({ showWelcomVideo: false })}
-                  style={{ marginBottom: "10px !important" }}
-                >
-                  Close
-                </Button>
-                <Button
-                  key="not-show"
-                  className="primary submit-content-standard"
-                  onClick={this.handleViewWelcomeVideo.bind(this)}
-                >
-                  Don&apos;t show this again
-                </Button>
-              </div>,
-            ]}
-          >
-            <VideoPlayer
-              {...{
-                key: `${performer._id}`,
-                controls: true,
-                playsinline: true,
-                sources: [
-                  {
-                    src: performer?.welcomeVideoPath,
-                    type: "video/mp4",
-                  },
-                ],
-              }}
-            />
-          </Modal>
-        )}
 
         <Modal
           key="tip_performer"
@@ -1600,6 +1327,7 @@ class PerformerProfile extends PureComponent<IProps> {
           title={null}
           onCancel={() => this.setState({ openTipModal: false })}
         >
+
           <TipPerformerForm
             user={user}
             performer={performer}
@@ -1609,9 +1337,9 @@ class PerformerProfile extends PureComponent<IProps> {
             isProfile
           />
         </Modal>
-        <Modal
+        {/* <Modal
           key="tip_progress"
-          className="tip-progress"
+          className="progress-modal"
           open={openTipProgressModal}
           centered
           onOk={() => this.setState({ openTipProgressModal: false })}
@@ -1619,33 +1347,17 @@ class PerformerProfile extends PureComponent<IProps> {
           width={450}
           title={null}
           onCancel={() => this.setState({ openTipProgressModal: false })}
-        >
-          <PaymentProgress progress={tipProgress} performer={performer}/>
-        </Modal>
-        <Modal
-          key="tip_success"
-          className="subscription-modal"
-          open={openTipSuccessModal}
-          centered
-          onOk={() => this.setState({ openTipSuccessModal: false })}
-          footer={null}
-          width={420}
-          title={null}
-          onCancel={() => this.setState({ openTipSuccessModal: false })}
-        >
-          <TipPerformerForm
-            user={user}
-            performer={performer}
-            submiting={submiting}
-            participants={null}
-            onFinish={this.sendTip.bind(this)}
-            isProfile
-          />
-        </Modal>
+        > */}
+        {openTipProgressModal && (
+            <PaymentProgress stage={tipProgress}  confetti={confetti}/>
+          )}
+
+        {/* </Modal> */}
+
         <Modal
           key="subscribe_performer"
           className="subscription-modal"
-          width={420}
+          width={600}
           centered
           title={null}
           open={openSubscriptionModal}
@@ -1654,10 +1366,11 @@ class PerformerProfile extends PureComponent<IProps> {
           destroyOnClose
         >
           <ConfirmSubscriptionPerformerForm
-            type={subscriptionType || "monthly"}
             performer={performer}
-            submiting={submiting}
+            settings={settings}
+            submitting={submiting}
             onFinish={this.subscribe.bind(this)}
+            onClose={this.closeSubModal.bind(this)}
             user={user}
           />
         </Modal>

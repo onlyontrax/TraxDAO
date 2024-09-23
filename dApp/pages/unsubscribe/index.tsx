@@ -15,7 +15,6 @@ import { connect } from 'react-redux';
 import { ISettings, IUIConfig } from 'src/interfaces';
 import { Auth } from 'src/crypto/nfid/Auth';
 import styles from '../auth/index.module.scss';
-import { SparklesIcon } from '@heroicons/react/solid';
 
 interface IProps {
   store: any;
@@ -155,7 +154,7 @@ class Unsubscribe extends PureComponent<IProps> {
               </Col>
               <Col xs={0} sm={24} md={12} lg={12} className="" style={{padding: 0}}>
               <div className='temp-div'>
-                  <div className="temp-bg" style={{ backgroundImage: "/static/artistsnormal.png" }} />
+                  <div className="temp-bg" style={{ backgroundImage: "/static/artistsnormal.jpg" }} />
                 </div>
               </Col>
             </Row>

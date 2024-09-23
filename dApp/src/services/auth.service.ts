@@ -87,6 +87,10 @@ export class AuthService extends APIRequest {
   userSwitchToPerformer(userId: string) {
     return this.post(`/auth/users/${userId}/switch-to-performer`);
   }
+
+  public async getSmsCode(data: ILogin) {
+    return this.post('/auth/getSmsCode', data);
+  }
 }
 
 export const authService = new AuthService();

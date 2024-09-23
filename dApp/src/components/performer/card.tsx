@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { connect } from 'react-redux';
 import Router from 'next/router';
 import { followService } from 'src/services';
-import { BadgeCheckIcon } from '@heroicons/react/solid';
+import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import styles from './performer.module.scss';
 
 interface IProps {
@@ -94,15 +94,15 @@ class PerformerCard extends PureComponent<IProps> {
                 <Avatar alt="avatar" src={performer?.avatar || '/static/no-avatar.png'} />
               </div>
               <Link
-                href={`/artist/profile?id=${performer?.username || performer?._id}`}
-                as={`/artist/profile?id=${performer?.username || performer?._id}`}
+                href={`/${performer?.username || performer?._id}`}
+                as={`/${performer?.username || performer?._id}`}
               >
                 <div className="artist-name">
                   <div className="name">
                     {performer?.name || 'N/A'}
                     {' '}
                     {' '}
-                    {performer?.verifiedAccount && <BadgeCheckIcon className="feed-v-badge" />}
+                    {performer?.verifiedAccount && <CheckBadgeIcon className="feed-v-badge" />}
                 &nbsp;
                     {performer?.wallet_icp && (
 

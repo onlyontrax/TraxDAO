@@ -258,8 +258,8 @@ class PerformerLivePage extends PureComponent<IProps, IStates> {
                       key="start-btn"
                       className="primary"
                       onClick={() => Router.push(
-                        { pathname: `/artist/profile?id=${user?.username || user?._id}` },
-                        `/artist/profile?id=${user?.username || user?._id}`
+                        { pathname: `/${user?.username || user?._id}` },
+                        `/${user?.username || user?._id}`
                       )}
                       disabled={loading}
                       block

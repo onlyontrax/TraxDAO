@@ -12,9 +12,9 @@ import {
   authService, ticketService, reactionService, tokenTransctionService, performerService, utilsService
 } from '@services/index';
 import {
-  Avatar, Button, Image, Layout, Modal, Spin, Tooltip, message, Progress
+  Avatar, Button, Image, Layout, Modal, Spin, Tooltip, message, Progress, Alert
 } from 'antd';
-import { BadgeCheckIcon } from '@heroicons/react/solid';
+import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import Error from 'next/error';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -41,6 +41,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronRight, faChevronDown, faCheck, faLocationDot, faTicket, faDoorClosed, faDoorOpen } from '@fortawesome/free-solid-svg-icons'
 import Places from './places'
 import PaymentProgress from '../../src/components/user/payment-progress';
+import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider } from '../../src/crypto/mobilePlugWallet';
 
 interface IProps {
   user: IUser;
@@ -71,6 +72,7 @@ interface IStates {
   requesting: boolean;
   isFollowed: boolean;
   hasEventDatePassed: boolean;
+  confetti: boolean;
 }
 
 class TicketViewPage extends PureComponent<IProps, IStates> {
@@ -119,7 +121,8 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
       caption: false,
       requesting: false,
       isFollowed: false,
-      hasEventDatePassed: false
+      hasEventDatePassed: false,
+      confetti: false
     };
   }
 
@@ -257,12 +260,12 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
     const { ticket } = this.state;
     if (ticket === null) return;
     if (user?.isPerformer) return;
-    
+
     if (payload.currency === 'USD' && user.balance < payload.price) {
       message.error('You have an insufficient token balance. Please top up.');
       return;
     }
-    
+
     try {
       this.setState({ submiting: true });
 
@@ -273,16 +276,16 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
         }).catch((error) => {
           console.log(error)
         })
-        
+
         // handleUpdateBalance({ token: -ticket.price - fee });
-        Router.push('/user/my-payments');
+        Router.push('/user/wallet');
       }else if(payload.currency !== "USD"){
         if(payload.paymentOption === 'plug'){
           await this.purchaseTicketPlug(payload);
         }else{
           await this.purchaseTicketCrypto(payload.currencyOption, payload.amountToSendICP, payload)
         }
-        
+
       }else{
         message.error('Invalid ticket');
       }
@@ -328,199 +331,196 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
       progress: 0
     });
 
-    if(typeof window !== 'undefined' && 'ic' in window){
-      // @ts-ignore
-      const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
-        host: settings.icHost
-      }) : false;
+    const plugWalletProvider = await getPlugWalletProvider();
+    const agent = await getPlugWalletAgent();
+    const connected = await getPlugWalletIsConnected();
 
-      !connected && message.error("Failed to connected to canister. Please try again later or contact us. ")
+    !connected && message.error("Failed to connected to canister. Please try again later or contact us. ")
 
-      if(connected){
-        this.setState({ progress: 25 });
-        //@ts-ignore
-        const requestBalanceResponse = await window.ic?.plug?.requestBalance();
-        let icp_balance;
-        let ckBTC_balance;
-        let TRAX_balance;
+    if(connected){
+      this.setState({ progress: 25 });
+      //@ts-ignore
+      const requestBalanceResponse = await plugWalletProvider.requestBalance();
+      let icp_balance;
+      let ckBTC_balance;
+      let TRAX_balance;
 
-        for(let i = 0; i < requestBalanceResponse.length; i++){
-          if(requestBalanceResponse[i]?.symbol === 'ICP'){
-            icp_balance = requestBalanceResponse[i]?.amount;
-          }
-          if(requestBalanceResponse[i]?.symbol === 'ckBTC'){
-            ckBTC_balance = requestBalanceResponse[i]?.amount;
-          }
-          if(requestBalanceResponse[i]?.symbol === 'TRAX'){
-            TRAX_balance = requestBalanceResponse[i]?.amount;
-          }
-        };
-
-        let amountToSendArtist = payload.price * 0.9;
-        let amountToSendTRAX = payload.price * 0.1;
-        let decimals = 100000000;
-
-        if(payload.currency === 'ckBTC'){
-          if((ckBTC_balance * decimals) >= (payload.price * decimals) + 200000){
-            this.setState({ progress: 50 });
-
-            const params = {
-              to: payload.wallet_address,
-              strAmount: payload.price.toString(),
-              token: ckBTCLedgerCanID
-            };
-
-            //@ts-ignore
-            transfer = await window.ic?.plug?.requestTransfer(params).then(async ()=>{
-              
-            }).catch((error) =>{
-              message.error(`Transaction failed. ${error}`);
-              console.log(error)
-              this.setState({progress: 0})
-            })
-
-
-            // //@ts-ignore
-            // transferToTrax = await window.ic.plug.requestTransferToken(traxParams).then( async ()=>{
-            //   //@ts-ignore
-            //   transferToArtist = await window.ic.plug.requestTransferToken(artistParams).catch((error) => {
-            //     message.error(`Transaction failed. ${error}`);
-            //     this.setState({progress: 0})
-            //   })
-            // }).catch((error) =>{
-            //   message.error(`Transaction failed. ${error}`);
-            //   this.setState({progress: 0})
-            // });
-            
-          } else {
-            this.setState({ progress: 0 })
-            message.error('Insufficient balance, please top up your wallet and try again.');
-          }
+      for(let i = 0; i < requestBalanceResponse.length; i++){
+        if(requestBalanceResponse[i]?.symbol === 'ICP'){
+          icp_balance = requestBalanceResponse[i]?.amount;
         }
-
-
-        if(payload.currency === 'TRAX'){
-          if((TRAX_balance * decimals) >= (payload.price * decimals) + 200000){
-            this.setState({ progress: 50 });
-
-            const params = {
-              to: payload.wallet_address,
-              strAmount: payload.price.toString(),
-              token: process.env.NEXT_PUBLIC_TRAX_CANISTER_ID as string
-            };
-
-            // const traxParams = {
-            //   to: payload.wallet_address,
-            //   strAmount: amountToSendTRAX.toString(),
-            //   token: process.env.NEXT_PUBLIC_TRAX_CANISTER_ID as string
-            // };
-
-            // const artistParams = {
-            //   to: payload.wallet_address,
-            //   strAmount: amountToSendArtist.toString(),
-            //   token: process.env.NEXT_PUBLIC_TRAX_CANISTER_ID as string
-            // };
-
-
-            //@ts-ignore
-            transfer = await window.ic?.plug?.requestTransfer(params).then(async ()=>{
-              
-            }).catch((error) =>{
-              message.error(`Transaction failed. ${error}`);
-              console.log(error)
-              this.setState({progress: 0})
-            })
-
-            // //@ts-ignore
-            // transferToTrax = await window.ic.plug.requestTransferToken(traxParams).then( async ()=>{
-            //   //@ts-ignore
-            //   transferToArtist = await window.ic.plug.requestTransferToken(artistParams).catch((error) =>{
-            //     message.error(`Transaction failed. ${error}`);
-            //     this.setState({progress: 0})
-            //   })
-            // }).catch((error) =>{
-            //   message.error(`Transaction failed. ${error}`);
-            //   this.setState({progress: 0})
-            // });
-            
-          } else {
-            this.setState({ progress: 0 })
-            message.error('Insufficient balance, please top up your wallet and try again.');
-          }
+        if(requestBalanceResponse[i]?.symbol === 'ckBTC'){
+          ckBTC_balance = requestBalanceResponse[i]?.amount;
         }
-        
-        
-        if (payload.currency === 'ICP') {
-          if((icp_balance * decimals) >= (payload.price * decimals) + 200000){
-            this.setState({ progress: 50 });
+        if(requestBalanceResponse[i]?.symbol === 'TRAX'){
+          TRAX_balance = requestBalanceResponse[i]?.amount;
+        }
+      };
 
-            const param = {
-              to: payload.wallet_address,
-              amount: Math.trunc(payload.price * decimals),
-            }
+      let amountToSendArtist = payload.price * 0.9;
+      let amountToSendTRAX = payload.price * 0.1;
+      let decimals = 100000000;
 
-            // const traxParam = {
-            //   to: payload.wallet_address,
-            //   amount: Math.trunc(amountToSendTRAX * 100000000),
-            // }
+      if(payload.currency === 'ckBTC'){
+        if((ckBTC_balance * decimals) >= (payload.price * decimals) + 200000){
+          this.setState({ progress: 50 });
 
-            // const artistParam = {
-            //   to: payload.wallet_address,
-            //   amount: Math.trunc(amountToSendArtist * 100000000),
-            // }
+          const params = {
+            to: payload.wallet_address,
+            strAmount: payload.price.toString(),
+            token: ckBTCLedgerCanID
+          };
 
-            //@ts-ignore
-            transfer = await window.ic?.plug?.requestTransfer(param).then(async ()=>{
-              
-            }).catch((error) =>{
-              message.error(`Transaction failed. ${error}`);
-              console.log(error)
-              this.setState({progress: 0})
-            })
+          //@ts-ignore
+          transfer = await plugWalletProvider.requestTransfer(params).then(async ()=>{
 
-            // //@ts-ignore
-            // transferToTrax = await window.ic?.plug?.requestTransfer(traxParam).then(async ()=>{
-            //   //@ts-ignore
-            //   transferToArtist = await window.ic?.plug?.requestTransfer(artistParam).catch( async (error) =>{
-            //     message.error(`Transaction failed. ${error}`);
-            //     console.log(error)
-            //     this.setState({progress: 0})
-            //   })
-            // }).catch((error) =>{
-            //   message.error(`Transaction failed. ${error}`);
-            //   console.log(error)
-            //   this.setState({progress: 0})
-            // })
-            
-          } else {
+          }).catch((error) =>{
+            message.error(`Transaction failed. ${error}`);
+            console.log(error)
             this.setState({progress: 0})
-            message.error('Insufficient balance, please top up your wallet and try again.');
+          })
+
+
+          // //@ts-ignore
+          // transferToTrax = await window.ic.plug.requestTransferToken(traxParams).then( async ()=>{
+          //   //@ts-ignore
+          //   transferToArtist = await window.ic.plug.requestTransferToken(artistParams).catch((error) => {
+          //     message.error(`Transaction failed. ${error}`);
+          //     this.setState({progress: 0})
+          //   })
+          // }).catch((error) =>{
+          //   message.error(`Transaction failed. ${error}`);
+          //   this.setState({progress: 0})
+          // });
+
+        } else {
+          this.setState({ progress: 0 })
+          message.error('Insufficient balance, please top up your wallet and try again.');
+        }
+      }
+
+
+      if(payload.currency === 'TRAX'){
+        if((TRAX_balance * decimals) >= (payload.price * decimals) + 200000){
+          this.setState({ progress: 50 });
+
+          const params = {
+            to: payload.wallet_address,
+            strAmount: payload.price.toString(),
+            token: settings.icTraxToken
+          };
+
+          // const traxParams = {
+          //   to: payload.wallet_address,
+          //   strAmount: amountToSendTRAX.toString(),
+          //   token: process.env.NEXT_PUBLIC_TRAX_CANISTER_ID as string
+          // };
+
+          // const artistParams = {
+          //   to: payload.wallet_address,
+          //   strAmount: amountToSendArtist.toString(),
+          //   token: process.env.NEXT_PUBLIC_TRAX_CANISTER_ID as string
+          // };
+
+
+          //@ts-ignore
+          transfer = await plugWalletProvider.requestTransfer(params).then(async ()=>{
+
+          }).catch((error) =>{
+            message.error(`Transaction failed. ${error}`);
+            console.log(error)
+            this.setState({progress: 0})
+          })
+
+          // //@ts-ignore
+          // transferToTrax = await window.ic.plug.requestTransferToken(traxParams).then( async ()=>{
+          //   //@ts-ignore
+          //   transferToArtist = await window.ic.plug.requestTransferToken(artistParams).catch((error) =>{
+          //     message.error(`Transaction failed. ${error}`);
+          //     this.setState({progress: 0})
+          //   })
+          // }).catch((error) =>{
+          //   message.error(`Transaction failed. ${error}`);
+          //   this.setState({progress: 0})
+          // });
+
+        } else {
+          this.setState({ progress: 0 })
+          message.error('Insufficient balance, please top up your wallet and try again.');
+        }
+      }
+
+
+      if (payload.currency === 'ICP') {
+        if((icp_balance * decimals) >= (payload.price * decimals) + 200000){
+          this.setState({ progress: 50 });
+
+          const param = {
+            to: payload.wallet_address,
+            amount: Math.trunc(payload.price * decimals),
           }
-        }
 
-        if(transfer.height){
-          this.setState({ progress: 75 });
-          
-          await tokenTransctionService.purchaseTicketCrypto(ticket?.performer?._id, 
-            { 
-              performerId: ticket?.performer?._id, 
-              price: payload.price, 
-              tokenSymbol: payload.currency, 
-              id: ticket._id, 
-              tier: payload.tier, 
-              cryptoTx: transfer.height,
-              quantity: payload.quantity
-            }).then(() => {
-            this.setState({ progress: 100 });
-            message.success(`Payment successful! You are going to ${ticket.name}`);
-          });
+          // const traxParam = {
+          //   to: payload.wallet_address,
+          //   amount: Math.trunc(amountToSendTRAX * 100000000),
+          // }
 
-        }else{
-          setTimeout(() => this.setState({
-            progress: 0
-          }), 1000);
-          message.error('Transaction failed. Please try again later.');
+          // const artistParam = {
+          //   to: payload.wallet_address,
+          //   amount: Math.trunc(amountToSendArtist * 100000000),
+          // }
+
+          //@ts-ignore
+          transfer = await plugWalletProvider.requestTransfer(param).then(async ()=>{
+
+          }).catch((error) =>{
+            message.error(`Transaction failed. ${error}`);
+            console.log(error)
+            this.setState({progress: 0})
+          })
+
+          // //@ts-ignore
+          // transferToTrax = await plugWalletProvider.requestTransfer(traxParam).then(async ()=>{
+          //   //@ts-ignore
+          //   transferToArtist = await plugWalletProvider.requestTransfer(artistParam).catch( async (error) =>{
+          //     message.error(`Transaction failed. ${error}`);
+          //     console.log(error)
+          //     this.setState({progress: 0})
+          //   })
+          // }).catch((error) =>{
+          //   message.error(`Transaction failed. ${error}`);
+          //   console.log(error)
+          //   this.setState({progress: 0})
+          // })
+
+        } else {
+          this.setState({progress: 0})
+          message.error('Insufficient balance, please top up your wallet and try again.');
         }
+      }
+
+      if(transfer.height){
+        this.setState({ progress: 75 });
+
+        await tokenTransctionService.purchaseTicketCrypto(ticket?.performer?._id,
+          {
+            performerId: ticket?.performer?._id,
+            price: payload.price,
+            tokenSymbol: payload.currency,
+            id: ticket._id,
+            tier: payload.tier,
+            cryptoTx: transfer.height,
+            quantity: payload.quantity
+          }).then(() => {
+          this.setState({ progress: 100 });
+          message.success(`Payment successful! You are going to ${ticket.name}`);
+        });
+
+      }else{
+        setTimeout(() => this.setState({
+          progress: 0
+        }), 1000);
+        message.error('Transaction failed. Please try again later.');
       }
     }
   }
@@ -555,7 +555,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
 
     const recipientAccountIdBlob = this.getRecipientAccountIdentity(Principal.fromText(ticket?.performer?.wallet_icp))
     const platformAccountIdBlob = this.getPlatformAccountIdentity(Principal.fromText(settings.icTraxAccountPercentage))
-    
+
     const fanAI = AccountIdentifier.fromPrincipal({
       principal: Principal.fromText(user.wallet_icp)
     });
@@ -675,7 +675,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
             let balICRC1 = await ledgerActor.balance({
               owner: Principal.fromText(user?.wallet_icp),
               certified: false,
-            });     
+            });
             if(Number(balICRC1) < Number(amountToSend + amountToSendPlatform) + 20){
               this.setState({
                 submiting: false,
@@ -695,7 +695,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
             let balICRC1 = await ledgerActor.balance({
               owner: Principal.fromText(user?.wallet_icp),
               certified: false,
-            });     
+            });
             if(Number(balICRC1) < Number(amountToSend + amountToSendPlatform) + 200000){
               this.setState({
                 submiting: false,
@@ -722,13 +722,13 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
           // transfer remaining funds to artist
           await ledgerActor.transfer(ticker === "ICP" ? transferArgs : transferParams).then(async (res) => {
 
-            await tokenTransctionService.purchaseTicketCrypto(ticket?.performer?._id, 
-              { 
-                performerId: ticket?.performer?._id, 
-                price: payload.price, 
-                tokenSymbol: payload.currency, 
-                id: ticket._id, 
-                tier: payload.tier, 
+            await tokenTransctionService.purchaseTicketCrypto(ticket?.performer?._id,
+              {
+                performerId: ticket?.performer?._id,
+                price: payload.price,
+                tokenSymbol: payload.currency,
+                id: ticket._id,
+                tier: payload.tier,
                 cryptoTx: res.Ok,
                 quantity: payload.quantity
               }).then(() => {
@@ -876,7 +876,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
       ui, error, user
     } = this.props;
     const {
-      selectedOption, caption, isFollowed, ticket, countries, relatedTickets, isBookmarked, loading, openPurchaseModal, submiting, progress, openProgressModal, ticketsAvalable, venue, selectedTier, hasEventDatePassed
+      selectedOption, caption, confetti, isFollowed, ticket, countries, relatedTickets, isBookmarked, loading, openPurchaseModal, submiting, progress, openProgressModal, ticketsAvalable, venue, selectedTier, hasEventDatePassed
     } = this.state;
     if (ticket === null) {
       return <div style={{ margin: 30, textAlign: 'center' }}><Spin /></div>;
@@ -912,7 +912,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
             )}
 
           <div className="tick-card">
-            
+
             {ticket && !loading ? (
               <div className='ticket-img-wrapper'>
                 <div className="ticket-img-thumb">
@@ -950,13 +950,13 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
                       <div className='ticket-icon-wrapper'>
                         <FontAwesomeIcon className='pin-icon' icon={faLocationDot} />
                       </div>
-                    
+
                       <span>
                       {(ticket?.address).substring(0, ticket.address.indexOf(','))}
                       </span>
                     </span>
                   </div>
-                  
+
                   <p>
                   {!hasEventDatePassed && ticketsAvalable &&(
                     <div className='tick-stock-wrapper'>
@@ -983,13 +983,13 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
                         In stock and ready to buy
                       </span>
                     </div>
-                    
+
                   ) : null} */}
                   {/* {ticket.stock === 0 && (
                   <span style={{color: 'red'}}>Sold out!</span>
                 )} */}
                   {/* {!ticket.stock && ticket.type === 'physical' && <span className="prod-stock">Out of stock!</span>} */}
-                  
+
                 </p>
 
                   <div className='ticket-description-wrapper'>
@@ -1041,7 +1041,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
 
 
 
-                  
+
                     <div className='product-options-container'>
                         <div className='product-option-wrapper' key="dateTime">
                           <div
@@ -1060,7 +1060,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
                                 <span className='ticket-option-date'>
                                     {ticket.description}
                                 </span>
-                                
+
                             </div>
                           )}
                         </div>
@@ -1106,16 +1106,16 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
                             <Avatar className='ticket-artist-avatar' src={ticket?.performer?.avatar || '/no-avatar.png'}/>
                             <span className='ticket-profile-name'>{ticket.performer?.name}</span>
                             {/* onClick={() => this.handleFollow()} */}
-                            <Link 
+                            <Link
                               className='ticket-profile-link'
-                              href={`/artist/profile?id=${ticket?.performer?.username || ticket?.performer?._id}`}
-                              as={`/artist/profile?id=${ticket?.performer?.username || ticket?.performer?._id}`}>
+                              href={`/${ticket?.performer?.username || ticket?.performer?._id}`}
+                              as={`/${ticket?.performer?.username || ticket?.performer?._id}`}>
                               <Button className={`${isFollowed ? 'ticket-profile-following-btn' : 'ticket-profile-follow-btn'} `}>Visit profile</Button>
                             </Link>
                         </div>
-                  
+
                     </div>
-                  
+
                 </div>
               </div>
             )}
@@ -1126,6 +1126,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
             <h4 className="ttl-1">You may also like</h4>
             {!loading && relatedTickets.length > 0 && <PerformerListTicket tickets={relatedTickets} />}
             {!loading && !relatedTickets.length && <p>No ticket was found</p>}
+            {!relatedTickets.length && !loading && <div className="main-container custom"><div><Alert className="no-object-found" message={'This artist has no available music'} type="info" /></div></div>}
             {loading && (
               <div style={{ margin: 10, textAlign: 'center' }}>
                 <Spin />
@@ -1158,21 +1159,13 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
         )}
 
 
-        <Modal
-          key="ppv_progress"
-          className="tip-progress"
-          open={openProgressModal}
-          centered
-          onOk={() => this.setState({ openProgressModal: false })}
-          footer={null}
-          width={450}
-          title={null}
-          onCancel={() => this.setState({ openProgressModal: false })}
-        >
+          {openProgressModal && (
+            <PaymentProgress stage={progress}  confetti={confetti} />
+          )}
 
-          <PaymentProgress progress={progress} performer={ticket?.performer}/>
 
-        </Modal>
+
+
 
 
 
@@ -1195,7 +1188,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
                 </div>
               <div className='event-has-passed-msg'>
                 <span>You're too late :&#40;  </span>
-                 
+
                 <span> Follow this artist to be notified on any future events. Subscribe to this artist to get early access to future event sales. </span>
               </div>
             </div>

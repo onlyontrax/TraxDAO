@@ -9,73 +9,14 @@ import Link from 'next/link';
 import Head from 'next/head';
 import Image from 'next/image';
 import { PureComponent } from 'react';
-import { BadgeCheckIcon } from '@heroicons/react/solid';
+import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import { IUIConfig } from 'src/interfaces/';
 import { performerService, utilsService } from 'src/services';
+import { SHORT_GENRES, GENRES } from 'src/constants';
 
 interface IProps {
   ui: IUIConfig;
-  countries: any;
-  musicInfo: any;
 }
-
-
-const genres = [
-  { value: 'all', text: 'All' },
-  { value: 'acoustic', text: 'Acoustic' },
-  { value: 'alternative', text: 'Alternative' },
-  { value: 'anime', text: 'Anime' },
-  { value: 'ambient', text: 'Ambient' },
-  { value: 'breakbeat', text: 'Breakbeat' },
-  { value: 'classical', text: 'Classical' },
-  { value: 'drum & base', text: 'Drum and base' },
-  { value: 'drill', text: 'Drill' },
-  { value: 'dance', text: 'Dance' },
-  { value: 'dub', text: 'Dub' },
-  { value: 'easy listening', text: 'Easy Listening' },
-  { value: 'electronic', text: 'Electronic' },
-  { value: 'electronica', text: 'Electronica' },
-  { value: 'funk', text: 'Funk' },
-  { value: 'garage', text: 'Garage' },
-  { value: 'grime', text: 'Grime' },
-  { value: 'hip-hop/rap', text: 'Hip-Hop/Rap' },
-  { value: 'holiday', text: 'Holiday' },
-  { value: 'house', text: 'House' },
-  { value: 'indie pop', text: 'Indie Pop' },
-  { value: 'jazz', text: 'Jazz' },
-  { value: 'jungle', text: 'Jungle' },
-  { value: 'k-pop', text: 'K-Pop' },
-  { value: 'latin', text: 'Latin' },
-  { value: 'lo-fi', text: 'Lo-fi' },
-  { value: 'metal', text: 'Metal' },
-  { value: 'opera', text: 'Opera' },
-  { value: 'pop', text: 'Pop' },
-  { value: 'reggae', text: 'Reggae' },
-  { value: 'rock', text: 'Rock' },
-  { value: 'r&b', text: 'R&B' },
-  { value: 'soundtrack', text: 'Soundtrack' },
-  { value: 'soul', text: 'Soul' },
-  { value: 'techno', text: 'Techno' },
-  { value: 'trance', text: 'Trance' },
-  { value: 'trap', text: 'Trap' },
-];
-
-
-const someGenres = [
-  { value: 'all', text: 'All' },
-  { value: 'acoustic', text: 'Acoustic' },
-  { value: 'alternative', text: 'Alternative' },
-  { value: 'anime', text: 'Anime' },
-  { value: 'ambient', text: 'Ambient' },
-  { value: 'breakbeat', text: 'Breakbeat' },
-  { value: 'classical', text: 'Classical' },
-  { value: 'drum & base', text: 'Drum and base' },
-  { value: 'drill', text: 'Drill' },
-  { value: 'dance', text: 'Dance' },
-  { value: 'dub', text: 'Dub' },
-  { value: 'easy listening', text: 'Easy Listening' },
-  { value: 'electronic', text: 'Electronic' },
-];
 
 class Performers extends PureComponent<IProps> {
   static authenticate = true;
@@ -117,7 +58,7 @@ class Performers extends PureComponent<IProps> {
     isSearchEmpty: true,
     countries: null,
     musicInfo: null,
-    genre: 'all',
+    genre: 'featured',
     showMoreGenres: false,
     showFeaturedArtists: true,
   };
@@ -152,7 +93,7 @@ class Performers extends PureComponent<IProps> {
     let vals = values;
     const { filter, limit } = this.state;
     let f;
-    if(values !== 'all'){
+    if(values !== 'featured'){
 
       vals = {searchValue: values, q: values}
       f = { ...filter, ...vals };
@@ -284,16 +225,16 @@ class Performers extends PureComponent<IProps> {
             <div className='genre-select-wrapper'>
               {showMoreGenres ? (
                 <>
-                  {genres.map((g) => (
-                    <span onClick={()=> this.handleGenreFilter(g.value)} className={`${g.value === genre ? "explore-genre-badge-active" : "explore-genre-badge" }`}>
+                  {GENRES.map((g) => (
+                    <span key={g.value} onClick={()=> this.handleGenreFilter(g.value)} className={`${g.value === genre ? "explore-genre-badge-active" : "explore-genre-badge" }`}>
                       {g.value}
                     </span>
                   ))}
                 </>
               ) : (
                 <>
-                  {someGenres.map((g) => (
-                    <span onClick={()=> this.handleGenreFilter(g.value)} className={`${g.value === genre ? "explore-genre-badge-active" : "explore-genre-badge" }`}>
+                  {SHORT_GENRES.map((g) => (
+                    <span key={g.value} onClick={()=> this.handleGenreFilter(g.value)} className={`${g.value === genre ? "explore-genre-badge-active" : "explore-genre-badge" }`}>
                       {g.value}
                     </span>
                   ))}
@@ -312,8 +253,8 @@ class Performers extends PureComponent<IProps> {
                   {recentlyJoinedPerformers.map((artist) => (
                     <div key={artist._id} className="new-join-wrapper">
                       <Link
-                        href={`/artist/profile?id=${artist?.username || artist?._id}`}
-                        as={`/artist/profile?id=${artist?.username || artist?._id}`}
+                        href={`/${artist?.username || artist?._id}`}
+                        as={`/${artist?.username || artist?._id}`}
                         style={{ cursor: 'pointer' }}
                         className="new-join-link"
                       >
@@ -324,7 +265,7 @@ class Performers extends PureComponent<IProps> {
                           <p className="join-title">
                             { artist.name }
                             <span>
-                              { artist?.verifiedAccount && <BadgeCheckIcon className="recently-joined-v-badge" /> }
+                              { artist?.verifiedAccount && <CheckBadgeIcon className="recently-joined-v-badge" /> }
                             </span>
                           </p>
                           <p className="join-artist">
@@ -343,8 +284,8 @@ class Performers extends PureComponent<IProps> {
                   {trendingPerformers.map((artist) => (
                     <div className='trending-artists-cont-relative' key={artist._id} >
                       <Link
-                        href={`/artist/profile?id=${artist?.username || artist?._id}`}
-                        as={`/artist/profile?id=${artist?.username || artist?._id}`}
+                        href={`/${artist?.username || artist?._id}`}
+                        as={`/${artist?.username || artist?._id}`}
                         style={{ cursor: 'pointer' }}
                         className=""
                       >
@@ -356,7 +297,7 @@ class Performers extends PureComponent<IProps> {
                       <div className='trending-artists-cont-relative' style={{marginTop:'1rem'}}>
                         <p className='trending-artists-display-name'>{artist?.name}
                           <span className='-mt-1 pl-1'>
-                            { artist?.verifiedAccount && <BadgeCheckIcon className="recently-joined-v-badge" /> }
+                            { artist?.verifiedAccount && <CheckBadgeIcon className="recently-joined-v-badge" /> }
                           </span>
                         </p>
                         <p className='trending-artists-username pt-3'>@{artist?.username}</p>

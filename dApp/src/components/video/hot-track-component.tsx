@@ -19,12 +19,6 @@ export default function MappedElement (video) {
     return () => window.removeEventListener('resize', updateMedia);
   }, []);
 
-  const getUrl = (videoProp) => {
-    const { thumbnail, video, teaser } = videoProp;
-    const url = (thumbnail?.thumbnails && thumbnail?.thumbnails[0]) || (teaser?.thumbnails && teaser?.thumbnails[0]) || (video?.thumbnails && video?.thumbnails[0]) || '/static/no-image.jpg';
-    return url;
-  };
-
   const getTitle = (title) => {
     let res;
     if (!isDesktop) {
@@ -45,18 +39,27 @@ export default function MappedElement (video) {
     return res;
   };
 
+  const getUrl = (videoProp) => {
+    const { thumbnail, video, teaser } = videoProp;
+    const url = (thumbnail?.thumbnails && thumbnail?.thumbnails[0]) || (teaser?.thumbnails && teaser?.thumbnails[0]) || (video?.thumbnails && video?.thumbnails[0]) || '/static/no-image.jpg';
+    return url;
+  };
+
+  const backgroundImageStyle = {
+    backgroundImage: `url("${getUrl(video.video)}")`
+  };
 
   return (
     <div key={video.video.id} className="h-track-wrapper">
         <Link onPointerOver={() => setHover(true)}
               onPointerOut={() => setHover(false)} 
-              href={`/video?id=${video.video.slug}`} 
+              href={`/video?id=${video.video.slug}`}
               className="h-track-link">
           <div className='h-track-ranking'>
           <p>{video.idValue + 1}</p>
           </div>
           <div className="h-track-thumb">
-            <div className="h-track-bg" style={{ backgroundImage: `url(${getUrl(video.video)})` }} />
+            <div className="h-track-bg" style={backgroundImageStyle} />
             {hover && (
                 <div className='play-btn-wrapper-ht'>
                   <FaPlay className='play-btn-nr-ht'/>
@@ -67,13 +70,9 @@ export default function MappedElement (video) {
             <p className="h-track-title">
               {getTitle(video.video.title)}
             </p>
-            <Link 
-              href={`/artist/profile?id=${video.video?.performer?.username || video.video?.performer?._id}`}
-              as={`/artist/profile?id=${video.video?.performer?.username || video.video?.performer?._id}`} 
-              className="h-track-artist"
-            >
+            <span className="h-track-artist">
               {getArtist(video.video.performer.name)}
-            </Link>
+            </span>
           </div>
           {/* <div className='h-track-options'>
             <p>...</p>

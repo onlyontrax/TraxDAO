@@ -14,6 +14,7 @@ interface IProps {
   pagination: {};
   onChange: Function;
   onDelete: Function;
+  contentType: string;
 }
 
 export class TableListVideo extends PureComponent<IProps> {
@@ -24,13 +25,17 @@ export class TableListVideo extends PureComponent<IProps> {
       loading,
       pagination,
       onChange,
-      onDelete
+      onDelete,
+      contentType
     } = this.props;
     const columns = [
       {
-        title: 'Thumbnail',
+        title: 'Artwork',
         render(record: any) {
-          return <Link href={`/video?id=${record.slug || record._id}`} as={`/video?id=${record.slug || record._id}`}><ThumbnailVideo style={{height: 50}} video={record} /></Link>;
+          return (
+          <Link href={`/video?id=${record.slug || record._id}`} as={`/video?id=${record.slug || record._id}`}>
+            <ThumbnailVideo style={{borderRadius: '6px', minWidth: '60px'}} video={record} />
+          </Link>)
         }
       },
       {
@@ -43,7 +48,7 @@ export class TableListVideo extends PureComponent<IProps> {
                 maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
               }}
               >
-                <Link href={`/video?id=${record.slug || record._id}`} as={`/video?id=${record.slug || record._id}`}>
+                <Link className="text-trax-white font-light" href={`/video?id=${record.slug || record._id}`} as={`/video?id=${record.slug || record._id}`}>
                   {title}
                 </Link>
               </div>
@@ -52,58 +57,95 @@ export class TableListVideo extends PureComponent<IProps> {
         }
       },
       {
-        title: 'Sale?',
+        title: 'Access',
         dataIndex: 'isSale',
         render(isSale: string) {
           return (
-            <span>
+            <span className="text-trax-white font-light">
               {isSale}
             </span>
           );
         }
       },
       {
-        title: 'Schedule?',
+        title: 'Schedule',
         dataIndex: 'isSchedule',
         render(isSchedule: boolean) {
           switch (isSchedule) {
             case true:
-              return <Tag color="green" className="tag-style">Y</Tag>;
+              return <span className="text-trax-white font-light" >Yes</span>;
             case false:
-              return <Tag color="red" className="tag-style">N</Tag>;
-            default: return <Tag color="orange" className="tag-style">{isSchedule}</Tag>;
+              return <span className="text-trax-white font-light"  >No</span>;
+            default: return <span className="text-trax-white font-light">{isSchedule}</span>;
           }
         }
       },
       {
-        title: 'Status',
-        dataIndex: 'status',
-        render(status: string) {
-          switch (status) {
-            case 'active':
-              return <Tag color="success" className="tag-style">Active</Tag>;
-            case 'inactive':
-              return <Tag color="orange" className="tag-style">Inactive</Tag>;
-            default:
-              return <Tag color="red" className="tag-style">{status}</Tag>;
+        title: 'Supply',
+        dataIndex: 'limitSupply',
+        render(limitSupply: boolean, record: any) {
+          switch (limitSupply) {
+            case true:
+              return (
+                <div className=''>
+                  {(limitSupply && record.supply === 0) &&(
+                    <span>Sold out</span>
+                  )}
+                  {(limitSupply && record.supply !== 0) &&(
+                    <span>{record.supply}</span>
+                  )}
+                  
+                  
+                </div>
+              )
+            case false:
+              return (
+                <div>
+                  { !limitSupply && (
+                    <span>Unlimited</span>
+                  )}
+                </div>
+              )
+            default: return (
+              <div>
+                  { !limitSupply && (
+                    <span>Unlimited</span>
+                  )}
+                </div>
+            )
           }
         }
       },
+      // {
+      //   title: 'Status',
+      //   dataIndex: 'status',
+      //   render(status: string) {
+      //     switch (status) {
+      //       case 'active':
+      //         return <span className="text-trax-white font-light" >Active</span>;
+      //       case 'inactive':
+      //         return <span className="text-trax-white font-light" >Inactive</span>;
+      //       default:
+      //         return <span className="text-trax-white font-light" >{status}</span>;
+      //     }
+      //   }
+      // },
       {
         title: 'Updated On',
         dataIndex: 'updatedAt',
         sorter: true,
         render(date: Date) {
-          return <span>{formatDate(date)}</span>;
+          return <span className="text-trax-white font-light">{formatDate(date)}</span>;
         }
       },
       {
-        title: 'Action',
+        title: '',
         dataIndex: '_id',
         render: (id: string) => (
-          <div style={{ whiteSpace: 'nowrap' }}>
-            <Button className="info">
+          <div className='flex flex-row gap-1'>
+          
               <Link
+              className="rounded-lg w-8 h-8 bg-[#4a4a4a] border-none text-trax-white inline-flex p-1 items-center justify-center"
                 href={{
                   pathname: '/artist/my-video/update',
                   query: { id }
@@ -114,8 +156,8 @@ export class TableListVideo extends PureComponent<IProps> {
                 <EditOutlined />
 
               </Link>
-            </Button>
-            <Button onClick={onDelete.bind(this, id)} className="danger">
+           
+            <Button onClick={onDelete.bind(this, id)} className="rounded-lg w-8 h-8 bg-[red] border-none text-trax-white inline-flex p-1 items-center justify-center">
               <DeleteOutlined />
             </Button>
           </div>
@@ -124,8 +166,23 @@ export class TableListVideo extends PureComponent<IProps> {
     ];
 
     return (
-      <div className="table-responsive">
+      <div className="table-responsive bg-[#020202] rounded-lg p-4">
+        <div className='flex flex-row justify-between'>
+          <div className='flex flex-col  w-1/2 justify-start '>
+          <h1 className="profile-page-heading mt-0 capitalize">{contentType}</h1>
+          <span className='text-trax-gray-300 mb-6 flex'>Manage, edit or view your content. </span>
+          </div>
+          
+          <div className='flex items-start w-1/2 justify-end '>
+            <Button className="new-post-options-btn" style={{ width: '6rem' }}>
+              <Link href="/artist/my-video/upload">
+                Add {contentType}
+              </Link>
+            </Button> 
+          </div>
+        </div>
         <Table
+        style={{fontFamily: "Space Grotesk !important"}}
           dataSource={dataSource}
           columns={columns}
           rowKey={rowKey}

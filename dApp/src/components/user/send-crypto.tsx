@@ -8,7 +8,6 @@ import { PureComponent } from 'react';
 import { connect } from 'react-redux';
 import { TickIcon } from 'src/icons';
 import { principalToAccountIdentifier } from '../../crypto/account_identifier';
-import { SelectorIcon } from '@heroicons/react/solid';
 
 import { AccountIdentifier } from '@dfinity/nns';
 import { Actor, HttpAgent } from '@dfinity/agent';
@@ -23,6 +22,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faXmark, faBullhorn, faImage, faVideo, faSquarePollHorizontal, faCircleCheck } from '@fortawesome/free-solid-svg-icons';
 import { IcrcLedgerCanister, TransferParams } from "@dfinity/ledger";
+import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider } from '../../crypto/mobilePlugWallet';
 
 const { Option } = Select;
 
@@ -143,18 +143,18 @@ class SendCrypto extends PureComponent<IProps> {
     const { selectedCurrency, addressType, destinationAddress, amountToSend, walletOption} = this.state;
     let transfer;
     this.setState({progress: 10});
+    const plugWalletProvider = await getPlugWalletProvider();
 
-    if(typeof window !== 'undefined' && 'ic' in window){
       // @ts-ignore
-      const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect() : false;
+      const connected = await getPlugWalletIsConnected();
 
       !connected && message.error("Failed to connected to canister. Please try again later or contact us. ")
-        
+
       this.setState({ progress: 20 });
-      
+
       if(connected){
         //@ts-ignore
-        const requestBalanceResponse = await window.ic?.plug?.requestBalance();
+        const requestBalanceResponse = await plugWalletProvider.requestBalance();
         const icp_balance = requestBalanceResponse[0]?.amount;
         const ckBTC_balance = requestBalanceResponse[1]?.amount;
 
@@ -167,17 +167,17 @@ class SendCrypto extends PureComponent<IProps> {
               token: 'mxzaz-hqaaa-aaaar-qaada-cai'
             };
             //@ts-ignore
-            transfer = await window.ic.plug.requestTransferToken(params).catch((error) =>{
+            transfer = await plugWalletProvider.requestTransferToken(params).catch((error) =>{
               message.error('Transaction failed. Please try again later.');
               this.setState({progress: 0})
             });
-            
+
           } else {
             this.setState({ progress: 0 })
             message.error('Insufficient balance, please top up your wallet and try again.');
           }
         }
-        
+
         if (selectedCurrency === 'ICP') {
           this.setState({ progress: 30 });
           if(icp_balance >= Number(amountToSend)){
@@ -186,11 +186,11 @@ class SendCrypto extends PureComponent<IProps> {
               amount: Math.trunc(Number(amountToSend) * 100000000)
             }
             //@ts-ignore
-            transfer = await window.ic?.plug?.requestTransfer(requestTransferArg).catch((error) =>{
+            transfer = await plugWalletProvider.requestTransfer(requestTransferArg).catch((error) =>{
               message.error('Transaction failed. Please try again later.');
               this.setState({progress: 0})
             })
-            
+
           } else {
             this.setState({progress: 0})
             message.error('Insufficient balance, please top up your wallet and try again.');
@@ -208,7 +208,6 @@ class SendCrypto extends PureComponent<IProps> {
           }), 1000);
           message.error('Transaction failed. Please try again later.');
         }
-    }
     }
   }
 
@@ -273,7 +272,7 @@ class SendCrypto extends PureComponent<IProps> {
                 let balICRC1 = await ledgerActor.balance({
                     owner: sender,
                     certified: false,
-                  }); 
+                  });
                   if(Number(balICRC1) < (Number(amount) + 10)){
                     this.setState({
                       revealProgressBar: false,
@@ -329,7 +328,7 @@ class SendCrypto extends PureComponent<IProps> {
               let balICRC1 = await ledgerActor.balance({
                 owner: sender,
                 certified: false,
-              }); 
+              });
 
               if(Number(balICRC1) < (Number(amount)+10)){
                 this.setState({
@@ -376,10 +375,10 @@ class SendCrypto extends PureComponent<IProps> {
 
     if(this.containsDash(address.toString())){
         if(address.length === 63){
-            this.setState({ 
-                isAddressValid: true, 
-                addressType: "principal", 
-                destinationAddress: address 
+            this.setState({
+                isAddressValid: true,
+                addressType: "principal",
+                destinationAddress: address
             })
         }
     }else{
@@ -389,8 +388,8 @@ class SendCrypto extends PureComponent<IProps> {
         }else{
             if(address.length === 64){
                 this.setState({
-                    isAddressValid: true, 
-                    destinationAddress: address, 
+                    isAddressValid: true,
+                    destinationAddress: address,
                     addressType: "account identifier"
                 })
             }
@@ -455,14 +454,14 @@ class SendCrypto extends PureComponent<IProps> {
                         {selectedCurrency === 'ckBTC' && (
                            <span>~${(amountToSend * ckbtcPrice).toFixed(2)}</span>
                         )}
-                        
+
                     </div>
                     <div className='destination-address-wrapper'>
                         <div className='send-crypto-to'>
                           <span>To:</span>
                         </div>
-                          <Input 
-                          className='destination-address-input' 
+                          <Input
+                          className='destination-address-input'
                           type="text"
                           onChange={(e)=>this.onChangeDestination(e.target.value)}
                           placeholder={selectedCurrency ==="ICP" ? "Enter Principal ID or Account ID" : "Enter Principal ID"}
@@ -479,10 +478,10 @@ class SendCrypto extends PureComponent<IProps> {
                 </div>
             </div>
             </div>
-            <Modal 
+            <Modal
             className='selected-wallet-upload-modal'
             style={{backgroundColor: '#000000 !important'}}
-            key="purchase_post"    
+            key="purchase_post"
             title={null}
             open={openConnectModal}
             footer={null}

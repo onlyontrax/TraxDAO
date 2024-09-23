@@ -172,7 +172,7 @@ class PurchaseFeedForm extends PureComponent<IProps> {
                 <span>{feed?.performer?.name}</span>
                   <p style={{color: '#c8ff02'}}>Verified Artist</p>
               </div>
-              <a href={`/artist/profile?id=${feed?.performer?.username || feed?.performer?._id}`} className='info-icon-wrapper'>
+              <a href={`/${feed?.performer?.username || feed?.performer?._id}`} className='info-icon-wrapper'>
                 <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
               </a>
             </div>

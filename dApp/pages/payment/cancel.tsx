@@ -29,7 +29,7 @@ class PaymentCancel extends PureComponent<IProps> {
             title="Payment Fail"
             subTitle={`Hi ${user?.name || user?.username || 'there'}, your payment has been fail. Please contact us for more information.`}
             extra={[
-              <Button className="secondary" key="console" onClick={() => Router.push('/home')}>
+              <Button className="secondary" key="console" onClick={() => Router.push('/')}>
                 <HomeOutlined />
                 BACK HOME
               </Button>,

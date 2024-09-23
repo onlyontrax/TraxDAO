@@ -40,6 +40,7 @@ export interface IPerformer {
   eyes: string;
   sexualOrientation: string;
   isFreeSubscription: boolean;
+  subBenefits: string;
   durationFreeSubscriptionDays: number;
   monthlyPrice: number;
   yearlyPrice: number;
@@ -69,10 +70,6 @@ export interface IPerformer {
   verifiedDocument: boolean;
   twitterConnected: boolean;
   googleConnected: boolean;
-  welcomeVideoId: string;
-  welcomeVideoPath: string;
-  welcomeVideoName: string;
-  activateWelcomeVideo: boolean;
   isBookMarked: boolean;
   isSubscribed: boolean;
   live: number;
@@ -103,6 +100,8 @@ export interface IPerformer {
     status: string,
     reasons: string[]
   };
+  enabled2fa: boolean;
+  enabledSms: boolean;
 }
 
 export interface IBanking {

@@ -81,13 +81,20 @@ class Videos extends PureComponent<IProps> {
         filter, limit, sort, sortBy, pagination
       } = this.state;
       await this.setState({ searching: true });
+
+      let values = {searchValue: "video", q: "video"}
+
+
+      let f = { ...filter, ...values };
+
       const resp = await videoService.search({
-        ...filter,
+        ...f,
         limit,
         offset: (page - 1) * limit,
         sort,
         sortBy
       });
+
       await this.setState({
         searching: false,
         list: resp.data.data,
@@ -106,7 +113,7 @@ class Videos extends PureComponent<IProps> {
   async deleteVideo(id: string) {
     const { settings } = this.props;
     const res = await videoService.findById(id);
-   
+
     const vidData: IVideo = res.data;
     // eslint-disable-next-line no-alert
     if (!window.confirm('Are you sure you want to delete this video?')) {
@@ -195,24 +202,16 @@ class Videos extends PureComponent<IProps> {
         <div className="main-container">
           {/* <PageHeading title="Tracks" /> */}
           <div>
-            <Row>
-              <Col lg={16} xs={24}>
+            <Row className='w-full justify-end'>
+              {/* <Col lg={16} xs={24}>
                 <SearchFilter searchWithKeyword statuses={statuses} onSubmit={this.handleFilter.bind(this)} />
-              </Col>
-              <Col lg={8} xs={24} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                <Button className="new-post-options-btn" style={{ width: '10rem' }}>
-                  <Link href="/artist/my-video/upload">
-                    {' '}
-                    <UploadOutlined />
-                    {' '}
-                    Upload new
-                  </Link>
-                </Button>
-              </Col>
+              </Col> */}
+
             </Row>
           </div>
           <div className="table-responsive">
             <TableListVideo
+              contentType="video"
               dataSource={list}
               rowKey="_id"
               loading={searching}

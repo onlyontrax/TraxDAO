@@ -2,7 +2,7 @@
 import { SendOutlined, SmileOutlined } from '@ant-design/icons';
 import { ImageMessageUpload } from '@components/messages/uploadPhoto';
 import TipPerformerForm from '@components/performer/tip-form';
-import { BadgeCheckIcon } from '@heroicons/react/solid';
+import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import { sendMessage, sentFileSuccess } from '@redux/message/actions';
 import { updateBalance } from '@redux/user/actions';
 import { authService, messageService, tokenTransctionService } from '@services/index';
@@ -26,6 +26,7 @@ import { idlFactory as idlFactoryLedger } from '../../smart-contracts/declaratio
 import { idlFactory as idlFactoryTipping } from '../../smart-contracts/declarations/tipping/tipping.did.js';
 import styles from './Compose.module.scss';
 import { Emotions } from './emotions';
+import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider } from '../../crypto/mobilePlugWallet';
 
 interface IProps {
   ui: IUIConfig;
@@ -110,7 +111,7 @@ class Compose extends PureComponent<IProps> {
         await this.sendTipPlug(price, ticker)
       }else{
         await this.sendTipCrypto(price, ticker);
-      } 
+      }
     }
   }
 
@@ -243,122 +244,109 @@ class Compose extends PureComponent<IProps> {
       tippingCanID,
     ];
 
-    if(typeof window !== 'undefined' && 'ic' in window){
-      // @ts-ignore
-      const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
-        whitelist,
-        host: settings.icHost
-      }) : false;
+    const plugWalletProvider = await getPlugWalletProvider();
+    const agent = await getPlugWalletAgent('tippingCanID');
+    const connected = await getPlugWalletIsConnected();
 
-      !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
-        
-      this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 20 });
+    !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
 
-      // @ts-ignore
-      if (!window?.ic?.plug?.agent && connected  ) {
-        // @ts-ignore
-        await window.ic.plug.createAgent({ 
-          whitelist,
-          host: settings.icHost
-        });
-      }
-      
-      let tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
-        agent: (window as any).ic.plug.agent,
-        canisterId: tippingCanID
-      });
+    this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 20 });
 
-      const participants = [];
-      
-      if(connected){
-        //@ts-ignore
-        const requestBalanceResponse = await window.ic?.plug?.requestBalance();
-        const icp_balance = requestBalanceResponse[0]?.amount;
-        const ckBTC_balance = requestBalanceResponse[1]?.amount;
+    let tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
+      agent: agent,
+      canisterId: tippingCanID
+    });
 
-        if(ticker === 'ckBTC'){
-          if(ckBTC_balance >= amount){
-            this.setState({ tipProgress: 30 });
-            const params = {
-              to: tippingCanID,
-              strAmount: amount,
-              token: 'mxzaz-hqaaa-aaaar-qaada-cai'
-            };
-            //@ts-ignore
-            transfer = await window.ic.plug.requestTransferToken(params);
-            
-          } else {
-            this.setState({
-              requesting: false,
-              submiting: false,
-              openTipProgressModal: false,
-              tipProgress: 0
-            })
-            message.error('Insufficient balance, please top up your wallet and try again.');
-          }
-        }
-        
-        if (ticker === 'ICP') {
+    const participants = [];
+
+    if(connected){
+      //@ts-ignore
+      const requestBalanceResponse = await plugWalletProvider.requestBalance();
+      const icp_balance = requestBalanceResponse[0]?.amount;
+      const ckBTC_balance = requestBalanceResponse[1]?.amount;
+
+      if(ticker === 'ckBTC'){
+        if(ckBTC_balance >= amount){
           this.setState({ tipProgress: 30 });
-          if(icp_balance >= amount){
-            const requestTransferArg = {
-              to: tippingCanID,
-              amount: Math.trunc(Number(amount) * 100000000)
-            }
-            //@ts-ignore
-            transfer = await window.ic?.plug?.requestTransfer(requestTransferArg);
-            
-          } else {
-            this.setState({
-              requesting: false,
-              submiting: false,
-              openTipProgressModal: false,
-              tipProgress: 0
-            })
-            message.error('Insufficient balance, please top up your wallet and try again.');
-          }
-        }
-
-        this.setState({ tipProgress: 50 });
-
-        if(transfer.height){
-          const obj2: Participants = {
-            participantID: Principal.fromText(conversation?.recipientInfo?.wallet_icp),
-            participantPercentage: 1
+          const params = {
+            to: tippingCanID,
+            strAmount: amount,
+            token: 'mxzaz-hqaaa-aaaar-qaada-cai'
           };
-          participants.push(obj2);
-          const participantArgs: TippingParticipants = participants;
-        
-          await tippingActor.sendTip(transfer.height, participantArgs, amountToSend, ticker).then(() => {
-            this.setState({ tipProgress: 100 });
-            tokenTransctionService.sendCryptoTip(conversation?.recipientInfo?._id, {
-                performerId: conversation?.recipientInfo?._id,
-                price: Number(amountToSend),
-                tokenSymbol: ticker
-              }).then(() => {});
-            setTimeout(
-              () => this.setState({
-                requesting: false,
-                submiting: false,
-                openTipProgressModal: false,
-                tipProgress: 0
-              }),1000);
-            message.success(`Payment successful! ${conversation?.recipientInfo?.name} has recieved your tip`);
-            this.setState({ requesting: false, submiting: false });
-          }).catch((error) => {
-            this.setState({
+          //@ts-ignore
+          transfer = await plugWalletProvider.requestTransferToken(params);
+
+        } else {
+          this.setState({
+            requesting: false,
+            submiting: false,
+            openTipProgressModal: false,
+            tipProgress: 0
+          })
+          message.error('Insufficient balance, please top up your wallet and try again.');
+        }
+      }
+
+      if (ticker === 'ICP') {
+        this.setState({ tipProgress: 30 });
+        if(icp_balance >= amount){
+          const requestTransferArg = {
+            to: tippingCanID,
+            amount: Math.trunc(Number(amount) * 100000000)
+          }
+          //@ts-ignore
+          transfer = await plugWalletProvider.requestTransfer(requestTransferArg);
+
+        } else {
+          this.setState({
+            requesting: false,
+            submiting: false,
+            openTipProgressModal: false,
+            tipProgress: 0
+          })
+          message.error('Insufficient balance, please top up your wallet and try again.');
+        }
+      }
+
+      this.setState({ tipProgress: 50 });
+
+      if(transfer.height){
+        const obj2: Participants = {
+          participantID: Principal.fromText(conversation?.recipientInfo?.wallet_icp),
+          participantPercentage: 1
+        };
+        participants.push(obj2);
+        const participantArgs: TippingParticipants = participants;
+
+        await tippingActor.sendTip(transfer.height, participantArgs, amountToSend, ticker).then(() => {
+          this.setState({ tipProgress: 100 });
+          tokenTransctionService.sendCryptoTip(conversation?.recipientInfo?._id, {
+              performerId: conversation?.recipientInfo?._id,
+              price: Number(amountToSend),
+              tokenSymbol: ticker
+            }).then(() => {});
+          setTimeout(
+            () => this.setState({
               requesting: false,
               submiting: false,
               openTipProgressModal: false,
               tipProgress: 0
-            });
-            message.error(error.message || 'error occured, please try again later');
-            return error;
+            }),1000);
+          message.success(`Payment successful! ${conversation?.recipientInfo?.name} has recieved your tip`);
+          this.setState({ requesting: false, submiting: false });
+        }).catch((error) => {
+          this.setState({
+            requesting: false,
+            submiting: false,
+            openTipProgressModal: false,
+            tipProgress: 0
           });
-        }else{
-          message.error('Transaction failed. Please try again later.');
-        }
-    }
+          message.error(error.message || 'error occured, please try again later');
+          return error;
+        });
+      }else{
+        message.error('Transaction failed. Please try again later.');
+      }
     }
   }
 
@@ -556,7 +544,7 @@ class Compose extends PureComponent<IProps> {
                   {conversation?.recipientInfo?.name || 'N/A'}
                   {' '}
                   {conversation?.recipientInfo?.verifiedAccount && (
-                  <BadgeCheckIcon style={{ height: '1.5rem' }} className="primary-color" />
+                  <CheckBadgeIcon style={{ height: '1.5rem' }} className="primary-color" />
                   )}
                 </div>
                 <p className="p-subtitle">Transaction progress</p>
