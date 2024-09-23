@@ -1,65 +1,62 @@
-import { PureComponent } from 'react';
-import videojs from 'video.js';
+import { useRef, useState, useCallback } from 'react';
+import ReactPlayer from 'react-player';
 
-export class VideoPlayer extends PureComponent<any> {
-  videoNode: HTMLVideoElement;
+export const VideoPlayer = (props) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const playerRef = useRef(null);
+  const videoSettings = { ...props };
+  const currentSource = videoSettings.sources[0];
 
-  player: any;
-
-  state={
-    isDesktop: false
-  }
-
-  componentDidMount() {
-    const videoSettings = { ...this.props };
-
-    this.player = videojs(this.videoNode, {
-      ...videoSettings,
-      fluid: true,
-      enableDocumentPictureInPicture: true,
-      disablePictureInPicture: false,
-      controlBar: {
-        pictureInPictureToggle: true
+  const handlePlay = useCallback(() => {
+    if (!props.hasSignedIn) {
+      props.onPressPlay();
+      if (playerRef.current) {
+        playerRef.current.seekTo(0);
       }
-    } as any);
-    this.setState({ isDesktop: window.innerWidth > 500 });
-    window.addEventListener('resize', this.updateMedia);
-    return () => window.removeEventListener('resize', this.updateMedia);
-  }
-
-  componentDidUpdate() {
-    const { stop } = this.props;
-    if (stop) {
-      this.stopVideo();
+      setIsPlaying(false);
+    } else {
+      setIsPlaying(true);
     }
-  }
+  }, [props.hasSignedIn, props.onPressPlay]);
 
-  stopVideo() {
-    if (this.player) {
-      this.player.pause();
-    }
-  }
-
-  componentWillUnmount() {
-    if (this.player) {
-      this.player.dispose();
-    }
-  }
-
-  updateMedia = () => {
-    // @ts-ignore
-    this.setState({ isDesktop: window.innerWidth > 500 });
+  const handlePause = () => {
+    setIsPlaying(false);
   };
 
-  render() {
-    const { isDesktop } = this.state;
+  const handleEnded = () => {
+    setIsPlaying(false);
+  };
 
-    return (
-      <div className="videojs-player">
-        <div data-vjs-player style={isDesktop ? { paddingTop: 'max(60vh)', borderRadius: '15px' } : null}>
-          <video controlsList="nodownload" ref={(node) => { this.videoNode = node; }} className="video-js" />
-        </div>
+  console.log(isPlaying)
+
+  return (
+    <div className="videojs-player">
+      <div>
+        <ReactPlayer
+          ref={playerRef}
+          className='player-react-vid'
+          url={currentSource.src}
+          width='100%'
+          height='100%'
+          style={{ maxHeight: '750px' }}
+          controls={true}
+          playing={isPlaying}
+          onPlay={handlePlay}
+          onPause={handlePause}
+          onEnded={handleEnded}
+          pip={true}
+          stopOnUnmount={false}
+          config={{
+            file: {
+              attributes: {
+                controlsList: 'nodownload'
+              }
+            }
+          }}
+        />
       </div>
-    );
-  }
-}
+    </div>
+  );
+};
+
+export default VideoPlayer;

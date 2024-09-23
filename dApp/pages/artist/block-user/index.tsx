@@ -140,7 +140,7 @@ class BlockPage extends PureComponent<IProps> {
             initialValues={{ reason: '' }}
             labelCol={{ span: 24 }}
             wrapperCol={{ span: 24 }}
-            className="account-form"
+            className="account-form-settings"
           >
             <Form.Item label="Please select user you want to block">
               <SelectUserDropdown onSelect={(val) => this.setState({ blockUserId: val })} />

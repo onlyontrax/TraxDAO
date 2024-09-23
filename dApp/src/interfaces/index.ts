@@ -23,3 +23,4 @@ export * from './utils';
 export * from './video';
 export * from './nft';
 export * from './ticket';
+export * from './featured-artists';

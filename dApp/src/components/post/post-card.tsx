@@ -19,7 +19,7 @@ import { VideoPlayer } from "@components/common/video-player";
 import ConfirmSubscriptionPerformerForm from "@components/performer/confirm-subscription";
 import TipPerformerForm from "@components/performer/tip-form";
 import { ReportForm } from "@components/report/report-form";
-import { BadgeCheckIcon } from "@heroicons/react/solid";
+import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 import { formatDate, shortenLargeNumber, videoDuration } from "@lib/index";
 import { createComment, deleteComment, getComments, moreComment } from "@redux/comment/actions";
 import { updateBalance } from "@redux/user/actions";
@@ -64,6 +64,7 @@ import { IcrcLedgerCanister, TransferParams } from "@dfinity/ledger";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLock, faLockOpen, faCheck } from "@fortawesome/free-solid-svg-icons";
 import PaymentProgress from '../../../src/components/user/payment-progress';
+import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider } from '../../crypto/mobilePlugWallet';
 
 interface IProps {
   feed: IFeed;
@@ -80,6 +81,7 @@ interface IProps {
   settings: ISettings;
   fromExplore?: boolean;
   isPostDetails?: boolean;
+  confetti: boolean
 }
 
 class FeedCard extends Component<IProps> {
@@ -111,6 +113,7 @@ class FeedCard extends Component<IProps> {
     tipProgress: 0,
     participants: [],
     amountICPToDisplay: "",
+    confetti: false
   };
 
   fullCaption(val: boolean) {
@@ -550,177 +553,161 @@ class FeedCard extends Component<IProps> {
     const whitelist = [
       tippingCanID,
     ];
+    const agent = await getPlugWalletAgent('tippingCanID');
+    const plugWalletProvider = await getPlugWalletProvider();
 
-    if (typeof window !== "undefined" && "ic" in window) {
-      // @ts-ignore
-      const connected =
-        typeof window !== "undefined" && "ic" in window
-          // @ts-ignore
-          ? await window?.ic?.plug?.requestConnect({
-              whitelist,
-              host: settings.icHost
-            })
-          : false;
+    // @ts-ignore
+    const connected = await getPlugWalletIsConnected();
 
-      !connected && message.info("Failed to connected to canister. Please try again later or contact us. ");
+    !connected && message.info("Failed to connected to canister. Please try again later or contact us. ");
 
-      this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 25 });
+    this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 25 });
 
-      // @ts-ignore
-      if (!window?.ic?.plug?.agent && connected) {
-        // @ts-ignore
-        await window.ic.plug.createAgent({
-          whitelist,
-          host: settings.icHost
-        });
+    let tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
+      agent: agent,
+      canisterId: tippingCanID,
+    });
+
+    const participants = [];
+
+    if (connected) {
+      //@ts-ignore
+      const requestBalanceResponse = await plugWalletProvider.requestBalance();
+      let icp_balance;
+      let ckBTC_balance;
+      let TRAX_balance;
+      for(let i = 0; i < requestBalanceResponse.length; i++){
+        if(requestBalanceResponse[i]?.symbol === 'ICP'){
+          icp_balance = requestBalanceResponse[i]?.amount;
+        }
+        if(requestBalanceResponse[i]?.symbol === 'ckBTC'){
+          ckBTC_balance = requestBalanceResponse[i]?.amount;
+        }
+        if(requestBalanceResponse[i]?.symbol === 'TRAX'){
+          TRAX_balance = requestBalanceResponse[i]?.amount;
+        }
+
+      };
+
+      if (ticker === "ckBTC") {
+        if (ckBTC_balance >= amount) {
+          this.setState({ tipProgress: 50 });
+          const params = {
+            to: tippingCanID,
+            strAmount: amount,
+            token: "mxzaz-hqaaa-aaaar-qaada-cai",
+          };
+          //@ts-ignore
+          transfer = await plugWalletProvider.requestTransferToken(params).catch(error => {
+            message.error("Transaction failed. Please try again later.");
+            this.setState({ requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0 });
+          });
+        } else {
+          this.setState({
+            requesting: false,
+            submiting: false,
+            openTipProgressModal: false,
+            tipProgress: 0,
+          });
+          message.error("Insufficient balance, please top up your wallet and try again.");
+        }
       }
 
-      let tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
-        agent: (window as any).ic.plug.agent,
-        canisterId: tippingCanID,
-      });
-
-      const participants = [];
-
-      if (connected) {
-        //@ts-ignore
-        const requestBalanceResponse = await window.ic?.plug?.requestBalance();
-        let icp_balance;
-        let ckBTC_balance;
-        let TRAX_balance;
-        for(let i = 0; i < requestBalanceResponse.length; i++){
-          if(requestBalanceResponse[i]?.symbol === 'ICP'){
-            icp_balance = requestBalanceResponse[i]?.amount;
-          }
-          if(requestBalanceResponse[i]?.symbol === 'ckBTC'){
-            ckBTC_balance = requestBalanceResponse[i]?.amount;
-          }
-          if(requestBalanceResponse[i]?.symbol === 'TRAX'){
-            TRAX_balance = requestBalanceResponse[i]?.amount;
-          }
-
-        };
-
-        if (ticker === "ckBTC") {
-          if (ckBTC_balance >= amount) {
-            this.setState({ tipProgress: 50 });
-            const params = {
-              to: tippingCanID,
-              strAmount: amount,
-              token: "mxzaz-hqaaa-aaaar-qaada-cai",
-            };
-            //@ts-ignore
-            transfer = await window.ic.plug.requestTransferToken(params).catch(error => {
-              message.error("Transaction failed. Please try again later.");
-              this.setState({ requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0 });
-            });
-          } else {
-            this.setState({
-              requesting: false,
-              submiting: false,
-              openTipProgressModal: false,
-              tipProgress: 0,
-            });
-            message.error("Insufficient balance, please top up your wallet and try again.");
-          }
-        }
-
-        if (ticker === "TRAX") {
-          if (TRAX_balance >= amount) {
-            this.setState({ tipProgress: 50 });
-            const params = {
-              to: tippingCanID,
-              strAmount: amount,
-              token: process.env.NEXT_PUBLIC_TRAX_CANISTER_ID as string,
-            };
-            //@ts-ignore
-            transfer = await window.ic.plug.requestTransferToken(params).catch(error => {
-              message.error("Transaction failed. Please try again later.");
-              this.setState({ requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0 });
-            });
-          } else {
-            this.setState({
-              requesting: false,
-              submiting: false,
-              openTipProgressModal: false,
-              tipProgress: 0,
-            });
-            message.error("Insufficient balance, please top up your wallet and try again.");
-          }
-        }
-
-        if (ticker === "ICP") {
+      if (ticker === "TRAX") {
+        if (TRAX_balance >= amount) {
           this.setState({ tipProgress: 50 });
-          if (icp_balance >= amount) {
-            const requestTransferArg = {
-              to: tippingCanID,
-              amount: Math.trunc(Number(amount) * 100000000),
-            };
-            //@ts-ignore
-            transfer = await window.ic?.plug?.requestTransfer(requestTransferArg).catch(error => {
-              message.error("Transaction failed. Please try again later.");
-              this.setState({ requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0 });
-            });
-          } else {
+          const params = {
+            to: tippingCanID,
+            strAmount: amount,
+            token: settings.icTraxToken
+          };
+          //@ts-ignore
+          transfer = await plugWalletProvider.requestTransferToken(params).catch(error => {
+            message.error("Transaction failed. Please try again later.");
+            this.setState({ requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0 });
+          });
+        } else {
+          this.setState({
+            requesting: false,
+            submiting: false,
+            openTipProgressModal: false,
+            tipProgress: 0,
+          });
+          message.error("Insufficient balance, please top up your wallet and try again.");
+        }
+      }
+
+      if (ticker === "ICP") {
+        this.setState({ tipProgress: 50 });
+        if (icp_balance >= amount) {
+          const requestTransferArg = {
+            to: tippingCanID,
+            amount: Math.trunc(Number(amount) * 100000000),
+          };
+          //@ts-ignore
+          transfer = await plugWalletProvider.requestTransfer(requestTransferArg).catch(error => {
+            message.error("Transaction failed. Please try again later.");
+            this.setState({ requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0 });
+          });
+        } else {
+          this.setState({
+            requesting: false,
+            submiting: false,
+            openTipProgressModal: false,
+            tipProgress: 0,
+          });
+          message.error("Insufficient balance, please top up your wallet and try again.");
+        }
+      }
+
+      this.setState({ tipProgress: 50 });
+
+      if (transfer.height) {
+        this.setState({ tipProgress: 75 });
+        const obj2: Participants = {
+          participantID: Principal.fromText(feed.performer?.wallet_icp),
+          participantPercentage: 1,
+        };
+        participants.push(obj2);
+        const participantArgs: TippingParticipants = participants;
+
+
+        await tippingActor
+          .sendTip(transfer.height, participantArgs, amountToSend, ticker)
+          .then(() => {
+            this.setState({ tipProgress: 100 });
+            tokenTransctionService
+              .sendCryptoTip(feed.performer?._id, {
+                performerId: feed.performer?._id,
+                price: Number(amountToSend),
+                tokenSymbol: ticker,
+              })
+              .then(() => {});
+            setTimeout(
+              () =>
+                this.setState({
+                  requesting: false,
+                  submiting: false,
+                  openTipProgressModal: false,
+                  tipProgress: 0,
+                }),
+              1000
+            );
+            message.success(`Payment successful! ${feed.performer?.name} has recieved your tip`);
+            this.setState({ requesting: false, submiting: false });
+          })
+          .catch(error => {
             this.setState({
               requesting: false,
               submiting: false,
               openTipProgressModal: false,
               tipProgress: 0,
             });
-            message.error("Insufficient balance, please top up your wallet and try again.");
-          }
-        }
-
-        this.setState({ tipProgress: 50 });
-
-        if (transfer.height) {
-          this.setState({ tipProgress: 75 });
-          const obj2: Participants = {
-            participantID: Principal.fromText(feed.performer?.wallet_icp),
-            participantPercentage: 1,
-          };
-          participants.push(obj2);
-          const participantArgs: TippingParticipants = participants;
-
-
-          await tippingActor
-            .sendTip(transfer.height, participantArgs, amountToSend, ticker)
-            .then(() => {
-              this.setState({ tipProgress: 100 });
-              tokenTransctionService
-                .sendCryptoTip(feed.performer?._id, {
-                  performerId: feed.performer?._id,
-                  price: Number(amountToSend),
-                  tokenSymbol: ticker,
-                })
-                .then(() => {});
-              setTimeout(
-                () =>
-                  this.setState({
-                    requesting: false,
-                    submiting: false,
-                    openTipProgressModal: false,
-                    tipProgress: 0,
-                  }),
-                1000
-              );
-              message.success(`Payment successful! ${feed.performer?.name} has recieved your tip`);
-              this.setState({ requesting: false, submiting: false });
-            })
-            .catch(error => {
-              this.setState({
-                requesting: false,
-                submiting: false,
-                openTipProgressModal: false,
-                tipProgress: 0,
-              });
-              message.error(error.message || "error occured, please try again later");
-              return error;
-            });
-        } else {
-          message.error("Transaction failed. Please try again later.");
-        }
+            message.error(error.message || "error occured, please try again later");
+            return error;
+          });
+      } else {
+        message.error("Transaction failed. Please try again later.");
       }
     }
   }
@@ -899,6 +886,10 @@ class FeedCard extends Component<IProps> {
     }
   };
 
+  closeSubModal(val){
+    this.setState({openSubscriptionModal: val})
+  }
+
   getRSPerformers = debounce(async () => {
     const { feed } = this.props;
     const rc = feed?.royaltySharing;
@@ -946,6 +937,7 @@ class FeedCard extends Component<IProps> {
       subscriptionType,
       caption,
       openTipProgressModal,
+      confetti,
       tipProgress,
       participants,
     } = this.state;
@@ -1010,8 +1002,8 @@ class FeedCard extends Component<IProps> {
         <div className="feed-card" style={{ margin: isPostDetails ? "auto" : "" }}>
           <div className="feed-top">
             <Link
-              href={`/artist/profile?id=${performer?.username || performer?._id}`}
-              as={`/artist/profile?id=${performer?.username || performer?._id}`}
+              href={`/${performer?.username || performer?._id}`}
+              as={`/${performer?.username || performer?._id}`}
               legacyBehavior
             >
               <div className="feed-top-left">
@@ -1037,7 +1029,7 @@ class FeedCard extends Component<IProps> {
                     &nbsp;
                     {participants?.length > 2 && <> &amp; others </>}
                     {participants?.length === 2 && <>&amp; {participants[1].name}</>}{" "}
-                    {performer?.verifiedAccount && <BadgeCheckIcon className="feed-v-badge" />}
+                    {performer?.verifiedAccount && <CheckBadgeIcon className="feed-v-badge" />}
                     &nbsp;
                     {performer?.wallet_icp && (
                       <Image preview={false} src="/static/infinity-symbol.png" className="profile-icp-badge-feed" />
@@ -1109,8 +1101,8 @@ class FeedCard extends Component<IProps> {
                       className="lock-btn"
                       onClick={() =>
                         Router.push(
-                          { pathname: `/artist/profile?id=${performer?.username || performer?._id}` },
-                          `/artist/profile?id=${performer?.username || performer?._id}`
+                          { pathname: `/${performer?.username || performer?._id}` },
+                          `/${performer?.username || performer?._id}`
                         )
                       }
                     >
@@ -1138,7 +1130,7 @@ class FeedCard extends Component<IProps> {
                       {videos.length > 0 && (
                         <span>
                           {videos.length > 1 && videos.length} <VideoCameraOutlined />{" "}
-                          {videos.length === 1 && videoDuration(videos[0].duration)}
+                          {videos.length === 1 && videoDuration(videos[0]?.duration)}
                         </span>
                       )}
                     </span>
@@ -1320,7 +1312,7 @@ class FeedCard extends Component<IProps> {
             key="subscribe_performer"
             className="subscription-modal"
             centered
-            width={420}
+            width={600}
             title={null}
             open={openSubscriptionModal}
             footer={null}
@@ -1328,29 +1320,21 @@ class FeedCard extends Component<IProps> {
             onCancel={() => this.setState({ openSubscriptionModal: false, subscriptionType: "" })}
           >
             <ConfirmSubscriptionPerformerForm
-              type={subscriptionType}
+              settings={settings}
               performer={performer}
-              submiting={submiting}
+              submitting={submiting}
               onFinish={this.subscribe.bind(this)}
+              onClose={this.closeSubModal.bind(this)}
               user={user}
             />
           </Modal>
 
-          <Modal
-            key="tip_progress"
-            className="tip-progress"
-            open={openTipProgressModal}
-            centered
-            onOk={() => this.setState({ openTipProgressModal: false })}
-            footer={null}
-            width={450}
-            title={null}
-            onCancel={() => this.setState({ openTipProgressModal: false })}
-          >
-            <PaymentProgress progress={tipProgress} performer={performer}/>
-            
-            
-          </Modal>
+
+            {openTipProgressModal && (
+            <PaymentProgress stage={tipProgress}  confetti={confetti} />
+          )}
+
+
           <Modal
             key="teaser_video"
             open={openTeaser}

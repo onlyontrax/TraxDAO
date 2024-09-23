@@ -34,8 +34,8 @@ export function TableListSubscription({
         return (
           (
             <Link
-              href={`/artist/profile?id=${records?.performerInfo?.username || records?.performerInfo?._id}`}
-              as={`/artist/profile?id=${records?.performerInfo?.username || records?.performerInfo?._id}`}
+              href={`/${records?.performerInfo?.username || records?.performerInfo?._id}`}
+              as={`/${records?.performerInfo?.username || records?.performerInfo?._id}`}
             >
 
               <Avatar src={records?.performerInfo?.avatar || '/static/no-avatar.png'} />

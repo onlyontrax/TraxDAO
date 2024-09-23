@@ -60,7 +60,7 @@ function InternetIdentity({ onSignOut, onConnect, isAuthenticated, handleConnect
                 ):(
                   <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
                 )}
-                <span>{from === 'sign-up' ? 'Sign up with Internet Identity' : 'Continue with Internet Identity'}</span>
+                <span className='font-medium'>{from === 'sign-up' ? 'Sign up with Internet Identity' : 'Continue with Internet Identity'}</span>
               </>
           )
           :

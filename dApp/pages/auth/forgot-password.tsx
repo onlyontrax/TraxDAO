@@ -11,11 +11,10 @@ import { IForgot } from 'src/interfaces';
 import AuthFrame from 'src/components/common/base/auth-frame'
 
 interface IProps {
-  auth: any;
-  ui: any;
-  forgot: Function;
-  forgotData: any;
-  query: any;
+  ui?: any;
+  forgotData?: any;
+  query?: any;
+  onClose: () => void;
 }
 
 interface IState {
@@ -38,15 +37,15 @@ class Forgot extends PureComponent<IProps, IState> {
     emailValue: '',
   };
 
-  componentDidUpdate(prevProps, prevState) {
+  componentDidUpdate(prevProps: IProps, prevState: IState) {
     if (prevState.countTime === 0) {
-      this._intervalCountdown && clearInterval(this._intervalCountdown);
+      clearInterval(this._intervalCountdown);
       this.setState({ countTime: 60 });
     }
   }
 
   componentWillUnmount() {
-    this._intervalCountdown && clearInterval(this._intervalCountdown);
+    clearInterval(this._intervalCountdown);
   }
 
   handleReset = async (data: IForgot) => {
@@ -89,30 +88,42 @@ class Forgot extends PureComponent<IProps, IState> {
   };
 
   render() {
-    const { ui } = this.props;
+    const { ui, onClose } = this.props;
     const { submiting, countTime, emailValue } = this.state;
+    const isMobile = window.innerWidth <= 768;
+
     return (
       <>
         <Head>
           <title>{`${ui?.siteName} | Forgot Password`}</title>
         </Head>
-        <Layout className="min-w-full min-h-full pt-28 md:pt-0">
+        <Layout className="min-w-full min-h-full pt-0">
           <AuthFrame>
                 <div className='log-in-form items-center'>
                   <div className="w-full text-left">
-                    <a className="flex text-sm items-center gap-2 font-semibold" href='/login'>
+                  {!isMobile ? (
+                    <a className="flex text-sm items-center gap-2 font-semibold" href='/'>
                       <img className='w-5 h-5'src="/static/frameIcon.svg" alt="Right arrow" />
                       Back
                     </a>
-                    </div>
+                  ) : (
+                    <button
+                      className="flex text-sm items-center gap-2 font-semibold text-custom-lime-green pb-4"
+                      onClick={onClose}
+                    >
+                      <img className="w-5 h-5" src="/static/frameIcon.svg" alt="Right arrow" />
+                      Back
+                    </button>
+                  )}
+                  </div>
                   <div className='log-in-header text-center md:text-left'>
-                    <h1 className='main-title'>Reset your password</h1>
-                    <p className='main-subtitle text-center md:text-left pt-2 md:pb-6 text-sm md:text-sm font-medium'>If you signed up with an email and password, reset your password below.</p>
-                    <p className='main-subtitle text-center md:text-left md:pb-12 text-sm md:text-sm font-medium'>
+                    <h1 className='main-title pb-4'>Reset your password</h1>
+                    <p className='main-subtitle text-center md:text-left pt-2 pb-2 md:pb-6 text-sm md:text-sm font-medium'>If you signed up with an email and password, reset your password below.</p>
+                    <p className='main-subtitle text-center md:text-left pt-2 pb-2 md:pb-12 text-sm md:text-sm font-medium'>
                       If you signed up using a wallet, Plug or Internet Identity, get help accessing your account
                       <Link
                         href={{
-                          pathname: 'https://linktr.ee/help/en/articles/6608177-i-can-t-log-in-to-my-account-what-should-i-do'
+                          pathname: 'https://x.com/trax_so'
                         }}
                         target="_blank"
                         className="forgot-password ml-2 underline"
@@ -124,7 +135,7 @@ class Forgot extends PureComponent<IProps, IState> {
                   </div>
                   <div className='w-full m-auto md:py-0 py-2'>
                     <Form
-                      name="login-form"
+                      name="forgot-password-form"
                       onFinish={this.handleReset.bind(this)}
                       initialValues={{ remember: true }}
                       className='flex flex-col m-auto py-0'
@@ -148,8 +159,14 @@ class Forgot extends PureComponent<IProps, IState> {
                             onChange = {this.handleInputChange}
                             name="emailValue"
                             type="text"
-                            placeholder="Enter your email address"
                           />
+                          <label
+                            htmlFor="usernameInput"
+                            className={`floating-label ${this.state.emailValue ? 'label-transition-active' : 'label-transition-initial'
+                              }`}
+                          >
+                            Enter your email address
+                          </label>
                         </Form.Item>
                       </div>
                       <div className='log-in-btn-wrapper py-3'>

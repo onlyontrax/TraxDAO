@@ -32,15 +32,16 @@ export class TableListProduct extends PureComponent<IProps> {
     } = this.props;
     const columns = [
       {
-        title: 'Thumbnail',
+        title: '',
         dataIndex: 'image',
         render(data, record) {
           return (
             <Link
               href={`/store?id=${record.slug || record._id}`}
               as={`/store?id=${record.slug || record._id}`}
+              
             >
-              <ImageProduct product={record} />
+              <ImageProduct style={{borderRadius: '6px', minWidth: '60px'}} product={record} />
             </Link>
           );
         }
@@ -55,7 +56,7 @@ export class TableListProduct extends PureComponent<IProps> {
                 maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
               }}
               >
-                <Link href={`/store?id=${record.slug || record._id}`} as={`/store?id=${record.slug || record._id}`}>
+                <Link className="text-trax-white font-light" href={`/store?id=${record.slug || record._id}`} as={`/store?id=${record.slug || record._id}`}>
                   {name}
                 </Link>
               </div>
@@ -68,7 +69,7 @@ export class TableListProduct extends PureComponent<IProps> {
         dataIndex: 'price',
         render(price: number) {
           return (
-            <span style={{ whiteSpace: 'nowrap' }}>
+            <span className="text-trax-white font-light" style={{ whiteSpace: 'nowrap' }}>
               $
               {(price && price.toFixed(2)) || 0}
             </span>
@@ -79,7 +80,7 @@ export class TableListProduct extends PureComponent<IProps> {
         title: 'Stock',
         dataIndex: 'stock',
         render(stock: number, record) {
-          return <span>{(record.type === 'physical' && stock) || ''}</span>;
+          return <span className="text-trax-white font-light">{(record.type === 'physical' && stock) || ''}</span>;
         }
       },
       {
@@ -88,13 +89,13 @@ export class TableListProduct extends PureComponent<IProps> {
         render(type: string) {
           switch (type) {
             case 'physical':
-              return <Tag color="#007bff" className="tag-style">Physical</Tag>;
+              return <span className="text-trax-white font-light" >Physical</span>;
             case 'digital':
-              return <Tag color="#ff0066" className="tag-style">Digital</Tag>;
+              return <span className="text-trax-white font-light" >Digital</span>;
             default:
               break;
           }
-          return <Tag color="orange" className="tag-style">{type}</Tag>;
+          return <span className="text-trax-white font-light" color="orange">{type}</span>;
         }
       },
       {
@@ -103,13 +104,13 @@ export class TableListProduct extends PureComponent<IProps> {
         render(status: string) {
           switch (status) {
             case 'active':
-              return <Tag color="success" className="tag-style">Active</Tag>;
+              return <span className="text-trax-white font-light" >Active</span>;
             case 'inactive':
-              return <Tag color="orange" className="tag-style">Inactive</Tag>;
+              return <span className="text-trax-white font-light">Inactive</span>;
             default:
               break;
           }
-          return <Tag color="default" className="tag-style">{status}</Tag>;
+          return <span className="text-trax-white font-light" >{status}</span>;
         }
       },
       {
@@ -117,16 +118,17 @@ export class TableListProduct extends PureComponent<IProps> {
         dataIndex: 'updatedAt',
         sorter: true,
         render(date: Date) {
-          return <span>{formatDate(date)}</span>;
+          return <span className="text-trax-white font-light">{formatDate(date)}</span>;
         }
       },
       {
-        title: 'Action',
+        title: '',
         dataIndex: '_id',
         render: (id: string) => (
-          <div style={{ whiteSpace: 'nowrap' }}>
-            <Button className="info">
+          <div className='flex flex-row gap-1'>
+            
               <Link
+                className="rounded-lg w-8 h-8 bg-[#4a4a4a] border-none text-trax-white inline-flex p-1 items-center justify-center"
                 href={{
                   pathname: '/artist/my-store/update',
                   query: { id }
@@ -137,9 +139,9 @@ export class TableListProduct extends PureComponent<IProps> {
                 <EditOutlined />
 
               </Link>
-            </Button>
+            
             <Button
-              className="danger"
+              className="rounded-lg w-8 h-8 bg-[red] border-none text-trax-white inline-flex p-1 items-center justify-center"
               onClick={() => deleteProduct(id)}
             >
               <DeleteOutlined />
@@ -149,7 +151,22 @@ export class TableListProduct extends PureComponent<IProps> {
       }
     ];
     return (
-      <div className="table-responsive">
+      <div className="table-responsive bg-[#020202] rounded-lg p-4">
+        
+        <div className='flex flex-row justify-between'>
+          <div className='flex flex-col  w-1/2 justify-start '>
+          <h1 className="profile-page-heading mt-0">Products</h1>
+          <span className='text-trax-gray-300 mb-6 flex'>Manage, edit or view your uploaded products. </span>
+          </div>
+          
+          <div className='flex items-start w-1/2 justify-end '>
+          <Button className="new-post-options-btn" style={{ width: '7rem' }}>
+                  <Link href="/artist/my-store/create">
+                    Add product
+                  </Link>
+                </Button>
+          </div>
+        </div>
         <Table
           dataSource={dataSource}
           columns={columns}

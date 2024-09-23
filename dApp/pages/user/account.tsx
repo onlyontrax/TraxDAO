@@ -136,7 +136,7 @@ class UserAccountSettingPage extends PureComponent<IProps, IState> {
         <Head>
           <title>{`${ui?.siteName} | Edit Profile`}</title>
         </Head>
-        <div className="main-container user-account">
+        <div className="main-container user-account-settings" style={{maxWidth: '800px', width: '100%', margin: 'unset'}}>
           <UserAccountForm
             onFinish={this.onFinish.bind(this)}
             updating={updating || emailSending}

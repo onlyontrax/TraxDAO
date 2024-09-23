@@ -2,8 +2,8 @@
 import { connect } from 'react-redux';
 import FeedForm from '@components/post/form';
 import {
-  CameraIcon, MusicNoteIcon, ShoppingBagIcon, SpeakerphoneIcon, VideoCameraIcon, PlayIcon
-} from '@heroicons/react/solid';
+  MusicalNoteIcon, ShoppingBagIcon,
+} from '@heroicons/react/24/solid';
 import { IPerformer, ISettings, IUIConfig } from '@interfaces/index';
 import { Layout, message } from 'antd';
 import Head from 'next/head';
@@ -52,22 +52,11 @@ class CreatePost extends PureComponent<IProps> {
             {!createPost ? (
               <div className="story-switch-type">
                 <div className="post-wrapper-wrapper">
-                  <div className="post-wrapper" onClick={() => this.setState({ createPost: true })}>
-                    <div aria-hidden className="type-item left">
-                      <span>
-                        <CameraIcon className="shopping-bag-icon"/>
-                      </span>
-                    </div>
-                    <div className="post-type-info-wrapper">
-                      <h2>Feed Post</h2>
-                      <p>Let your fans know what you&apos;re up to</p>
-                    </div>
-                  </div>
                   <Link href="/artist/my-video/upload">
                     <div className="post-wrapper">
                       <div aria-hidden className="type-item middle">
                         <span>
-                          <MusicNoteIcon className="shopping-bag-icon"/>
+                          <MusicalNoteIcon className="shopping-bag-icon"/>
                         </span>
                       </div>
                       <div className="post-type-info-wrapper">

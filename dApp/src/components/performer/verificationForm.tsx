@@ -1,5 +1,4 @@
 import { ImageUpload } from '@components/file';
-import { InformationCircleIcon } from '@heroicons/react/outline';
 import { authService, performerService } from '@services/index';
 import {
   Col,
@@ -32,10 +31,10 @@ export class PerformerVerificationForm extends PureComponent<IProps> {
   componentDidMount() {
     const { user, registeredUser } = this.props;
     if (registeredUser) {
-      this.setState({currentUser: registeredUser});
+      this.setState({ currentUser: registeredUser });
 
     } else if (user) {
-      this.setState({currentUser: user});
+      this.setState({ currentUser: user });
     }
   }
 
@@ -52,46 +51,62 @@ export class PerformerVerificationForm extends PureComponent<IProps> {
     return (
       <div className={styles.componentsPerformerVerificationFormModule} style={{ display: 'flex', flexDirection: 'column' }}>
         {this.props.signUp ? (
-            <div>
-              <p className="text-trax-gray-500 text-base py-6 text-left">To verify your account, click on the button below.</p>
-              <div className='log-in-btn-wrapper'>
-                <Form.Item style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-                  <Button
-                    className="log-in-btn sign-up place-content-center"
-                    href={user ? user.identityVerificationStatus.link : ''}
-                    target="_blank"
-                  >
-                    Verify your identity
-                  </Button>
-                </Form.Item>
-              </div>
+          <div>
+            <p className="text-trax-gray-500 text-base py-6 text-left">To verify your account, click on the button below.</p>
+            <div className='log-in-btn-wrapper'>
+              <Form.Item style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                <Button
+                  className="log-in-btn sign-up place-content-center"
+                  href={user ? user.identityVerificationStatus.link : ''}
+                  target="_blank"
+                >
+                  Verify your identity
+                </Button>
+              </Form.Item>
             </div>
-          ) : (
-            <div className="account-form" >
-              <div style={{ width: '100%' }}>
-                <h1 className="profile-page-heading">Identity verification</h1>
-              </div>
-              {user.verifiedDocument && (
-                <div>
-                  Your identification has been verified. Thank you.
-                </div>)}
-              {!user.verifiedDocument && (
-                <div>
-                  <p className="account-form-item-tag">Your identity verification status is: {user.identityVerificationStatus.status}</p>
-                  {user.identityVerificationStatus.lastStatus !== '' && <p className="account-form-item-tag">Your last identity verification status was: {user.identityVerificationStatus.lastStatus}</p>}
-                  {user.identityVerificationStatus.reasons.length > 0 && user.identityVerificationStatus.reasons.map((reason) => (
-                  <p className="account-form-item-tag">
-                    {reason}
-                  </p>
-                  ))}
-                  <p className="account-form-item-tag">Use this button to verify your identity.</p>
-
-                  <a target='_blank' href={user ? user.identityVerificationStatus.link : ''}>Verify your identity</a>
+          </div>
+        ) : (
+          <div className="account-form-settings" >
+            <div style={{ width: '100%' }}>
+              <h1 className="profile-page-heading">Verification</h1>
+              <span className='profile-page-subtitle'>Verify your identity to start posting and earning on TRAX</span>
+            </div>
+            {user.verifiedDocument && (
+              <div className='profile-form-box-connected'>
+                <span className='text-lg text-trax-white '>You are now verified!</span>
+                <span className='text-trax-gray-300'>You have already completed identity verification, to re-verify your account please click 'Re-verify'.</span>
+                <div className='w-full flex justify-end'>
+                  <div className='cursor-pointer rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-4 flex w-20 justify-center'>
+                    <span>Re-verify</span>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+              </div>)}
+            {!user.verifiedDocument && (
+              <div className='profile-form-box-unconnected'>
+                <span className='text-lg text-trax-black '>Start verification process</span>
+                <span className='text-trax-gray-700'>By clicking 'Continue' you will be redirected to Onfido - a third party verifiaction service. Please do not close this window.</span>
+                <div className='w-full flex justify-end'>
+                  <div className='cursor-pointer rounded-lg bg-[#1e1e1e] text-trax-white p-2 mt-4 flex w-20 justify-center'>
+                    <span>Continue</span>
+                  </div>
+                </div>
+              </div>
+              // <div>
+              //   <p className="account-form-item-tag">Your identity verification status is: {user?.identityVerificationStatus?.status}</p>
+              //   {user?.identityVerificationStatus?.lastStatus !== '' && <p className="account-form-item-tag">Your last identity verification status was: {user?.identityVerificationStatus?.lastStatus}</p>}
+              //   {user?.identityVerificationStatus?.reasons.length > 0 && user?.identityVerificationStatus?.reasons.map((reason) => (
+              //   <p className="account-form-item-tag">
+              //     {reason}
+              //   </p>
+              //   ))}
+              //   <p className="account-form-item-tag">Use this button to verify your identity.</p>
+
+              //   <a target='_blank' href={user ? user?.identityVerificationStatus?.link : ''}>Verify your identity</a>
+              // </div>
+            )}
+          </div>
+        )}
+      </div>
     );
   }
 }

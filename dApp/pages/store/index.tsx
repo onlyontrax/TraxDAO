@@ -9,7 +9,6 @@ import { cryptoService } from '@services/crypto.service';
 import {
   Avatar, Button, Image, Layout, Modal, Spin, Tooltip, message, Progress
 } from 'antd';
-import { BadgeCheckIcon } from '@heroicons/react/solid';
 import Error from 'next/error';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -35,6 +34,7 @@ import { debounce } from 'lodash';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronRight, faChevronDown, faCheck, faStore, faXmark } from '@fortawesome/free-solid-svg-icons'
 import PaymentProgress from '../../src/components/user/payment-progress';
+import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider } from '../../src/crypto/mobilePlugWallet';
 
 interface IProps {
   user: IUser;
@@ -60,6 +60,7 @@ interface IStates {
   caption: boolean;
   isFollowed: boolean;
   requesting: boolean;
+  confetti: boolean;
 }
 
 class ProductViewPage extends PureComponent<IProps, IStates> {
@@ -104,7 +105,8 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
       countries: null,
       caption: false,
       requesting: false,
-      isFollowed: false
+      isFollowed: false,
+      confetti: false
     };
   }
 
@@ -209,7 +211,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
         await tokenTransctionService.purchaseProduct(product._id, payload);
         message.success('Payment success');
         handleUpdateBalance({ token: -product.price - fee });
-        Router.push('/user/my-payments');
+        Router.push('/user/wallet');
 
       }else if(payload.currencyOption !== "USD"){
         if(payload.paymentOption === 'plug'){
@@ -217,7 +219,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
         }else{
           await this.purchaseProductCrypto(payload.currencyOption, payload.price)
         }
-        
+
       }else{
         message.error('This is an invalid currency option. Please pick a different currency to pay in.');
         return;
@@ -264,140 +266,135 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
       progress: 0
     });
 
-    if(typeof window !== 'undefined' && 'ic' in window){
-      // @ts-ignore
-      const connected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
-        host: settings.icHost
-      }) : false;
+    const plugWalletProvider = await getPlugWalletProvider();
+    const agent = await getPlugWalletAgent();
+    const connected = await getPlugWalletIsConnected();
 
-      !connected && message.error("Failed to connected to canister. Please try again later or contact us. ")
+    !connected && message.error("Failed to connected to canister. Please try again later or contact us. ")
 
-      if(connected){
-        this.setState({ progress: 25 });
-        //@ts-ignore
-        const requestBalanceResponse = await window.ic?.plug?.requestBalance();
-        let icp_balance;
-        let ckBTC_balance;
-        let TRAX_balance;
+    if(connected){
+      this.setState({ progress: 25 });
+      //@ts-ignore
+      const requestBalanceResponse = await plugWalletProvider.requestBalance();
+      let icp_balance;
+      let ckBTC_balance;
+      let TRAX_balance;
 
-        for(let i = 0; i < requestBalanceResponse.length; i++){
-          if(requestBalanceResponse[i]?.symbol === 'ICP'){
-            icp_balance = requestBalanceResponse[i]?.amount;
-          }
-          if(requestBalanceResponse[i]?.symbol === 'ckBTC'){
-            ckBTC_balance = requestBalanceResponse[i]?.amount;
-          }
-          if(requestBalanceResponse[i]?.symbol === 'TRAX'){
-            TRAX_balance = requestBalanceResponse[i]?.amount;
-          }
-        };
-
-        let decimals = 100000000;
-
-        if(payload.currencyOption === 'ckBTC'){
-          if((ckBTC_balance * decimals) >= (payload.price * decimals) + 200000){
-            this.setState({ progress: 50 });
-            (async () => {
-            const params = {
-              to: payload.wallet_address,
-              strAmount: payload.price.toString(),
-              token: ckBTCLedgerCanID
-            };
-
-            //@ts-ignore
-            transfer = await window.ic?.plug?.requestTransferToken(params).catch((error) =>{
-              message.error(`Transaction failed. ${error}`);
-              console.log(error)
-              this.setState({progress: 0})
-            })
-          })();
-          } else {
-            this.setState({ progress: 0 })
-            message.error('Insufficient balance, please top up your wallet and try again.');
-          }
+      for(let i = 0; i < requestBalanceResponse.length; i++){
+        if(requestBalanceResponse[i]?.symbol === 'ICP'){
+          icp_balance = requestBalanceResponse[i]?.amount;
         }
-
-
-        if(payload.currencyOption === 'TRAX'){
-          if((TRAX_balance * decimals) >= (payload.price * decimals) + 200000){
-            this.setState({ progress: 50 });
-
-            const params = {
-              to: payload.wallet_address,
-              strAmount: payload.price.toString(),
-              token: process.env.NEXT_PUBLIC_TRAX_CANISTER_ID as string
-            };
-
-
-            //@ts-ignore
-            transfer = await window.ic.plug.requestTransferToken(params).catch((error) =>{
-              message.error(`Transaction failed. ${error}`);
-              console.log(error)
-              this.setState({progress: 0})
-            })
-
-            
-          } else {
-            this.setState({ progress: 0 })
-            message.error('Insufficient balance, please top up your wallet and try again.');
-          }
+        if(requestBalanceResponse[i]?.symbol === 'ckBTC'){
+          ckBTC_balance = requestBalanceResponse[i]?.amount;
         }
-        
-        
-        if (payload.currencyOption === 'ICP') {
-          if((icp_balance * decimals) >= (payload.price * decimals) + 200000){
-            
-            this.setState({ progress: 50 });
-            
-            const param = {
-              to: payload.wallet_address,
-              amount: Math.trunc(payload.price * decimals),
-            }
-           
-            //@ts-ignore
-            transfer = await window.ic?.plug?.requestTransfer(param).catch((error) =>{
-              message.error(`Transaction failed. ${error}`);
-              console.log(error)
-              this.setState({progress: 0})
-            })
-            // transfer = await window.ic?.plug?.requestTransfer(param).catch((error) =>{
-            //   message.error(`Transaction failed. ${error}`);
-            //   console.log(error)
-            //   this.setState({progress: 0})
-            // })
+        if(requestBalanceResponse[i]?.symbol === 'TRAX'){
+          TRAX_balance = requestBalanceResponse[i]?.amount;
+        }
+      };
 
-   
-          } else {
+      let decimals = 100000000;
+
+      if(payload.currencyOption === 'ckBTC'){
+        if((ckBTC_balance * decimals) >= (payload.price * decimals) + 200000){
+          this.setState({ progress: 50 });
+          (async () => {
+          const params = {
+            to: payload.wallet_address,
+            strAmount: payload.price.toString(),
+            token: ckBTCLedgerCanID
+          };
+
+          //@ts-ignore
+          transfer = await plugWalletProvider.requestTransferToken(params).catch((error) =>{
+            message.error(`Transaction failed. ${error}`);
+            console.log(error)
             this.setState({progress: 0})
-            message.error('Insufficient balance, please top up your wallet and try again.');
+          })
+        })();
+        } else {
+          this.setState({ progress: 0 })
+          message.error('Insufficient balance, please top up your wallet and try again.');
+        }
+      }
+
+
+      if(payload.currencyOption === 'TRAX'){
+        if((TRAX_balance * decimals) >= (payload.price * decimals) + 200000){
+          this.setState({ progress: 50 });
+
+          const params = {
+            to: payload.wallet_address,
+            strAmount: payload.price.toString(),
+            token: settings.icTraxToken
+          };
+
+
+          //@ts-ignore
+          transfer = await plugWalletProvider.requestTransferToken(params).catch((error) =>{
+            message.error(`Transaction failed. ${error}`);
+            console.log(error)
+            this.setState({progress: 0})
+          })
+
+
+        } else {
+          this.setState({ progress: 0 })
+          message.error('Insufficient balance, please top up your wallet and try again.');
+        }
+      }
+
+
+      if (payload.currencyOption === 'ICP') {
+        if((icp_balance * decimals) >= (payload.price * decimals) + 200000){
+
+          this.setState({ progress: 50 });
+
+          const param = {
+            to: payload.wallet_address,
+            amount: Math.trunc(payload.price * decimals),
           }
+
+          //@ts-ignore
+          transfer = await plugWalletProvider.requestTransfer(param).catch((error) =>{
+            message.error(`Transaction failed. ${error}`);
+            console.log(error)
+            this.setState({progress: 0})
+          })
+          // transfer = await plugWalletProvider.requestTransfer(param).catch((error) =>{
+          //   message.error(`Transaction failed. ${error}`);
+          //   console.log(error)
+          //   this.setState({progress: 0})
+          // })
+
+
+        } else {
+          this.setState({progress: 0})
+          message.error('Insufficient balance, please top up your wallet and try again.');
         }
+      }
 
-        console.log(transfer)
+      if(transfer.height){
+        this.setState({ progress: 75 });
 
-        if(transfer.height){
-          this.setState({ progress: 75 });
-          
-          await tokenTransctionService.purchaseProductCrypto(product?.performer?._id, 
-            { 
-              performerId: product?.performer?._id, 
-              price: payload.price, 
-              tokenSymbol: payload.currency, 
-              id: product._id, 
-              shippingOption: payload.shippingOption,
-              cryptoTx: transfer.height,
-              quantity: payload.quantity
-            }).then(() => {
-            this.setState({ progress: 100 });
-            message.success(`Payment successful! You are going to ${product.name}`);
-          });
+        await tokenTransctionService.purchaseProductCrypto(product?.performer?._id,
+          {
+            performerId: product?.performer?._id,
+            price: payload.price,
+            tokenSymbol: payload.currency,
+            id: product._id,
+            shippingOption: payload.shippingOption,
+            cryptoTx: transfer.height,
+            quantity: payload.quantity
+          }).then(() => {
+          this.setState({ progress: 100 });
+          message.success(`Payment successful! You are going to ${product.name}`);
+        });
 
-        }else{
-          setTimeout(() => this.setState({
-            progress: 0
-          }), 1000);
-          message.error('Transaction failed. Please try again later.');
-        }
+      }else{
+        setTimeout(() => this.setState({
+          progress: 0
+        }), 1000);
+        message.error('Transaction failed. Please try again later.');
       }
     }
   }
@@ -429,7 +426,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
 
     const recipientAccountIdBlob = this.getRecipientAccountIdentity(Principal.fromText(product?.performer?.wallet_icp))
     const platformAccountIdBlob = this.getPlatformAccountIdentity(Principal.fromText(settings.icTraxAccountPercentage))
-    
+
     const fanAI = AccountIdentifier.fromPrincipal({
       principal: Principal.fromText(user.wallet_icp)
     });
@@ -528,7 +525,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
             let balICRC1 = await ledgerActor.balance({
               owner: Principal.fromText(user?.wallet_icp),
               certified: false,
-            });     
+            });
             if(Number(balICRC1) < Number(amountToSend + amountToSendPlatform) + 20){
               this.setState({
                 submiting: false,
@@ -682,7 +679,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
       ui, error, user
     } = this.props;
     const {
-      selectedOption, product, countries, relatedProducts, isBookmarked, loading, openPurchaseModal, submiting, progress, openProgressModal, caption, isFollowed
+      selectedOption, confetti, product, countries, relatedProducts, isBookmarked, loading, openPurchaseModal, submiting, progress, openProgressModal, caption, isFollowed
     } = this.state;
     if (product === null) {
       return <div style={{ margin: 30, textAlign: 'center' }}><Spin /></div>;
@@ -857,10 +854,10 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
                             <Avatar className='prod-artist-avatar' src={product?.performer?.avatar || '/no-avatar.png'}/>
                             <span className='prod-profile-name'>{product.performer?.name}</span>
                             {/* onClick={() => this.handleFollow()} */}
-                            <Link 
+                            <Link
                               className='prod-profile-link'
-                              href={`/artist/profile?id=${product?.performer?.username || product?.performer?._id}`}
-                              as={`/artist/profile?id=${product?.performer?.username || product?.performer?._id}`}>
+                              href={`/${product?.performer?.username || product?.performer?._id}`}
+                              as={`/${product?.performer?.username || product?.performer?._id}`}>
                               <Button className={`${isFollowed ? 'prod-profile-following-btn' : 'prod-profile-follow-btn'} `}>Visit profile</Button>
                             </Link>
                         </div>
@@ -902,24 +899,12 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
             onFinish={this.purchaseProduct.bind(this)}
           />
         </Modal>
-        
-        <Modal
-          key="ppv_progress"
-          className="tip-progress"
-          open={openProgressModal}
-          centered
-          onOk={() => this.setState({ openProgressModal: false })}
-          footer={null}
-          width={450}
-          title={null}
-          onCancel={() => this.setState({ openProgressModal: false })}
-        >
-
-          <PaymentProgress progress={progress} performer={product?.performer}/>
-
-        </Modal>
 
 
+
+          {openProgressModal && (
+            <PaymentProgress stage={progress}  confetti={confetti} />
+          )}
 
       </Layout>
     );

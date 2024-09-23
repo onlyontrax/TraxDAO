@@ -5,7 +5,7 @@ import {
 import {
   EyeOutlined, PictureOutlined, CalendarOutlined, PlusOutlined
 } from '@ant-design/icons';
-import { BadgeCheckIcon } from '@heroicons/react/solid';
+import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 
 import { connect } from 'react-redux';
 import Head from 'next/head';
@@ -228,6 +228,10 @@ class GalleryViewPage extends PureComponent<IProps> {
     }
   }
 
+  closeSubModal(val){
+    this.setState({openSubscriptionModal: val})
+  }
+
   render() {
     const {
       ui,
@@ -370,8 +374,8 @@ class GalleryViewPage extends PureComponent<IProps> {
           <div className="main-container">
             <div className="vid-act">
               <Link
-                href={`/artist/profile?id=${gallery?.performer?.username || gallery?.performer?._id}`}
-                as={`/artist/profile?id=${gallery?.performer?.username || gallery?.performer?._id}`}
+                href={`/${gallery?.performer?.username || gallery?.performer?._id}`}
+                as={`/${gallery?.performer?.username || gallery?.performer?._id}`}
               >
 
                 <div className="o-w-ner">
@@ -382,7 +386,7 @@ class GalleryViewPage extends PureComponent<IProps> {
                   <div className="owner-name">
                     <div className="name">
                       {gallery?.performer?.name || 'N/A'}
-                      {gallery?.performer?.verifiedAccount && <BadgeCheckIcon className="album-v-badge" />}
+                      {gallery?.performer?.verifiedAccount && <CheckBadgeIcon className="album-v-badge" />}
                     </div>
                     <small>
                       @
@@ -434,7 +438,7 @@ class GalleryViewPage extends PureComponent<IProps> {
         <Modal
           key="subscribe_performer"
           className="subscription-modal"
-          width={420}
+          width={600}
           centered
           title={null}
           open={openSubscriptionModal}
@@ -442,10 +446,11 @@ class GalleryViewPage extends PureComponent<IProps> {
           onCancel={() => this.setState({ openSubscriptionModal: false })}
         >
           <ConfirmSubscriptionPerformerForm
-            type={subscriptionType || 'monthly'}
             performer={gallery?.performer}
-            submiting={submiting}
+            settings={settings}
+            submitting={submiting}
             onFinish={this.subscribe.bind(this)}
+            onClose={this.closeSubModal.bind(this)}
             user={user}
           />
         </Modal>

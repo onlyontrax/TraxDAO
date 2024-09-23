@@ -27,8 +27,8 @@ export default function MappedElement (event) {
         <div className="track-info-wrapper">
           <p className="track-title">{ event.event.name }</p>
           <Link 
-              href={`/artist/profile?id=${event.event?.performer?.username || event.event?.performer?._id}`}
-              as={`/artist/profile?id=${event.event?.performer?.username || event.event?.performer?._id}`} 
+              href={`/${event.event?.performer?.username || event.event?.performer?._id}`}
+              as={`/${event.event?.performer?.username || event.event?.performer?._id}`} 
               className="track-artist"
           >
             { event.event.performer.name }

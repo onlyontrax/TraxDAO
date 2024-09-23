@@ -18,4 +18,6 @@ export * from './scroll-list';
 //export * from './tip-form';
 export * from './paypalForm';
 export * from './walletsForm';
+export * from './social-links';
+export * from './account-information';
 //export * from './ppv-purchase';

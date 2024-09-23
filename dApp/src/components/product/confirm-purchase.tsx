@@ -380,7 +380,7 @@ export function PurchaseProductForm({
                 <span>{performer?.name}</span>
                   <p style={{color: '#FFFFF50', marginTop:'-0.125rem'}}>Verified Artist</p>
               </div>
-              <a href={`/artist/profile?id=${performer?.username || performer?._id}`} className='info-icon-wrapper'>
+              <a href={`/${performer?.username || performer?._id}`} className='info-icon-wrapper'>
                 <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
               </a>
             </div>

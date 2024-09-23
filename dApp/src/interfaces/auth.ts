@@ -2,6 +2,8 @@ export interface ILogin {
   username?: string;
   password: string;
   remember?: boolean;
+  twoFactorKey?: string;
+  smsKey?: string;
 }
 
 export interface IForgot {

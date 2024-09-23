@@ -6,7 +6,7 @@ import { connect } from 'react-redux';
 import { message, Button } from 'antd';
 // import Router from 'next/router';
 import { followService } from 'src/services';
-import { BadgeCheckIcon } from '@heroicons/react/solid';
+import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import styles from './performer.module.scss';
 
 interface IProps {
@@ -68,7 +68,7 @@ class PerformerGridCard extends PureComponent<IProps> {
     if(this.isUpperCase(name)){
       res = name.length > 9 ? `${name.substring(0, 9)}...` : name
     } else {
-      res = name.length > 12 ? `${name.substring(0, 12)}...` : name
+      res = name.length > 16 ? `${name.substring(0, 12)}...` : name
     }
     return res;
   };
@@ -80,8 +80,8 @@ class PerformerGridCard extends PureComponent<IProps> {
     return (
       <div className={styles.componentsPerformerVerificationFormModule}>
         <Link
-          href={`/artist/profile?id=${performer?.username || performer?._id}`}
-          as={`/artist/profile?id=${performer?.username || performer?._id}`}
+          href={`/${performer?.username || performer?._id}`}
+          as={`/${performer?.username || performer?._id}`}
           style={{ cursor: 'pointer' }}
         >
           <div className="grid-card" style={{ backgroundImage: `url(${performer?.avatar || '/static/no-avatar.png'})` }}>
@@ -90,7 +90,7 @@ class PerformerGridCard extends PureComponent<IProps> {
             <div className="artist-name-wrapper">
               <div className="artist-name">
                 {this.renderArtistName(performer?.name)}
-                {performer?.verifiedAccount && <BadgeCheckIcon className="performer-grid-card-v-badge" />}
+                {performer?.verifiedAccount && <CheckBadgeIcon className="performer-grid-card-v-badge" />}
                 {performer?.wallet_icp && (
                 <img src="/static/infinity-symbol.png" style={{ marginLeft: '3px', marginTop: '1px' }} className="profile-icp-badge-feed" />
                 )}

@@ -14,7 +14,7 @@ export class ImageTicket extends PureComponent<IProps> {
   render() {
     const { ticket, style } = this.props;
     const url = ticket?.image || '/static/no-image.jpg';
-    return <Image alt="" src={url} width={50} height={50} style={style || { width: 50, borderRadius: 3 }} />;
+    return <img alt="" src={url} width={80} height={80} style={style}  />;
   }
 }
 

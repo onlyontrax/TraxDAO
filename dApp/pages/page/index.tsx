@@ -1,22 +1,20 @@
-import { ReadOutlined } from '@ant-design/icons';
 import PageHeading from '@components/common/page-heading';
 import { IPostResponse } from '@interfaces/post';
 import { postService } from '@services/post.service';
-import { authService } from '@services/index';
 import { Layout, Spin } from 'antd';
 import Head from 'next/head';
-import Router from 'next/router';
 import Script from 'next/script';
 import { PureComponent } from 'react';
 import { connect } from 'react-redux';
+import policies from '../../src/TermsAndPolicies';
 
 interface IProps {
   ui: any;
   post: IPostResponse;
 }
+
 class PostDetail extends PureComponent<IProps> {
   static authenticate = true;
-
   static noredirect = true;
 
   state = {
@@ -25,11 +23,24 @@ class PostDetail extends PureComponent<IProps> {
 
   async getData() {
     const url = new URL(window.location.href);
-    const id = url.searchParams.get('id');
+    let id = url.searchParams.get('id');
+
+    if (id) {
+      if (id.endsWith('/')) {
+        id = id.slice(0, -1);
+      }
+
+      if (id && policies[id]) {
+        const policy = policies[id];
+        return { post: { content: policy.content, title: policy.title } };
+      }
+    }
+
     try {
       const post = await (await postService.findById(id)).data;
       return { post };
     } catch (e) {
+      console.error('Error fetching post:', e);
       return { post: null };
     }
   }
@@ -38,7 +49,6 @@ class PostDetail extends PureComponent<IProps> {
     const { post } = this.state;
     if (post === null) {
       const data = await this.getData();
-
       this.setState({ post: data.post }, () => this.updateDataDependencies());
     } else {
       await this.updateDataDependencies();
@@ -75,7 +85,7 @@ class PostDetail extends PureComponent<IProps> {
         </Head>
         <div className="main-container">
           <div className="page-container">
-            <PageHeading title={post?.title || 'Page was not found'} icon={<ReadOutlined style={{fontSize: '27px'}} />} />
+            <PageHeading title={post?.title || 'Page was not found'} />
             <div
               className="page-content"
               // eslint-disable-next-line react/no-danger

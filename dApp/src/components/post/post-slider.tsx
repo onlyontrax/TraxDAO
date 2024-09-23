@@ -29,6 +29,13 @@ export default class FeedSlider extends PureComponent<IProps> {
       }
     });
 
+    const videoJsOptionsAudio = {
+      key: videos._id,
+      source: videos?.url,
+      stop: false
+    };
+
+
     return (
       <div className={styles.componentsPostPostSliderModule}>
         <div className={feed.type === 'audio' ? 'feed-slider custom' : 'feed-slider'}>
@@ -80,7 +87,7 @@ export default class FeedSlider extends PureComponent<IProps> {
                 }}
               />
             ))}
-            {audios && audios.length > 0 && audios.map((audio) => <AudioPlayer_ key={audio._id} source={audio?.url} stop={false} />)}
+            {audios && audios.length > 0 && audios.map((audio) => <AudioPlayer_ {...videoJsOptionsAudio} key={audio._id} stop={false} />)}
           </>
           )}
           {processing && (

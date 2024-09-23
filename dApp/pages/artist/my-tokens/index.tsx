@@ -3,9 +3,6 @@ import { Layout, message } from 'antd';
 import Head from 'next/head';
 import { PureComponent } from 'react';
 import { connect } from 'react-redux';
-// import { TokenListEarning } from '@components/performer/tokens';
-import { getResponseError } from '@lib/utils';
-import { SearchFilter } from 'src/components/common/search-filter';
 import {
   IEarning, IPerformer, IPerformerStats, IUIConfig
 } from 'src/interfaces';
@@ -44,12 +41,6 @@ const initialState = {
   dateRange: null
 };
 
-const currencies = [
-    { name: 'USD', imgSrc: '/static/usd-logo.png', symbol: 'USD' },
-    { name: 'ICP', imgSrc: '/static/icp-logo.png', symbol: 'ICP' },
-    { name: 'ckBTC', imgSrc: '/static/ckbtc_nobackground.svg', symbol: 'ckBTC' }
-  ]
-
 class EarningPage extends PureComponent<IProps, IStates> {
   static authenticate = true;
 
@@ -86,58 +77,54 @@ class EarningPage extends PureComponent<IProps, IStates> {
         <div className="main-container-table">
           <div className="table-responsive">
             <div className='tokens-container'>
-                <div className='tokens-wrapper'>
-                    <img src="/static/usd-logo.png" alt="dollars" className='tokens-img'/>
-                    <div className='tokens-split'>
-                        <div className='tokens-data'>
-                            <span className='tokens-symbol'>US Dollars</span>
-                            <span className='tokens-balance'>{stats?.totalNetPrice.toFixed(2) || 0} USD</span>
-                        </div>
-                        <div className='tokens-ex-rate'>
-                            <span>${stats?.totalNetPrice.toFixed(2) || 0}</span>
-                        </div>
-                    </div>
+              <div className='tokens-wrapper'>
+                <img src="/static/usd-logo.png" alt="dollars" className='tokens-img' />
+                <div className='tokens-split'>
+                  <div className='tokens-data'>
+                    <span className='tokens-symbol'>US Dollars</span>
+                    <span className='tokens-balance'>{stats?.totalNetPrice.toFixed(2) || 0} USD</span>
+                  </div>
+                  <div className='tokens-ex-rate'>
+                    <span>${stats?.totalNetPrice.toFixed(2) || 0}</span>
+                  </div>
                 </div>
-                <div className='tokens-wrapper'>
-                    <img src="/static/icp-logo.png" alt="icp" className='tokens-img' />
-                    <div className='tokens-split'>
-                        <div className='tokens-data'>
-                            <span className='tokens-symbol'>ICP</span>
-                            <span className='tokens-balance'>{stats?.totalSiteCommissionICP.toFixed(3) || 0} ICP</span>
-                        </div>
-                        <div className='tokens-ex-rate'>
-                            <span>${stats?.totalNetPriceICP.toFixed(2) || 0}</span>
-                        </div>
-                    </div>
+              </div>
+              <div className='tokens-wrapper'>
+                <img src="/static/icp-logo.png" alt="icp" className='tokens-img' />
+                <div className='tokens-split'>
+                  <div className='tokens-data'>
+                    <span className='tokens-symbol'>ICP</span>
+                    <span className='tokens-balance'>{stats?.totalSiteCommissionICP.toFixed(3) || 0} ICP</span>
+                  </div>
+                  <div className='tokens-ex-rate'>
+                    <span>${stats?.totalNetPriceICP.toFixed(2) || 0}</span>
+                  </div>
                 </div>
-                <div className='tokens-wrapper'>
-                    <img src="/static/ckbtc_nobackground.svg" alt="ckbtc" className='tokens-img' />
-                    <div className='tokens-split'>
-                        <div className='tokens-data'>
-                            <span className='tokens-symbol'>ckBTC</span>
-                            <span className='tokens-balance'>{stats?.totalSiteCommissionCKBTC.toFixed(3) || 0} ckBTC</span>
-                        </div>
-                        <div className='tokens-ex-rate'>
-                            <span>${stats?.totalNetPriceCKBTC.toFixed(2) || 0}</span>
-                        </div>
-                    </div>
+              </div>
+              <div className='tokens-wrapper'>
+                <img src="/static/ckbtc_nobackground.svg" alt="ckbtc" className='tokens-img' />
+                <div className='tokens-split'>
+                  <div className='tokens-data'>
+                    <span className='tokens-symbol'>ckBTC</span>
+                    <span className='tokens-balance'>{stats?.totalSiteCommissionCKBTC || 0} ckBTC</span>
+                  </div>
+                  <div className='tokens-ex-rate'>
+                    <span>${stats?.totalNetPriceCKBTC.toFixed(2) || 0}</span>
+                  </div>
                 </div>
-                <div className='tokens-wrapper'>
-                    <img src="/static/trax-token.png" alt="trax" className='tokens-img' />
-                    <div className='tokens-split'>
-                        <div className='tokens-data'>
-                            <span className='tokens-symbol'>TRAX</span>
-                            <span className='tokens-balance'>{stats?.totalSiteCommissionTRAX.toFixed(3) || 0} TRAX</span>
-                        </div>
-                        <div className='tokens-ex-rate'>
-                            <span>${stats?.totalNetPriceTRAX.toFixed(2) || 0}</span>
-                        </div>
-                    </div>
-
+              </div>
+              <div className='tokens-wrapper'>
+                <img src="/static/trax-token.png" alt="trax" className='tokens-img' />
+                <div className='tokens-split'>
+                  <div className='tokens-data'>
+                    <span className='tokens-symbol'>TRAX</span>
+                    <span className='tokens-balance'>{stats?.totalSiteCommissionTRAX.toFixed(2) || 0} TRAX</span>
+                  </div>
+                  <div className='tokens-ex-rate'>
+                    <span>${stats?.totalNetPriceTRAX.toFixed(2) || 0}</span>
+                  </div>
                 </div>
-                <div>
-
-                </div>
+              </div>
             </div>
           </div>
         </div>

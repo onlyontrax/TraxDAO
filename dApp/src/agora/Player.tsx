@@ -36,7 +36,7 @@ export function Player({ tracks }: Props) {
         (ref.current.tech().el() as HTMLVideoElement).srcObject = mediaStream;
       } else {
         (ref.current.tech().el() as HTMLVideoElement).srcObject = null;
-        (ref.current.tech().el() as HTMLVideoElement).poster = '/static/processed.jpeg';
+        (ref.current.tech().el() as HTMLVideoElement).poster = '/static/processed.jpg';
       }
     }
   }, [ref, tracks]);

@@ -20,7 +20,7 @@ export class BreadcrumbComponent extends PureComponent<IProps> {
 
         <Breadcrumb>
 
-          <Breadcrumb.Item href="/home">
+          <Breadcrumb.Item href="/">
             <HomeOutlined />
           </Breadcrumb.Item>
           {breadcrumbs

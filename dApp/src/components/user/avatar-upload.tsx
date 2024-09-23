@@ -109,10 +109,10 @@ export class AvatarUpload extends PureComponent<IProps, IState> {
           >
             <div className="edit-avatar-wrapper">
               <AntImage src={imageUrl} alt="avatar" className="edit-profile-avatar" />
-              <div className="edit-avatar-btn">
+              {/* <div className="edit-avatar-btn">
                 {' '}
                 Edit avatar
-              </div>
+              </div> */}
             </div>
           </Upload>
         </ImgCrop>

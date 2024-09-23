@@ -92,6 +92,11 @@ function PayoutRequestForm({
       )}
       <Form.Item label="Select payout method" name="paymentAccountType">
         <Select>
+          <Select.Option value="stripe" key="stripe">
+            <img src="/static/stripe-icon.jpeg" width="30px" alt="stripe" />
+            {' '}
+            Stripe
+          </Select.Option>
           <Select.Option value="paypal" key="paypal">
             <img src="/static/paypal-ico.png"  style={{ width: '40px' }} alt="paypal" />
             {' '}

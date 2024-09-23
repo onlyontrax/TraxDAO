@@ -4,6 +4,7 @@ import * as crypto from 'crypto';
 import { message } from 'antd';
 //import store from '../redux/store';
 import storeHolder from '@lib/storeHolder';
+import { getPlugWalletAgent, getPlugWalletProvider, createPlugwalletActor } from '../crypto/mobilePlugWallet';
 
 import { idlFactory as identityIDL } from '../smart-contracts/declarations/identity/identity.did.js';
 
@@ -60,7 +61,7 @@ export class CryptoService {
     const state: any = store.getState();
     const { settings } = state;
     // needs to change to public
-    return settings.icNetwork === true ? 'https://o2kpe-tqaaa-aaaap-qb3ga-cai.ic0.app' : process.env.NEXT_PUBLIC_ASSET_CANISTER_ID_LOCAL as string;
+    return 'https://o2kpe-tqaaa-aaaap-qb3ga-cai.ic0.app';
   }
 
   async createBucketActor(idl, canisterId, host = '', identity = null) {
@@ -103,20 +104,39 @@ export class CryptoService {
 
   async getCanisterHashTokenwithPlugWallet(hashKey: string) {
     try {
+      const mobileProvider = await getPlugWalletProvider();
+      const agent = await getPlugWalletAgent();
       const store = storeHolder.getStore();
-    const state: any = store.getState();
-    const { settings } = state;
+      const state: any = store.getState();
+      const { settings } = state;
 
       const canisterId = settings.icTraxIdentity;
+      const host = settings.icNetwork === true ? settings.icHost : settings.icHostContentManager;
       // @ts-ignore
-      await window?.ic?.plug.requestConnect([canisterId]);
+      //await window?.ic?.plug.requestConnect([canisterId]);
       // @ts-ignore
-      const actor = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug.createActor({
+      /*const actor = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug.createActor({
         canisterId,
         interfaceFactory: identityIDL
-      }) : null;
+      }) : null;*/
+
+      const delegatedIdentity = await mobileProvider?.delegatedIdentity;
+      let actor:any = null;// await createPlugwalletActor(identityIDL, canisterId, host, delegatedIdentity, agent);
+      //console.log("actor", actor);
+      if (delegatedIdentity) {
+        actor = await this.createBucketActor(
+          identityIDL,
+          canisterId,
+          host,
+          delegatedIdentity
+        );
+      } else {
+        actor = agent ? await Actor.createActor(identityIDL, { agent, canisterId }) : null;
+      }
+
       if (actor) {
         const canisterResponse = await actor.getHashedToken(hashKey);
+
         return canisterResponse;
       }
       return '';
@@ -180,7 +200,7 @@ export class CryptoService {
 
   getIdentityProviderLink() {
     const settings = this.getSettings();
-    //http://127.0.0.1:8006/?canisterId=br5f7-7uaaa-aaaaa-qaaca-cai 
+    //http://127.0.0.1:8006/?canisterId=br5f7-7uaaa-aaaaa-qaaca-cai
     return settings.icNetwork === true ? 'https://identity.ic0.app' : `${settings.icHost}/?canisterId=${settings.icIdentityProvider}`;
   }
 
@@ -188,7 +208,7 @@ export class CryptoService {
     const store = storeHolder.getStore();
     const state: any = store.getState();
     const { settings } = state;
-    //http://127.0.0.1:8006/?canisterId=br5f7-7uaaa-aaaaa-qaaca-cai 
+    //http://127.0.0.1:8006/?canisterId=br5f7-7uaaa-aaaaa-qaaca-cai
     return settings;
   }
 }

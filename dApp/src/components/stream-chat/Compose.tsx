@@ -87,7 +87,7 @@ class StreamChatCompose extends PureComponent<IProps> {
             onKeyDown={this.onKeyDown}
             onChange={this.onChange}
             disabled={status.sending}
-          // eslint-disable-next-line no-return-assign
+            // @ts-ignore
             ref={(ref) => (this._input = ref)}
             rows={1}
           />

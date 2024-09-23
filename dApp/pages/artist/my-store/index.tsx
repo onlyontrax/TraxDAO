@@ -129,24 +129,6 @@ class Products extends PureComponent<IProps> {
           <title>{`${ui?.siteName} | My Products`}</title>
         </Head>
         <div className="main-container">
-          <div>
-            <Row>
-              <Col lg={20} xs={24}>
-                <SearchFilter
-                  statuses={statuses}
-                  onSubmit={this.handleFilter.bind(this)}
-                  searchWithKeyword
-                />
-              </Col>
-              <Col lg={4} xs={24} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                <Button className="new-post-options-btn" style={{ width: '10rem' }}>
-                  <Link href="/artist/my-store/create">
-                    New Product
-                  </Link>
-                </Button>
-              </Col>
-            </Row>
-          </div>
           <div className="table-responsive">
             <TableListProduct
               dataSource={list}

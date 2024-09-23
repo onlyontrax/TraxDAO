@@ -15,12 +15,22 @@ import {
   loginPerformer,
   forgotSuccess,
   forgotFail,
-  logout
+  logout,
+  connectPlugWallet,
+  connectPlugWalletSuccess,
+  connectPlugWalletFail,
+  disconnectPlugWallet
 } from './actions';
 
 const initialState = {
+  mobileProvider: null,
   loggedIn: false,
+  is2FAEnabled: false,
+  isSmsEnabled: false,
   authUser: null,
+  walletConnected: false,
+  walletAccount: null,
+  walletAgent: null,
   loginAuth: {
     requesting: false,
     error: null,
@@ -62,7 +72,36 @@ const authReducers = [
           error: null,
           data: null,
           success: false
-        }
+        },
+        authStatus: '',
+        twoFactorError: '',
+      };
+    }
+  },
+  {
+    on: '2FA_REQUIRED',
+    reducer(state: any, action: any) {
+      return {
+        ...state,
+        loginAuth: {
+          ...state.loginAuth,
+          requesting: false,
+          error: null
+        },
+        is2FAEnabled: action?.payload?.required?.enabled2fa === true,
+        isSmsEnabled: action?.payload?.required?.enabledSms === true,
+        authStatus: '2FA_REQUIRED',
+        twoFactorError: '',
+      };
+    }
+  },
+  {
+    on: '2FA_ERROR',
+    reducer(state: any, action: any) {
+      return {
+        ...state,
+        twoFactorError: action.payload,
+        authStatus: '2FA_ERROR',
       };
     }
   },
@@ -115,7 +154,9 @@ const authReducers = [
           error: null,
           data: data.payload,
           success: true
-        }
+        },
+        authStatus: '',
+        twoFactorError: '',
       };
     }
   },
@@ -129,7 +170,9 @@ const authReducers = [
           requesting: false,
           error: data.payload,
           success: false
-        }
+        },
+        authStatus: '',
+        twoFactorError: '',
       };
     }
   },
@@ -250,7 +293,51 @@ const authReducers = [
         ...initialState
       };
     }
-  }
+  },
+  {
+    on: connectPlugWallet,
+    reducer(state: any) {
+      return {
+        ...state,
+        walletConnected: false,
+        walletAccount: null,
+        walletAgent: null
+      };
+    }
+  },
+  {
+    on: connectPlugWalletSuccess,
+    reducer(state: any, data: any) {
+      return {
+        ...state,
+        walletConnected: true,
+        walletAccount: data.payload,
+        walletAgent: data.payload.agent
+      };
+    }
+  },
+  {
+    on: connectPlugWalletFail,
+    reducer(state: any, data: any) {
+      return {
+        ...state,
+        walletConnected: false,
+        walletAccount: null,
+        walletAgent: null
+      };
+    }
+  },
+  {
+    on: disconnectPlugWallet,
+    reducer(state: any) {
+      return {
+        ...state,
+        walletConnected: false,
+        walletAccount: null,
+        walletAgent: null
+      };
+    }
+  },
 ];
 
 export default merge({}, createReducers('auth', [authReducers], initialState));

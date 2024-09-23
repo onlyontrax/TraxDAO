@@ -8,6 +8,7 @@ import { NFIDIcon } from '../../icons/index';
 import AuthButton from './AuthButton';
 import InternetIdentity from './InternetIdentity';
 import AuthPlugWallet from './AuthPlugWallet';
+import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider, getPrincipalId } from '../mobilePlugWallet';
 
 function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
   const {
@@ -22,12 +23,10 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
   const [nfidAuthenticateInnitiated, setNfidAuthenticateInnitiated] = useState(false);
 
   const verifyPlugWalletConnection = async () => {
-    // @ts-ignore
-    const isConnected = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug.isConnected() : false;
+    const isConnected = await getPlugWalletIsConnected();
     setIsAuthenticatedPlug(isConnected);
 
-    // @ts-ignore
-    const principalIdPlug2 = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.agent?.getPrincipal() : '';
+    const principalIdPlug2 = await getPrincipalId();
     setPrincipalIdPlug(principalIdPlug2);
   };
 
@@ -90,18 +89,20 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
         message.success('Wallet Principal has been set.');
         onNFIDConnect(payload.principal);
         setPlugLoading(false);
-      }).catch(err => { 
+      }).catch(err => {
+        console.log(err)
         setPlugLoading(false);
-        message.error('There was a problem in updating your wallet principal.'); 
+        message.error('There was a problem in updating your wallet principal.');
       });
     } else {
       userService.setWalletPrincipal(payload).then(val => {
         message.success('Wallet Principal has been set.');
         onNFIDConnect(payload.principal);
         setPlugLoading(false);
-      }).catch(err => { 
+      }).catch(err => {
+        console.log(err)
         setPlugLoading(false);
-        message.error('There was a problem in updating your wallet principal.'); 
+        message.error('There was a problem in updating your wallet principal.');
       });
     }
   };
@@ -164,9 +165,9 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
 
   return (
     <div style={{display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', marginTop: '0.2rem', gap: '10px'}}>
-      <div className="NFIDAuth">
+      {/* <div className="NFIDAuth">
         <AuthButton from="sign-up" onSignOut={handleSignOut} onAuthenticate={handleAuthenticate} />
-      </div>
+      </div> */}
       <div className="NFIDAuth">
         <AuthPlugWallet
           isAuthenticated={isAuthenticatedPlug}

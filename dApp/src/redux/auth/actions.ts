@@ -43,3 +43,10 @@ export const { forgot, forgotSuccess, forgotFail } = createAsyncAction(
 export const logout = createAction('logout');
 
 export const getCurrentUser = createAction('getCurrentUser');
+
+export const { connectPlugWallet, connectPlugWalletSuccess, connectPlugWalletFail } = createAsyncAction(
+  'connectPlugWallet',
+  'CONNECT_PLUG_WALLET'
+);
+
+export const disconnectPlugWallet = createAction('DISCONNECT_PLUG_WALLET');

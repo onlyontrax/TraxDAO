@@ -3,11 +3,16 @@ import {
   Col,
   Form, InputNumber,
   Row,
-  Switch
+  Switch,
+  Input,
+  message
 } from 'antd';
+import dynamic from 'next/dynamic';
 import { PureComponent } from 'react';
 import { IPerformer } from 'src/interfaces';
 
+
+const { TextArea } = Input;
 const layout = {
   labelCol: { span: 24 },
   wrapperCol: { span: 24 }
@@ -29,9 +34,10 @@ interface IProps {
 
 export class PerformerSubscriptionForm extends PureComponent<IProps> {
   static defaultProps: Partial<IProps>;
+  private _content: string = '';
 
   state = {
-    isFreeSubscription: false
+    isFreeSubscription: false,
   }
 
   componentDidMount() {
@@ -39,73 +45,98 @@ export class PerformerSubscriptionForm extends PureComponent<IProps> {
     this.setState({ isFreeSubscription: !!user?.isFreeSubscription });
   }
 
+  contentChange(content: string) {
+    this._content = content;
+  }
+
   render() {
     const { onFinish, user, updating } = this.props;
     const { isFreeSubscription } = this.state;
+
 
     return (
       <Form
         {...layout}
         name="nest-messages"
         onFinish={(values) => {
-          onFinish(values);
+            // values.subBenefits = this._content
+            onFinish(values);
         }}
         validateMessages={validateMessages}
         initialValues={user}
         labelAlign="left"
-        className="account-form"
+        className="account-form-settings"
         scrollToFirstError
       >
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ width: '100%' }}>
-            <h1 className='subs-form-header'>Subscriptions</h1>
-              <Col xl={12} md={12} xs={24} style={{marginBottom: '24px', maxWidth: '100%'}}>
-                <p className="account-form-item-tag">Monthly price ($)</p>
-                <Form.Item
-                style={{marginBottom: '24px', maxWidth: '100%'}}
-                  name="monthlyPrice"
-                  rules={[{ required: true }]}
-                >
-                  <InputNumber className="account-form-input" placeholder="0.00" min={1} />
-                </Form.Item>
-                <p className="account-form-item-tag">Annual price ($)</p>
-                <Form.Item
-                style={{marginBottom: '24px', maxWidth: '100%'}}
-                  name="yearlyPrice"
-                  rules={[{ required: true }]}
-                >
-                  <InputNumber className="account-form-input" min={1} placeholder="0.00"/>
-                </Form.Item>
-              </Col>
-          </div>
-          <div style={{ width: '100%' }}>
-            <h1 style={{ fontSize: '18px', color: 'white' }}>Offer a free trial</h1>
-            <p style={{ fontSize: '14px', color: 'white' }}>Give fans free access to your subscriber-only content for a limited time</p>
-              <Col xl={24} md={24} xs={24}>
-                <p className="account-form-item-tag">Enable free trial</p>
-                <Form.Item name="isFreeSubscription" valuePropName="checked" style={{marginBottom: '24px', maxWidth: '100%'}}>
-                  <Switch unCheckedChildren="No" checkedChildren="Yes" onChange={(val) => this.setState({ isFreeSubscription: val })} />
-                </Form.Item>
-                {isFreeSubscription && (
-                  <>
-                   <p className="account-form-item-tag">Duration (days)</p>
+        <div className="account-form-settings">
+          <h1 className='profile-page-heading'>Pricing</h1>
+          <span className='profile-page-subtitle'>Set your pricing for monthly and yearly subscription plans, and outline the benefits and content your subscribers can expect to see.</span>
+          <Col lg={24} md={24} xs={24}>
+          <div className='flex flex-row gap-4 w-full'>
+          <p className="account-form-item-tag w-[25%] text-right">Subscription benefits</p>
+            <Form.Item
+              name="subBenefits"
+              className="account-form-input"
+            >
+              <TextArea className="account-form-input bg-[#141414] hover:bg-[#141414] white-space-pre" rows={5} placeholder="List the benefits of subscribing to your channel..." />
+            </Form.Item>
+            </div>
+          </Col>
+          <Col lg={24} md={24} xs={24}>
+            <div className=' flex flex-row gap-4 w-full'>
+              <p className="account-form-item-tag w-[25%] text-right">Monthly price ($)</p>
+              <Form.Item
+                name="monthlyPrice"
+                rules={[{ required: true }]}
+              >
+                <InputNumber className="account-form-input" placeholder="0.00" min={1} />
+              </Form.Item>
+            </div>
+            <div className=' flex flex-row gap-4 w-full'>
+              <p className="account-form-item-tag w-[25%] text-right">Annual price ($)</p>
+              <Form.Item
+                name="yearlyPrice"
+                rules={[{ required: true }]}
+              >
+                <InputNumber className="account-form-input" min={1} placeholder="0.00" />
+              </Form.Item>
+            </div>
+          </Col>
+        </div>
+        <div className="account-form-settings">
+          <h1 className='profile-page-heading'>Offer a free trial</h1>
+          <span className='profile-page-subtitle'>Give fans free access to your subscriber-only content for a limited time</span>
+          <Col lg={24} md={24} xs={24}>
+            <div className=' flex flex-row gap-4 w-full'>
+              <p className="account-form-item-tag w-[25%] text-right">Enable free trial</p>
+              <Form.Item name="isFreeSubscription" valuePropName="checked" >
+                <Switch unCheckedChildren="No" checkedChildren="Yes" onChange={(val) => this.setState({ isFreeSubscription: val })} />
+              </Form.Item>
+            </div>
+            {isFreeSubscription && (
+              <div className=' flex flex-row gap-4 w-full'>
+                <p className="account-form-item-tag w-[25%] text-right">Duration (days)</p>
                 <Form.Item
                   name="durationFreeSubscriptionDays"
-                  style={{marginBottom: '24px', maxWidth: '100%'}}
+
                   help="Try free subscription for xx days"
                   rules={[{ required: true }]}
                 >
                   <InputNumber min={1} />
                 </Form.Item>
-                </>
-                )}
-              </Col>
-            {/* </Row> */}
-          </div>
-        </div>
+              </div>
+            )}
+          </Col>
 
-        <Form.Item wrapperCol={{ ...layout.wrapperCol, offset: 4 }}>
-          <Button className="ant-primary-btn" type="primary" htmlType="submit" disabled={updating} loading={updating}>
+        </div>
+        <Form.Item wrapperCol={{ ...layout.wrapperCol, offset: 4 }} style={{ marginBottom: '2rem' }}>
+          <Button
+            className="profile-following-btn-card"
+            htmlType="submit"
+            loading={updating}
+            disabled={updating}
+            style={{ float: 'right' }}
+          >
             Save Changes
           </Button>
         </Form.Item>

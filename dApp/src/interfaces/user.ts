@@ -13,6 +13,7 @@ export interface IUser {
   twitterConnected: boolean;
   googleConnected: boolean;
   cover: string;
+  phone?: string;
   dateOfBirth: Date;
   verifiedDocument: boolean;
   balance: number;
@@ -23,4 +24,7 @@ export interface IUser {
   wallet_icp?: string;
   userReferral: string;
   referredBy?: string;
+  enabled2fa?: boolean;
+  currency?: string;
+  enabledSms?: boolean;
 }

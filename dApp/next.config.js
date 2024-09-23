@@ -29,6 +29,7 @@ const nextConfig = {
     loader: 'imgix',
     path: ''
   },
+  optimizeFonts: true,
   webpack: (
     config, { buildId, dev, isServer, defaultLoaders, nextRuntime, webpack }
   ) => {
@@ -59,7 +60,7 @@ const nextConfig = {
     }
 
     return config;
-  }
+  },
 };
 
 const plugins = [

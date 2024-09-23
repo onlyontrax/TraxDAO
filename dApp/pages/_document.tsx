@@ -3,7 +3,6 @@ import Document, {
 } from 'next/document';
 import Script from 'next/script';
 import { Spin } from 'antd';
-
 import { settingService } from '@services/setting.service';
 
 class CustomDocument extends Document {
@@ -64,6 +63,36 @@ class CustomDocument extends Document {
           <link rel="manifest" href="/manifest.json" />
           <meta httpEquiv="X-UA-Compatible" content="IE=edge,chrome=1" />
           <meta charSet="utf-8" />
+
+          {/* Preload critical fonts */}
+          <link
+            rel="preload"
+            href="/fonts/NeueMontreal/NeueMontreal-Regular.otf"
+            as="font"
+            type="font/otf"
+            crossOrigin="anonymous"
+          />
+          <link
+            rel="preload"
+            href="/fonts/NeueMontreal/NeueMontreal-Medium.otf"
+            as="font"
+            type="font/otf"
+            crossOrigin="anonymous"
+          />
+          <link
+            rel="preload"
+            href="/fonts/HeadingPro/Heading-Pro-Regular.ttf"
+            as="font"
+            type="font/ttf"
+            crossOrigin="anonymous"
+          />
+          <link
+            rel="preload"
+            href="/fonts/HeadingPro/Heading-Pro-Bold.ttf"
+            as="font"
+            type="font/ttf"
+            crossOrigin="anonymous"
+          />
         </Head>
         <body>
           <Main />

@@ -7,6 +7,8 @@ import { NFIDIcon } from '../../icons/index';
 import { ISettings } from "src/interfaces";
 import React, {useState} from 'react';
 import { LoadingOutlined } from '@ant-design/icons';
+import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider } from '../mobilePlugWallet';
+
 interface IAuthButton {
   onSignOut: Function
   onConnect: Function,
@@ -25,13 +27,10 @@ function AuthPlugWallet({ onSignOut, onConnect, isAuthenticated, handlePlugWalle
 
   const authenticateNow = async () => {
     setLoading(true);
-    const identityCanisterId = settings.icTraxIdentity;
-      const whitelist = [identityCanisterId];
-      // @ts-ignore
-      const res = typeof window !== 'undefined' && 'ic' in window ? await window?.ic?.plug?.requestConnect({
-        whitelist
-      }) : false;
-      setLoading(false);
+    await getPlugWalletProvider();
+    await getPlugWalletAgent();
+
+    setLoading(false);
     return isLogin ? handlePlugWalletConnect(from) : onConnect();
   };
 
@@ -48,7 +47,7 @@ function AuthPlugWallet({ onSignOut, onConnect, isAuthenticated, handlePlugWalle
               ):(
                 <img src="/static/plug-favicon-2.png" alt="" className='plug-icon-sign'/>
               )}
-              <span>{from === 'sign-up' ? 'Sign up with Plug' : 'Continue with Plug'}</span>
+              <span className='font-medium'>{from === 'sign-up' ? 'Sign up with Plug' : 'Continue with Plug'}</span>
             </>
           )
           :

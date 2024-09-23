@@ -19,7 +19,7 @@ type Props = {
   onSubscribed?: Function;
 }
 
-export function SubscribePerformerModal({ onSubscribed }: Props) {
+export function SubscribePerformerModal({ onSubscribed = null }: Props) {
   const [performer, setPerformer] = useState<IPerformer>();
   const [loading, setLoading] = useState(false);
   const [submiting, setSubmiting] = useState<boolean>();
@@ -128,7 +128,3 @@ export function SubscribePerformerModal({ onSubscribed }: Props) {
     </Modal>
   );
 }
-
-SubscribePerformerModal.defaultProps = {
-  onSubscribed: null
-};

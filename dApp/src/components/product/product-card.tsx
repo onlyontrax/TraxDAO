@@ -26,17 +26,37 @@ export class ProductCard extends PureComponent<IProps, IStates> {
             href={link}
             as={linkAs}
           >
-            <div className="prd-card" style={{ backgroundImage: `url(${image})` }}>
-              <div className="prd-card-overlay">
+            <div className="prd-card" >
+              <div className="prd-card-overlay" style={{ backgroundImage: `url(${image})` }}>
+                <div className='prd-overlay'/>
                 <div className="label-wrapper">
-                  {product.price > 0 && (
-                  <span className="label-wrapper-price">
-                    $
-                    {product.price.toFixed(0)}
-                  </span>
-                  )}
+                {product.stock > 0 ? (
+                    <div className="label-wrapper-digital">
+                      In stock
+                    </div>
+                    ):(
+                      <div className="label-wrapper-digital">
+                      Sold out
+                    </div>
+                    )}
 
                 </div>
+              </div>
+                
+            
+                
+              <div>
+                <div className="prd-info">
+                  <span style={{fontWeight: '300'}}>{product?.name}</span>
+                  <br />
+                  <span className='font-light	text-[#bababa] text-[14px]'>${product?.price}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* <div className="prd-card" style={{ backgroundImage: `url(${image})` }}>
+              <div className="prd-card-overlay">
+                
                 <Tooltip title={product.name}>
                   <div className="prd-info">
                     <span>{product.name}</span>
@@ -50,7 +70,7 @@ export class ProductCard extends PureComponent<IProps, IStates> {
                   </div>
                 </Tooltip>
               </div>
-            </div>
+            </div> */}
           </Link>
         </div>
       )

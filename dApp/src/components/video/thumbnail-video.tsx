@@ -16,7 +16,7 @@ export class ThumbnailVideo extends PureComponent<IProps> {
     const url = (thumbnail?.thumbnails && thumbnail?.thumbnails[0]) || (teaser?.thumbnails && teaser?.thumbnails[0]) || (video?.thumbnails && video?.thumbnails[0]) || '/static/no-image.jpg';
     return (
       <span className={styles.componentVideoModule}>
-        <img alt="thumbnail" src={url} style={style || { width: '50px' }} />
+        <img alt="" src={url} width={80} height={80} style={style || { width: 50, borderRadius: 3 }} />
       </span>
     );
   }

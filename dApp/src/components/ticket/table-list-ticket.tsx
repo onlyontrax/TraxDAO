@@ -131,15 +131,16 @@ export class TableListTicket extends PureComponent<IProps> {
     const {currentTier, isOpenGuestList, attendees, data} = this.state;
     const columns = [
       {
-        title: 'Cover image',
+        title: '',
         dataIndex: 'image',
         render(data, record) {
           return (
             <Link
               href={`/event-store?id=${record.slug || record._id}`}
               as={`/event-store?id=${record.slug || record._id}`}
+              
             >
-              <ImageTicket ticket={record} />
+              <ImageTicket style={{borderRadius: '6px', minWidth: '60px'}} ticket={record} />
             </Link>
           );
         }
@@ -154,7 +155,7 @@ export class TableListTicket extends PureComponent<IProps> {
                 maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
               }}
               >
-                <Link href={`/event-store?id=${record.slug || record._id}`} as={`/event-store?id=${record.slug || record._id}`}>
+                <Link className="text-trax-white font-light" href={`/event-store?id=${record.slug || record._id}`} as={`/event-store?id=${record.slug || record._id}`}>
                   {name}
                 </Link>
               </div>
@@ -169,7 +170,7 @@ export class TableListTicket extends PureComponent<IProps> {
           return (
             <span style={{ whiteSpace: 'nowrap', display: 'flex', flexDirection: 'column' }}>
                 {tiers.map((t)=>{
-                    return <span>{t.name}</span>
+                    return <span className="text-trax-white font-light">{t.name}</span>
                 })}
                 {/* {tiers[0].name} */}
             </span>
@@ -183,7 +184,7 @@ export class TableListTicket extends PureComponent<IProps> {
           return (
             <span style={{ whiteSpace: 'nowrap', display: 'flex', flexDirection: 'column' }}>
                 {tiers.map((t)=>{
-                    return <span>${t.price}</span>
+                    return <span className="text-trax-white font-light">${t.price}</span>
                 })}
               {/* ${tiers[0].price} */}
             </span>
@@ -197,41 +198,41 @@ export class TableListTicket extends PureComponent<IProps> {
           return (
             <span style={{ whiteSpace: 'nowrap', display: 'flex', flexDirection: 'column' }}>
                 {tiers.map((t)=>{
-                    return <span>{t.supply}</span>
+                    return <span className="text-trax-white font-light">{t.supply}</span>
                 })}
               {/* ${tiers[0].price} */}
             </span>
           )
         }
       },
-      {
-        title: 'Type',
-        dataIndex: 'type',
-        render(type: string) {
-          switch (type) {
-            case 'physical':
-              return <Tag color="#007bff" className="tag-style">Physical</Tag>;
-            case 'digital':
-              return <Tag color="#ff0066" className="tag-style">Digital</Tag>;
-            default:
-              break;
-          }
-          return <Tag color="orange" className="tag-style">{type}</Tag>;
-        }
-      },
+      // {
+      //   title: 'Type',
+      //   dataIndex: 'type',
+      //   render(type: string) {
+      //     switch (type) {
+      //       case 'physical':
+      //         return <span className="text-trax-white font-light" >Physical</span>;
+      //       case 'digital':
+      //         return <span className="text-trax-white font-light" >Digital</span>;
+      //       default:
+      //         break;
+      //     }
+      //     return <span className="text-trax-white font-light">{type}</span>;
+      //   }
+      // },
       {
         title: 'Status',
         dataIndex: 'status',
         render(status: string) {
           switch (status) {
             case 'active':
-              return <Tag color="success" className="tag-style">Active</Tag>;
+              return <span className="text-trax-white font-light" >Active</span>;
             case 'inactive':
-              return <Tag color="orange" className="tag-style">Inactive</Tag>;
+              return <span className="text-trax-white font-light">Inactive</span>;
             default:
               break;
           }
-          return <Tag color="default" className="tag-style">{status}</Tag>;
+          return <span className="text-trax-white font-light" >{status}</span>;
         }
       },
       {
@@ -243,35 +244,34 @@ export class TableListTicket extends PureComponent<IProps> {
         }
       },
       {
-        title: 'Action',
+        title: '',
         dataIndex: '_id',
         render: (id: string) => (
-          <div style={{ whiteSpace: 'nowrap' }}>
-            <Button className="info">
+          <div className='flex flex-row gap-1'>
+            
               <Link
+              className="rounded-lg w-8 h-8 bg-[#4a4a4a] border-none text-trax-white inline-flex p-1 items-center justify-center"
                 href={{
-                  pathname: '/artist/my-store/update',
+                  pathname: '/artist/my-events/update',
                   query: { id }
                 }}
-                as={`/artist/my-store/update?id=${id}`}
+                as={`/artist/my-events/update?id=${id}`}
               >
-
                 <EditOutlined />
-
               </Link>
-            </Button>
-            <Button
-              className="danger"
-              onClick={() => deleteProduct(id)}
-            >
-              <DeleteOutlined />
-            </Button>
-            <Button
-              className="view-attendees-btn"
+              <Button
+              className="rounded-lg w-8 h-8 bg-[#e8e8e8] text-trax-black border-none  inline-flex p-1 items-center justify-center"
               onClick={() => this.getGuestList(id)}
             >
               <FontAwesomeIcon icon={faClipboardList} />
             </Button>
+            <Button
+              className="rounded-lg w-8 h-8 bg-[red] border-none text-trax-white inline-flex p-1 items-center justify-center"
+              onClick={() => deleteProduct(id)}
+            >
+              <DeleteOutlined />
+            </Button>
+            
           </div>
         )
       },
@@ -279,7 +279,23 @@ export class TableListTicket extends PureComponent<IProps> {
     ];
     return (
       <>
-        <div className="table-responsive">
+        <div className="table-responsive bg-[#020202] rounded-lg p-4">
+          <div className='flex flex-row justify-between'>
+            <div className='flex flex-col  w-1/2 justify-start '>
+            <h1 className="profile-page-heading mt-0">Events</h1>
+            <span className='text-trax-gray-300 mb-6 flex'>Manage, edit or view your uploaded events. </span>
+            </div>
+
+            <div className='flex items-start w-1/2 justify-end '>
+            <Button className="new-post-options-btn" style={{ width: '6rem' }}>
+                    <Link href="/artist/my-events/create">
+                      Add event
+                    </Link>
+                  </Button>
+            </div>
+          </div>
+
+        
           <Table
             dataSource={dataSource}
             columns={columns}

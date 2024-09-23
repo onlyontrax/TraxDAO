@@ -9,21 +9,23 @@ interface IProps {
 
 function Error({ statusCode, message }: IProps) {
   return (
-    <Result
-      status="error"
-      title={statusCode}
-      subTitle={message}
-      extra={[
-        <Button className="secondary" key="console" onClick={() => Router.push('/home')}>
-          <HomeOutlined />
-          BACK HOME
-        </Button>,
-        <Button key="buy" className="primary" onClick={() => Router.push('/contact')}>
-          <ContactsOutlined />
-          CONTACT US
-        </Button>
-      ]}
-    />
+    <div className="main-container">
+      <Result
+        status="error"
+        title={statusCode}
+        subTitle={message}
+        extra={[
+          <Button className="secondary" key="console" onClick={() => Router.push('/')}>
+            <HomeOutlined />
+            BACK HOME
+          </Button>,
+          <Button key="buy" className="primary" onClick={() => Router.push('/contact')}>
+            <ContactsOutlined />
+            CONTACT US
+          </Button>
+        ]}
+      />
+    </div>
   );
 }
 

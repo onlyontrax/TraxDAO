@@ -4,6 +4,6 @@ export * from './datePicker';
 export * from './dropdown-action';
 export * from './banner';
 export * from './banner-new';
-export * from './banner-new-new';
 export * from './recaptcha';
 export * from './video-player';
+export * from './splide-banner';

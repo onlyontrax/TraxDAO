@@ -212,7 +212,7 @@ class CreateTicketNftForm extends PureComponent<IProps> {
             });
 
             message.success('Posted successfully!');
-            Router.push('/artist/my-content');
+            Router.push('/artist/studio');
           }
         });
 
@@ -254,7 +254,7 @@ class CreateTicketNftForm extends PureComponent<IProps> {
             });
             
             message.success('Posted successfully!');
-            Router.push('/artist/my-content');
+            Router.push('/artist/studio');
           }
         });
       }

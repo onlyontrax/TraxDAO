@@ -74,6 +74,38 @@ export class PerformerService extends APIRequest {
   disconnectWalletPrincipal() {
     return this.put('/performers/disconnectICPWallet');
   }
+
+  getQRCode(id: string) {
+    return this.get(`/performers/${id}/generateQRCode`);
+  }
+
+  enable2FA(id: string) {
+    return this.put(`/performers/${id}/enableTwoFactorSecret`);
+  }
+
+  disable2FA(id: string) {
+    return this.put(`/performers/${id}/disableTwoFactorSecret`);
+  }
+
+  verify2FA(id: string, payload: any) {
+    return this.put(`/performers/${id}/verify2FATokenForUser`, payload);
+  }
+
+  getSMSCode(id: string) {
+    return this.get(`/performers/${id}/generateSMSCode`);
+  }
+
+  enableSms(id: string) {
+    return this.put(`/performers/${id}/enableSmsAuthSecret`);
+  }
+
+  disableSms(id: string) {
+    return this.put(`/performers/${id}/disableSmsAuthSecret`);
+  }
+
+  verifySms(id: string, payload: any) {
+    return this.put(`/performers/${id}/verifySMSTokenForUser`, payload);
+  }
 }
 
 export const performerService = new PerformerService();

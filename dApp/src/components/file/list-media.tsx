@@ -35,7 +35,7 @@ export class UploadList extends PureComponent<IProps> {
       files, remove: handleRemove, uploading, type
     } = this.props;
     const { isShowPreview, previewUrl } = this.state;
-    
+
     return (
       <div className={styles.postModule}>
         <div className="f-upload-list">
@@ -82,14 +82,14 @@ export class UploadList extends PureComponent<IProps> {
               listType="picture"
             >
               <p>
-              {type === 'photo' ? 
-              <img src="/static/add-photo.png" className='upload-photos-img' width={50}/> 
-              : type === 'video' ? 
-              <img src="/static/add-video.png" className='upload-video-img' width={50}/> 
+              {type === 'photo' ?
+              <img src="/static/add-photo.png" className='upload-photos-img' width={50}/>
+              : type === 'video' ?
+              <img src="/static/add-video.png" className='upload-video-img' width={50}/>
               : 'files'}
                 {' '}
                 <span className='span-upload-msg'>Upload {type === 'photo' ? 'photos' : type === 'video' ? 'a video' : 'files'}</span>
-                <span className='span-upload-sub-msg'> {type === 'photo' ? 'Image should be 1GB or less' : type === 'video' ? 'Video file should be 5GB or less' : ''}</span>
+                <span className='span-upload-sub-msg'> {type === 'photo' ? 'Image should be 1GB or less' : type === 'video' ? 'Video file should be 50GB or less' : ''}</span>
                 {' '}
               </p>
             </Upload>

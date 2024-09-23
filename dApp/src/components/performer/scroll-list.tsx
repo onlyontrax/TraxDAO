@@ -28,6 +28,7 @@ export function ScrollListPerformers({
         endMessage={null}
         scrollThreshold={0.9}
       >
+        
         <Row>
           {performers.length > 0
             && performers.map((p: any) => (
@@ -37,6 +38,8 @@ export function ScrollListPerformers({
             ))}
         </Row>
       </InfiniteScroll>
+
+
       {!performers.length && !loading && (
         <div className="main-container custom text-center">
           <Alert type="info" message={notFoundText || 'No profile was found'} />

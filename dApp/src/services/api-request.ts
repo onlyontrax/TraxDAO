@@ -40,7 +40,7 @@ export abstract class APIRequest {
    *
    * @return {object|undefined} Returns either the response, or throws an error
    */
-  private checkStatus(response: Response) {
+  private async checkStatus(response: Response) {
     if (response.status >= 200 && response.status < 300) {
       return response;
     }
@@ -53,7 +53,10 @@ export abstract class APIRequest {
       throw new Error('Please login!');
     }
 
-    throw response.clone().json();
+    const errorData = await response.clone().json();
+    throw errorData;
+
+    //throw response.clone().json();
   }
 
   request(

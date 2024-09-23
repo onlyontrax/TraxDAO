@@ -34,7 +34,7 @@
       "name": "Home",
       "short_name": "Home",
       "description": "View artists that you liked",
-      "url": "/home?source=pwa",
+      "url": "/?source=pwa",
       "icons": [{ "src": "/static/logo_192x192.png", "sizes": "192x192" }]
     },
     {

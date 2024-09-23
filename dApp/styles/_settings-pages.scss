@@ -1,0 +1,85 @@
+.account-form-settings {
+  max-width: 650px;
+  width: 100%;
+  background: #0e0e0e00;
+  border-radius: 8px;
+  padding: 2px 28px;
+  padding-bottom: 30px;
+  margin-bottom: 24px;
+  border: 1px solid #20212300;
+
+  @media screen and (max-width: 650px) {
+    padding: 2px 10px;
+  }
+
+  // Styling for user 'Profile' page
+
+  .profile-page-heading {
+    font-size: 24px;
+    font-weight: 500;
+    margin-top: 1.2rem;
+    color: #FFF;
+    margin-bottom: 0rem;
+    font-family: HeadingPro;
+  }
+
+  .profile-page-subtitle {
+    @apply text-trax-gray-300 mb-6 flex text-sm;
+  }
+
+  .profile-form-box-connected {
+    @apply p-4 rounded-lg bg-custom-gray border-none text-trax-white flex flex-col w-full;
+  }
+
+  .profile-form-box-unconnected {
+    @apply p-4 rounded-lg bg-trax-white border-none text-trax-black flex flex-col w-full;
+  }
+
+  /* PhoneInput container styles */
+  .PhoneInput {
+    @apply flex flex-col gap-4;
+
+    .PhoneInputCountry {
+      @apply flex text-right items-center space-x-4 mb-2;
+
+      .PhoneInputCountryIcon {
+        @apply w-12 h-12 place-content-center;
+      }
+
+      .PhoneInputCountrySelect {
+        @apply bg-custom-gray text-trax-white border py-2.5 px-2.5 rounded-lg text-sm;
+      }
+
+      .PhoneInputCountrySelect option {
+        @apply bg-custom-gray text-trax-white;
+      }
+    }
+
+    .PhoneInputInput {
+      @apply bg-custom-gray text-trax-white border py-2.5 px-2.5 rounded-lg text-sm;
+    }
+    .PhoneInputInput:focus-visible {
+      @apply outline-none;
+    }
+  }
+}
+
+.StripeElement {
+  @apply w-full p-2 text-base text-font-gray bg-trax-black border-none rounded-lg;
+
+  .CardField {
+    @apply text-font-gray;
+  }
+}
+
+.StripeElement::placeholder {
+  @apply text-font-gray;
+}
+
+.StripeElement--focus {
+  @apply border-custom-green;
+}
+
+.StripeElement--invalid {
+  @apply border-trax-red-500;
+}

@@ -42,20 +42,39 @@ export class PerformerPaypalForm extends PureComponent<IProps> {
           phoneNumber: ''
         }}
         labelAlign="left"
+        className="w-full"
       >
-          <Col lg={24} xs={24}>
-          <p className="account-form-item-tag">Paypal account email</p>
-            <Form.Item
-              name="email"
-            >
-              <Input className="account-form-input"/>
-            </Form.Item>
-            <Form.Item className="text-center">
-              <Button style={{float: 'left'}} className="ant-btn profile-following-btn-card" htmlType="submit" disabled={updating} loading={updating}>
-                Submit
-              </Button>
-            </Form.Item>
-          </Col>
+        <Row className='gap-4 justify-between'>
+          {/* <p className="account-form-item-tag">Paypal account email</p> */}
+          <Form.Item
+            name="email"
+            className='flex w-3/5'
+
+          >
+            <Input
+              className="account-form-input"
+              placeholder='Add your email'
+            />
+          </Form.Item>
+          {user?.paypalSetting?.value?.email ? (
+            <div className='flex'>
+              <Form.Item className="flex w-1/5 justify-end">
+                <Button className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 h-[38px] flex w-fit justify-center" htmlType="submit" disabled={updating} loading={updating}>
+                  Submit
+                </Button>
+              </Form.Item>
+            </div>
+          ) : (
+            <div className='flex'>
+              <Form.Item className="flex w-1/5 justify-end">
+                <Button className="rounded-lg bg-[#1e1e1e] text-trax-white p-2 h-[38px] flex w-fit justify-center" htmlType="submit" disabled={updating} loading={updating}>
+                  Connect
+                </Button>
+              </Form.Item>
+            </div>
+          )}
+
+        </Row>
       </Form>
     );
   }

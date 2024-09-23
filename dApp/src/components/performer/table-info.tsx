@@ -5,6 +5,8 @@ import {
 } from '@ant-design/icons';
 import { GrSoundcloud, GrSpotify } from 'react-icons/gr';
 import { SiApplemusic } from 'react-icons/si';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faInstagram, faSoundcloud, faXTwitter, faSpotify } from '@fortawesome/free-brands-svg-icons'
 interface IProps {
   performer: IPerformer;
   countries: ICountry[];
@@ -81,7 +83,7 @@ export class PerformerInfo extends PureComponent<IProps> {
               {performer.soundcloud && performer.soundcloud.length > 10 && (
               <a target="_blank" href={performer.soundcloud}>
 
-                <GrSoundcloud />
+              <FontAwesomeIcon icon={faSoundcloud} />
                 {' '}
                 <span className="socials-label">{isDesktop ? 'Soundcloud' : ''}</span>
 

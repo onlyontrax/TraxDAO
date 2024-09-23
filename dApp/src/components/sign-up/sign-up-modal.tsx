@@ -18,6 +18,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import AuthFrame from '../common/base/auth-frame'
 import { IPerformer } from 'src/interfaces';
+import Image from 'next/image';
+import logo from '../../../public/static/trax_primary_logotype.svg'
 
 interface IProps {
   ui: IUIConfig;
@@ -48,10 +50,10 @@ class SignUpModal extends PureComponent<IProps> {
     stage: 1,
     emailValue: '',
     usernameValue: '',
-    passwordValue:'',
-    confirmPasswordValue:'',
-    nameValue:'',
-    referralCodeValue:'',
+    passwordValue: '',
+    confirmPasswordValue: '',
+    nameValue: '',
+    referralCodeValue: '',
     tempUser: null,
   };
 
@@ -59,7 +61,7 @@ class SignUpModal extends PureComponent<IProps> {
     const icpPrice = (await tokenTransctionService.getExchangeRate()).data.rate;
     const ckbtcPrice = (await tokenTransctionService.getExchangeRateBTC()).data.rate;
 
-    this.setState({icpPrice: icpPrice, ckbtcPrice: ckbtcPrice});
+    this.setState({ icpPrice: icpPrice, ckbtcPrice: ckbtcPrice });
     this.checkValidEmail = debounce(this.checkValidEmail.bind(this), 500);
     this.checkValidUsername = debounce(this.checkValidUsername.bind(this), 500);
   }
@@ -134,10 +136,10 @@ class SignUpModal extends PureComponent<IProps> {
       this.setState({ stage: this.state.stage + 1 })
     };
 
-    if(this.state.stage === 3 && !this.state.artistRegister ) {
+    if (this.state.stage === 3 && !this.state.artistRegister) {
       this.handleRegister(values);
     }
-    else if (this.state.stage === 4 && this.state.artistRegister){
+    else if (this.state.stage === 4 && this.state.artistRegister) {
       this.register(values);
     }
   };
@@ -148,19 +150,19 @@ class SignUpModal extends PureComponent<IProps> {
 
     const { registerPerformer: registerPerformerHandler } = this.props;
     // signedUp(false, 'exit')
-    try{
+    try {
       await registerPerformerHandler(data);
       const token = localStorage.getItem("tempToken")
-      if(token) {
+      if (token) {
         const user = await userService.me({
-            Authorization: token
-          });
+          Authorization: token
+        });
         await this.setState({
           tempUser: user.data
         })
       }
       message.success(`Your application will be processed within 24 to 48 hours, most times sooner. You will get an email notification sent to your email address with the status update.`)
-    }catch(e){
+    } catch (e) {
       console.log("This is error", e)
     }
     // return
@@ -178,46 +180,51 @@ class SignUpModal extends PureComponent<IProps> {
       <AuthFrame>
         <div className='sign-up-section'>
           {(stage > 1 && stage < 5) && (
-            <div className='text-trax-lime-200 py-2 lg:py-5 cursor-pointer text-sm' onClick={() => {
-                this.setState({ stage: stage - 1 })
-              }}>
-              <FontAwesomeIcon className='sign-up-back-arrow' icon={faArrowLeft} />
-              <span>Back</span>
+            <div className='text-[#A8FF00] w-12 h-12  cursor-pointer text-xl bg-[#1A1A1A] rounded-full' onClick={() => {
+              this.setState({ stage: stage - 1 })
+            }}>
+              <FontAwesomeIcon className='sign-up-back-arrow px-auto py-auto' icon={faArrowLeft} />
+
             </div>
           )}
           <div className='log-in-header -mb-1 lg:mb-0'>
             {stage === 1 && (
               <div>
-                <h1 className='main-title -mt-6'>Join TRAX</h1>
-                <p className='main-subtitle'>Sign up for free</p>
+                 <Image alt="logo" width={120} height={100} className='mt-3 mb-3' src={logo}/>
+                <h1 className='main-title font-heading md:mt-3 mt-3'>Create an account</h1>
+
               </div>
             )}
             {stage === 2 && (
               <div>
-                <h1 className='main-title text-left'>Enter a password</h1>
+                 <Image alt="logo" width={120} height={100} className='mt-3 mb-3' src={logo}/>
+                <h1 className='main-title font-heading text-left'>Enter a password</h1>
                 <p className='main-subtitle text-left'>Choose a strong password with at least 8 characters and 1 special character.</p>
               </div>
             )}
             {stage === 3 && (
               <div>
-                <h1 className='main-title text-left'>Tell us about yourself</h1>
+                 <Image alt="logo" width={120} height={100} className='mt-3 mb-3' src={logo}/>
+                <h1 className='main-title font-heading text-left'>Set your display name</h1>
                 <p className='main-subtitle text-left'>Set your display name that will be displayed on your TRAX profile.</p>
               </div>
             )}
             {stage === 4 && (
               <div>
-                <h1 className='main-title text-left'>Add referral code</h1>
+                 <Image alt="logo" width={120} height={100} className='mt-3 mb-3' src={logo}/>
+                <h1 className='main-title font-heading text-left'>Add referral code</h1>
                 <p className='main-subtitle text-left'>Reward the person who brought you to TRAX and paste their referral code below.</p>
               </div>
             )}
             {stage === 5 && (
               <div>
-                <h1 className='main-title text-left pb-2'>Thanks for signing up</h1>
+                 <Image alt="logo" width={120} height={100} className='mt-3 mb-3' src={logo}/>
+                <h1 className='main-title text-left font-heading pb-2'>Thanks for signing up</h1>
                 <p className='main-subtitle text-left'>To verify your account, click on the link sent to your inbox ({emailValue})</p>
               </div>
             )}
           </div>
-          <div className={`${stage !== 5 ? 'sign-in-options-wrapper': 'no-display'}`}>
+          <div className={`${stage !== 5 ? 'sign-in-options-wrapper' : 'no-display'}`}>
 
             <Form
               initialValues={{ remember: true, referralCode }}
@@ -226,30 +233,30 @@ class SignUpModal extends PureComponent<IProps> {
               scrollToFirstError
               className='log-in-form'
             >
-              <div className={`${stage === 1 ? 'display-contents': 'no-display'}`}>
+              <div className={`${stage === 1 ? 'display-contents' : 'no-display'}`}>
                 <div className='email-wrapper'>
 
                   <div className='log-in-btn-wrapper flex justify-between gap-4'>
                     <Form.Item className='w-full'>
                       <Button
-                          disabled={isLoading}
-                          loading={isLoading}
-                          htmlType="button"
-                          className={`log-in-btn ${!artistRegister ? 'selected' : 'nonselected'}`}
-                          onClick={() => this.setState({ artistRegister: false})}
+                        disabled={isLoading}
+                        loading={isLoading}
+                        htmlType="button"
+                        className={`log-in-btn ${!artistRegister ? 'selected' : 'nonselected'}`}
+                        onClick={() => this.setState({ artistRegister: false })}
                       >
-                          I'm a fan
+                        I'm a fan
                       </Button>
                     </Form.Item>
                     <Form.Item className='w-full'>
                       <Button
-                          disabled={isLoading}
-                          loading={isLoading}
-                          htmlType="button"
-                          className={`log-in-btn ${artistRegister ? 'selected' : 'nonselected'}`}
-                          onClick={() => this.setState({ artistRegister: true})}
+                        disabled={isLoading}
+                        loading={isLoading}
+                        htmlType="button"
+                        className={`log-in-btn ${artistRegister ? 'selected' : 'nonselected'}`}
+                        onClick={() => this.setState({ artistRegister: true })}
                       >
-                          I'm an artist
+                        I'm an artist
                       </Button>
                     </Form.Item>
                   </div>
@@ -290,13 +297,12 @@ class SignUpModal extends PureComponent<IProps> {
                           type="text"
                           name="emailValue"
                           id="emailInput"
-                          onChange = {this.handleInputChange}
+                          onChange={this.handleInputChange}
                         />
                         <label
                           htmlFor="emailInput"
-                          className={`floating-label text-center ${
-                            this.state.emailValue ? 'label-transition-active' : 'label-transition-initial'
-                        }`}
+                          className={`floating-label text-center ${this.state.emailValue ? 'label-transition-active' : 'label-transition-initial'
+                            }`}
                         >
                           Email
                         </label>
@@ -338,13 +344,12 @@ class SignUpModal extends PureComponent<IProps> {
                           type="text"
                           name="usernameValue"
                           id="usernameInput"
-                          onChange = {this.handleInputChange}
+                          onChange={this.handleInputChange}
                         />
                         <label
                           htmlFor="usernameInput"
-                          className={`floating-label text-center ${
-                            this.state.usernameValue ? 'label-transition-active' : 'label-transition-initial'
-                        }`}
+                          className={`floating-label text-center ${this.state.usernameValue ? 'label-transition-active' : 'label-transition-initial'
+                            }`}
                         >
                           Username
                         </label>
@@ -358,8 +363,8 @@ class SignUpModal extends PureComponent<IProps> {
               </div>
 
 
-              <div className={`${stage === 2 ? 'display-contents gap-2': 'no-display'}`}>
-                <div className='email-wrapper py-8'>
+              <div className={`${stage === 2 ? 'display-contents gap-2' : 'no-display'}`}>
+                <div className='email-wrapper py-2'>
                   <Form.Item
                     name="password"
                     className='w-full h-12 my-0 py-0'
@@ -379,13 +384,12 @@ class SignUpModal extends PureComponent<IProps> {
                         name="passwordValue"
                         id="passwordInput"
                         visibilityToggle={true}
-                        onChange = {this.handleInputChange}
+                        onChange={this.handleInputChange}
                       />
                       <label
                         htmlFor="passwordInput"
-                        className={`floating-label ${
-                          this.state.passwordValue ? 'label-transition-active' : 'label-transition-initial'
-                      }`}
+                        className={`floating-label ${this.state.passwordValue ? 'label-transition-active' : 'label-transition-initial'
+                          }`}
                       >
                         Password
                       </label>
@@ -419,13 +423,12 @@ class SignUpModal extends PureComponent<IProps> {
                         name="confirmPasswordValue"
                         id="confirmPasswordInput"
                         visibilityToggle={true}
-                        onChange = {this.handleInputChange}
+                        onChange={this.handleInputChange}
                       />
                       <label
                         htmlFor="confirmPasswordInput"
-                        className={`floating-label ${
-                          this.state.confirmPasswordValue ? 'label-transition-active' : 'label-transition-initial'
-                      }`}
+                        className={`floating-label ${this.state.confirmPasswordValue ? 'label-transition-active' : 'label-transition-initial'
+                          }`}
                       >
                         Confirm password
                       </label>
@@ -434,7 +437,7 @@ class SignUpModal extends PureComponent<IProps> {
                 </div>
               </div>
 
-              <div className={`${stage === 3 ? 'display-contents gap-2': 'no-display'}`}>
+              <div className={`${stage === 3 ? 'display-contents gap-2' : 'no-display'}`}>
                 <div className='email-wrapper py-4'>
                   <Form.Item
                     name="name"
@@ -457,14 +460,13 @@ class SignUpModal extends PureComponent<IProps> {
                         type="text"
                         name="nameValue"
                         id="nameInput"
-                        onChange = {this.handleInputChange}
-                        // onChange={(e)=> this.setState({displayName: e.target.value})}
+                        onChange={this.handleInputChange}
+                      // onChange={(e)=> this.setState({displayName: e.target.value})}
                       />
                       <label
                         htmlFor="nameInput"
-                        className={`floating-label ${
-                          this.state.nameValue ? 'label-transition-active' : 'label-transition-initial'
-                      }`}
+                        className={`floating-label ${this.state.nameValue ? 'label-transition-active' : 'label-transition-initial'
+                          }`}
                       >
                         Display name
                       </label>
@@ -530,7 +532,7 @@ class SignUpModal extends PureComponent<IProps> {
                 )}
 
                 {stage === 3 && (
-                  <Form.Item style={{width: '100%', paddingTop: '0'}}>
+                  <Form.Item style={{ width: '100%', paddingTop: '0' }}>
                     {!artistRegister ? (
                       <Button
                         htmlType="submit"
@@ -560,7 +562,7 @@ class SignUpModal extends PureComponent<IProps> {
                     loading={registerPerformerData.requesting || submiting || isLoading}
                     className='log-in-btn sign-up'
                   >
-                      Skip
+                    Skip
                   </Button>
                 )}
 
@@ -568,45 +570,45 @@ class SignUpModal extends PureComponent<IProps> {
             </Form>
           </div>
 
-          <div className={`${stage === 1 ? 'display-contents': 'no-display'}`}>
-            <div className={`${artistRegister ? 'sign-in-link mt-36 lg:mt-48': 'sign-in-link -mt-1 lg:mt-2'}`}>
+          <div className={`${stage === 1 ? 'display-contents' : 'no-display'}`}>
+            <div className={`${artistRegister ? 'sign-in-link mt-8 lg:mt-48' : 'sign-in-link -mt-1 lg:mt-2'}`}>
               <span className='new-to'>By clicking <span className='font-semibold'>Continue</span>, you agree to TRAX’s <Link href="/page?id=terms-of-service" target="_blank" className='get-started text-trax-gray-500'>Terms and Conditions</Link> and confirm
-  you have read our <Link href="/page?id=privacy-policy" target="_blank" className='get-started text-trax-gray-500'>Privacy Notice.</Link></span>
+                you have read our <Link href="/page?id=privacy-policy" target="_blank" className='get-started text-trax-gray-500'>Privacy Notice.</Link></span>
             </div>
           </div>
 
           {!artistRegister && (
-            <div className={`${stage === 1 ? 'display-contents': 'no-display'}`}>
+            <div className={`${stage === 1 ? 'display-contents' : 'no-display'}`}>
               <div className='divider'>
-                <div className='hr-line'/>
+                <div className='hr-line' />
                 <span>OR</span>
-                <div className='hr-line'/>
+                <div className='hr-line' />
               </div>
 
               <InternetIdentityProvider
                 {...cryptoService.getNfidInternetIdentityProviderProps(this.onNFIDLogin.bind(this))}
               >
-                <Auth from="sign-up" onLoggedIn={this.hasSignedUp.bind(this)}/>
+                <Auth from="sign-up" onLoggedIn={this.hasSignedUp.bind(this)} />
               </InternetIdentityProvider>
             </div>
           )}
 
-          {artistRegister && tempUser !== null &&(
-            <div className={`${stage === 5 && tempUser !== null ? 'display-contents': 'no-display'}`}>
-              <PerformerVerificationForm registeredUser={tempUser} user={this.props.user} signUp/>
+          {artistRegister && tempUser !== null && (
+            <div className={`${stage === 5 && tempUser !== null ? 'display-contents' : 'no-display'}`}>
+              <PerformerVerificationForm registeredUser={tempUser} user={this.props.user} signUp />
             </div>
           )}
 
-          <div className={`${stage !== 1 ? 'display-contents': 'no-display'}`}>
-            <div className='sign-in-link mt-28 lg:mt-36'>
+          <div className={`${stage !== 1 ? 'display-contents' : 'no-display'}`}>
+            <div className='sign-in-link mt-8 lg:mt-36'>
               <span className='new-to'>
                 This site is protected by reCAPTCHA and the <Link href="/page?id=privacy-policy" target="_blank" className='get-started text-trax-gray-500'>TRAX Privacy Policy</Link> and <Link href="/page?id=terms-of-service" target="_blank" className='get-started text-trax-gray-500'>Terms of Service</Link> apply. </span>
             </div>
           </div>
 
-          <div className={`${stage < 5 ? 'display-contents sign-in-link': 'no-display'}`}>
-            <div className={`${artistRegister ? 'py-3': 'py-3 lg:pt-9'}`}>
-              <span className='new-to'>Already have a TRAX account? </span> <span onClick={()=> this.props.onFinish(false, 'login')} className='get-started'>Log in</span>
+          <div className={`${stage < 5 ? 'display-contents sign-in-link' : 'no-display'}`}>
+            <div className={`${artistRegister ? 'py-3' : 'py-3 lg:pt-9'}`}>
+              <span className='new-to'>Already have a TRAX account? </span> <span onClick={() => this.props.onFinish(false, 'login')} className='get-started'>Log in</span>
             </div>
           </div>
         </div>
@@ -622,7 +624,7 @@ const mapStatesToProps = (state: any) => ({
   registerFanData: { ...state.auth.registerFanData },
   registerPerformerData: { ...state.auth.registerPerformerData },
   store: { ...state },
-  user: { ...state.user},
+  user: { ...state.user },
 });
 
 const mapDispatchToProps = {

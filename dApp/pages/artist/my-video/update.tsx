@@ -55,15 +55,38 @@ class VideoUpdate extends PureComponent<IProps> {
   };
 
   async componentDidMount() {
+    const { id } = this.props;
+    if (!id) {
+      const data = await this.getData();
+
+      this.setState({ video: data.video, fetching: false });
+    } else {
+      try {
+        const resp = await videoService.findById(id);
+        this.setState({ video: resp.data });
+      } catch (e) {
+        message.error('Video not found!');
+        Router.back();
+      } finally {
+        this.setState({ fetching: false });
+      }
+    }
+  }
+
+  async getData() {
     try {
-      const { id } = this.props;
+      const url = new URL(window.location.href);
+      const id = url.searchParams.get('id');
       const resp = await videoService.findById(id);
-      this.setState({ video: resp.data });
+
+      return {
+        video: resp?.data
+      };
     } catch (e) {
       message.error('Video not found!');
-      Router.back();
-    } finally {
-      this.setState({ fetching: false });
+      return {
+        video: null
+      };
     }
   }
 
@@ -73,7 +96,7 @@ class VideoUpdate extends PureComponent<IProps> {
       .updatePPVContent(id, content)
       .then(async () => {
         await videoService.update(id, files, data, this.onUploading.bind(this));
-        Router.replace(`/artist/profile?id=${user?.username || user?._id}`);
+        Router.replace(`/${user?.username || user?._id}`);
         message.success('Update successful!');
       })
       .catch((error) => {
@@ -91,7 +114,7 @@ class VideoUpdate extends PureComponent<IProps> {
   }
 
   async submit(data: any) {
-    
+
     const { user, settings } = this.props;
     const { video } = this.state;
     const submitData = { ...data };
@@ -127,7 +150,7 @@ class VideoUpdate extends PureComponent<IProps> {
           if (rc[i].performerId === user._id) {
             pubPercentage = rc[i].percentage / 100;
           } else {
-            
+
             const obj: Participants = {
               participantID: Principal.fromText(rc[i].wallet_id),
               participantPercentage: rc[i].percentage / 100
@@ -187,7 +210,7 @@ class VideoUpdate extends PureComponent<IProps> {
       } else {
         await videoService.update(video._id, files, data, this.onUploading.bind(this));
       }
-      Router.replace(`/artist/profile?id=${user?.username || user?._id}`);
+      Router.replace(`/${user?.username || user?._id}`);
       message.success('Your track has been successfully updated');
     } catch (error) {
       message.error(getResponseError(error) || 'An error occurred, please try again!');
@@ -207,7 +230,7 @@ class VideoUpdate extends PureComponent<IProps> {
           <title>{`${ui?.siteName} | Edit Video`}</title>
         </Head>
         <div className="main-container">
-          <PageHeading title="Edit Video" icon={<VideoCameraOutlined />} />
+          {/* <PageHeading title="Edit Video" icon={<VideoCameraOutlined />} /> */}
           {!fetching && video && (
             <FormUploadVideo
               user={user}
@@ -216,6 +239,7 @@ class VideoUpdate extends PureComponent<IProps> {
               uploading={uploading}
               beforeUpload={this.beforeUpload.bind(this)}
               uploadPercentage={uploadPercentage}
+              settings={this.props.settings}
             />
           )}
           {fetching && (

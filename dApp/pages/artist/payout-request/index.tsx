@@ -1,59 +1,56 @@
 import { getResponseError } from '@lib/utils';
 import { payoutRequestService } from '@services/index';
-import { Button, message } from 'antd';
+import { message } from 'antd';
 import Head from 'next/head';
-import Router from 'next/router';
 import { PureComponent } from 'react';
 import { connect } from 'react-redux';
-import PayoutRequestList from 'src/components/payout-request/table';
+import { formatDateNoTime } from 'src/lib';
+import { IUIConfig } from 'src/interfaces';
+import InfiniteScroll from 'react-infinite-scroll-component';
 
-interface IProps {}
+interface IProps {
+  ui: IUIConfig;
+}
 
-class PerformerPayoutRequestPage extends PureComponent<IProps> {
+interface IPayoutRequest {
+  _id: string;
+  updatedAt: Date;
+  amount: number;
+}
+
+interface IState {
+  items: IPayoutRequest[];
+  loading: boolean;
+  hasMore: boolean;
+}
+
+class PayoutRequest extends PureComponent<IProps, IState> {
   static onlyPerformer = true;
 
-  state = {
+  state: IState = {
     items: [],
     loading: false,
-    pagination: {
-      pageSize: 10,
-      current: 1,
-      total: 0
-    } as any,
-    sort: 'desc',
-    sortBy: 'updatedAt',
-    filter: {}
+    hasMore: true,
   };
 
   componentDidMount() {
     this.getData();
   }
 
-  async handleTabChange(data) {
-    const { pagination } = this.state;
-    await this.setState({
-      pagination: { ...pagination, current: data.current }
-    });
-    this.getData();
-  }
-
   async getData() {
+    const { items } = this.state;
+    const pageSize = 10;
     try {
-      const {
-        filter, sort, sortBy, pagination
-      } = this.state;
-      await this.setState({ loading: true });
+      this.setState({ loading: true });
       const resp = await payoutRequestService.search({
-        ...filter,
-        sort,
-        sortBy,
-        limit: pagination.pageSize,
-        offset: (pagination.current - 1) * pagination.pageSize
+        limit: pageSize,
+        offset: items.length,
       });
-      await this.setState({
+
+      this.setState({
         loading: false,
-        items: resp.data.data,
-        pagination: { ...pagination, total: resp.data.total }
+        items: [...items, ...resp.data.data],
+        hasMore: items.length + resp.data.data.length < resp.data.total,
       });
     } catch (error) {
       message.error(getResponseError(await error) || 'An error occured. Please try again.');
@@ -62,23 +59,39 @@ class PerformerPayoutRequestPage extends PureComponent<IProps> {
   }
 
   render() {
-    const { pagination, items, loading } = this.state;
+    const { hasMore, items, loading } = this.state;
 
     return (
       <>
         <Head>
           <title>Payout Requests</title>
         </Head>
-        <div className="main-container-table">
-          <div className="table-responsive">
-            <PayoutRequestList
-              payouts={items}
-              searching={loading}
-              total={pagination.total}
-              onChange={this.handleTabChange.bind(this)}
-              pageSize={pagination.pageSize}
-            />
-          </div>
+        <div className="lg:w-5/6 md:pl-6 pl-4">
+          <InfiniteScroll
+          
+            dataLength={items.length}
+            next={() => this.getData()}
+            hasMore={hasMore}
+            loader={<div>Loading...</div>}
+          >
+            <div>
+              {items.map((item) => (
+                <div key={item._id} className="flex justify-between items-center p-2 text-sm">
+                  <div className="flex items-center space-x-3">
+                    <div>
+                      <span className='text-trax-white'>
+                        {formatDateNoTime(item.updatedAt)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-trax-white">
+                    - ${item?.amount?.toFixed(2) || 0}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </InfiniteScroll>
+          
         </div>
       </>
     );
@@ -88,4 +101,4 @@ class PerformerPayoutRequestPage extends PureComponent<IProps> {
 const mapStateToProps = (state) => ({
   ui: state.ui
 });
-export default connect(mapStateToProps)(PerformerPayoutRequestPage);
+export default connect(mapStateToProps)(PayoutRequest);

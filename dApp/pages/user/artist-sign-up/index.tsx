@@ -1,10 +1,8 @@
 /* eslint-disable prefer-promise-reject-errors, react/sort-comp */
 import { DatePicker } from '@components/common/datePicker';
 import { ImageUploadModel } from '@components/file';
-import { InformationCircleIcon } from '@heroicons/react/solid';
 import { loginSocial, registerPerformer } from '@redux/auth/actions';
 import { authService } from '@services/index';
-import { BadgeCheckIcon } from '@heroicons/react/solid';
 import {
   Button, Col, Form, Image, Input, Layout, Row, Select, message, Spin
 } from 'antd';
@@ -30,10 +28,10 @@ interface IProps {
 }
 
 const artists = [
-    {name: 'CHELJI', handle: 'trax.so/chelji', link: '/artist/profile?id=chelji', img: '/static/Chelji-profile.jpeg'},
-    {name: 'MASTER PEACE', handle: 'trax.so/masterpeace', link: '/artist/profile?id=masterpeace', img: '/static/MasterPeace.jpeg'},
-    {name: 'DEIJUVHS', handle: 'trax.so/deijuvhs', link: '/artist/profile?id=deijuvhs', img: '/static/deijuvhs.jpeg'},
-    {name: 'SCRATCH CARD WED...', handle: 'trax.so/scratchcardwednesday', link: '/artist/profile?id=scratchcardwednesday', img: '/static/scw-show.jpeg'},
+    {name: 'CHELJI', handle: 'trax.so/chelji', link: '/chelji', img: '/static/Chelji-profile.jpg'},
+    {name: 'MASTER PEACE', handle: 'trax.so/masterpeace', link: '/masterpeace', img: '/static/MasterPeace.jpg'},
+    {name: 'DEIJUVHS', handle: 'trax.so/deijuvhs', link: '/deijuvhs', img: '/static/deijuvhs.jpg'},
+    {name: 'SCRATCH CARD WED...', handle: 'trax.so/scratchcardwednesday', link: '/scratchcardwednesday', img: '/static/scw-show.jpg'},
 ]
 
 class RegisterPerformer extends PureComponent<IProps> {
@@ -160,7 +158,7 @@ class RegisterPerformer extends PureComponent<IProps> {
         <Head>
           <title>{`${ui?.siteName} | Become a creator`}</title>
         </Head>
-        
+
         <div className="creator-sign-up-header-wrapper">
       <img
         src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=2970&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
@@ -226,14 +224,14 @@ class RegisterPerformer extends PureComponent<IProps> {
                           <div className='creator-sign-up-form-header-wrapper'>
                             <span>1</span>
                             <h1>Create a username</h1>
-                           
+
                           </div>
                           <p>Select a username and start building your profile</p>
                           </div>
                           <div className='creator-sign-up-field-wrapper'>
                             <div className="creator-field-name">
                               <p>Username</p>
-                             
+
                             </div>
                             <Form.Item
                               style={{width: '100%'}}
@@ -254,7 +252,7 @@ class RegisterPerformer extends PureComponent<IProps> {
                           <div className='creator-sign-up-field-wrapper'>
                             <div className="creator-field-name">
                               <p>Display name </p>
-                              
+
                             </div>
                             <Form.Item
                               style={{width: '100%'}}
@@ -283,9 +281,9 @@ class RegisterPerformer extends PureComponent<IProps> {
                             <p>Select an email and password</p>
                           </div>
 
-                          
+
                           <div className='creator-sign-up-field-wrapper'>
-                            
+
                             <div className="creator-field-name">
                               <p>Email address </p>
                               {/* <p className='field-info'>Must be different to your fan account</p> */}
@@ -333,7 +331,7 @@ class RegisterPerformer extends PureComponent<IProps> {
                           <div className='creator-sign-up-field-wrapper'>
                           <div className="creator-field-name">
                               <p>Confirm password </p>
-                              
+
                             </div>
                             <Form.Item
                             style={{width: '100%'}}
@@ -364,11 +362,11 @@ class RegisterPerformer extends PureComponent<IProps> {
                             <p>This won't be shared publicly, we use this information to verify your identity.</p>
                           </div>
                           <div className='creator-sign-up-field-wrapper'>
-                            
+
                               <div className="creator-field-name">
                                 <p>Name </p>
-                                
-                                
+
+
                               </div>
 
                               <Form.Item
@@ -386,13 +384,13 @@ class RegisterPerformer extends PureComponent<IProps> {
                               >
                                 <Input className='register-creator-input' placeholder="e.g. Kendrick Lamar" onChange={(e)=> this.setState({name: e.target.value})} />
                               </Form.Item>
-                          
+
                           </div>
-                          
+
                           <div className='creator-sign-up-field-wrapper'>
                               <div className="creator-field-name">
                                 <p>Date of birth </p>
-                                
+
                               </div>
                               <Form.Item
                               style={{width: '100%'}}
@@ -407,14 +405,14 @@ class RegisterPerformer extends PureComponent<IProps> {
                                 </div>
                               </Form.Item>
                             </div>
-                            
+
                             <div className='creator-sign-up-field-wrapper'>
                             <div className="creator-field-name">
                                 <p>Gender </p>
-                                
+
                               </div>
                               <Form.Item
-                                
+
                                 style={{width: '100%'}}
                                 name="gender"
                                 validateTrigger={['onChange', 'onBlur']}
@@ -466,7 +464,7 @@ class RegisterPerformer extends PureComponent<IProps> {
                               </Form.Item>
                           </div>
                   <Form.Item>
-                      
+
                         <div className='creator-docs-wrapper'>
                             <span className='creator-docs-header'>Verify yourself </span>
                             <span className='creator-docs-msg'>Upload the following identification to verify your identity.</span>
@@ -566,7 +564,7 @@ class RegisterPerformer extends PureComponent<IProps> {
               </div>
             </Col>
           </Row>
-        
+
       </Layout>
     );
   }
