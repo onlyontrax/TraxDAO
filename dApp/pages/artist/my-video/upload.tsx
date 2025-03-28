@@ -19,6 +19,9 @@ import { Content, Participants } from '../../../src/smart-contracts/declarations
 import { idlFactory as idlFactoryPPV } from '../../../src/smart-contracts/declarations/ppv/ppv.did.js';
 import type { _SERVICE as _SERVICE_PPV } from '../../../src/smart-contracts/declarations/ppv/ppv2.did';
 import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider } from '../../../src/crypto/mobilePlugWallet';
+import {
+  addContent
+} from "../../../src/crypto/transactions/plug-ppv";
 
 interface IProps {
   ui: IUIConfig;
@@ -47,10 +50,12 @@ class UploadVideo extends PureComponent<IProps> {
 
   _files: {
     thumbnail: File;
+    thumbnailMobile: File;
     teaser: File;
     video: File;
   } = {
     thumbnail: null,
+    thumbnailMobile: null,
     teaser: null,
     video: null
   };
@@ -89,6 +94,7 @@ class UploadVideo extends PureComponent<IProps> {
     }
     if (data.tags) { submitData.tags = [...[], ...data.tags]; }
     if (data.participantIds) submitData.participantIds = [...[], ...data.participantIds];
+    if (data.participantIds) submitData.royaltyCut = JSON.stringify(data.royaltyCut);
     const files = Object.keys(this._files).reduce((f, key) => {
       if (this._files[key]) {
         f.push({
@@ -102,8 +108,11 @@ class UploadVideo extends PureComponent<IProps> {
     this.setState({
       uploading: true
     });
+
+    let contentId;
     try {
-      const res = (await videoService.uploadVideo(files, data, this.onUploading.bind(this))) as IResponse;
+      const res = (await videoService.uploadVideo(files, submitData, this.onUploading.bind(this))) as IResponse;
+      contentId = res.data._id;
 
       if (data.isCrypto) {
         const participants = [];
@@ -123,104 +132,52 @@ class UploadVideo extends PureComponent<IProps> {
         }
 
         const content: Content = {
-          publisher: Principal.fromText(user.wallet_icp),
+          publisher: user && Principal.fromText(user.account?.wallet_icp),
           publisherPercentage: pubPercentage,
           price: data.price,
           participants,
           contentType: data.trackType === null ? 'video' : data.trackType
         };
 
-        let identity, ppvActor, agent, host;
+        console.log("@my-video/upload - submit - content: ", content);
 
-        const authClient = await AuthClient.create();
+        console.log("@my-video/upload - submit - before addContent: ",
+          contentId,
+          content,
+          settings,
+          data.walletOption)
 
-        if(data.walletOption === ('II' || 'nfid' )){
-          if (settings.icNetwork !== true) {
-            await authClient.login({
-              identityProvider: cryptoService.getIdentityProviderLink(),
-              onSuccess: async () => {
-                if (await authClient.isAuthenticated()) {
-                  identity = authClient.getIdentity();
-                  host = settings.icHost;
-                  agent = new HttpAgent({
-                    identity,
-                    host
-                  });
 
-                  let sender = await agent.getPrincipal();
-                  agent.fetchRootKey();
-                  ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
-                    agent,
-                    canisterId: settings.icPPV
-                  });
-                }
-                await this.handleAddPPVContent(res.data._id, content, ppvActor);
-              }
-            });
-          } else {
-            host = settings.icHost;
-            await authClient.login({
-              onSuccess: async () => {
-                identity = await authClient.getIdentity();
-                agent = new HttpAgent({ identity, host });
-                ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
-                  agent,
-                  canisterId: settings.icPPV
-                });
-
-                await this.handleAddPPVContent(res.data._id, content, ppvActor);
-              }
-            });
-          }
-        }else if(data.walletOption === 'plug'){
-
-          const whitelist = [
-            settings.icPPV,
-          ];
-
-          //const plugWalletProvider = await getPlugWalletProvider();
-          const agent = await getPlugWalletAgent('icPPV');
-          const connected = await getPlugWalletIsConnected();
-
-          !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
-
-          this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 20 });
-
-          ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
-            agent: agent,
-            canisterId: settings.icPPV
+          await addContent(
+            contentId,
+            content,
+            settings,
+            data.walletOption
+          ).then((res) => {
+              console.log("addContentRes: ", res);
+          }).catch((err) => {
+            console.log(err)
+            this.deleteVideo(contentId)
           });
-
-          await this.handleAddPPVContent(res.data._id, content, ppvActor);
-
-        }else{
-          message.error("This wallet does not exist. Please try again.")
-        }
       }
 
-      Router.replace(`/${user?.username || user?._id}`);
+      Router.replace(`/artist/profile/?id=${user?.username || user?._id}`);
       message.success('Your track has been successfully uploaded!');
     } catch (error) {
-      message.error(getResponseError(error) || 'An error occurred, please try again!');
+
+      this.deleteVideo(contentId)
+      message.error('An error occurred when trying to upload your content, please try again!');
+      console.log(getResponseError(error) || 'An error occurred, please try again!')
+
     } finally {
       this.setState({ uploading: false });
     }
   }
 
-  async handleAddPPVContent(id: string, content: Content, ppvActor: any) {
-    const { user } = this.props;
+  async handleAddPPVContent(id: string, content: Content, wallet: string) {
+    const { settings } = this.props;
 
-    await ppvActor
-      .addPPVContent(id, content)
-      .then(async () => {
-        message.success('Upload successful!');
-        Router.replace(`/${user?.username || user?._id}`);
-      })
-      .catch(async (error) => {
-        message.error(error.message || 'error occured, please try again later');
-        await this.deleteVideo(id);
-        return error;
-      });
+
   }
 
   async deleteVideo(id: string) {
@@ -238,12 +195,27 @@ class UploadVideo extends PureComponent<IProps> {
   render() {
     const { uploading, uploadPercentage } = this.state;
     const { ui, user } = this.props;
+
+    if (!user?.account?.verifiedEmail) {
+      return (
+        <Layout>
+          <Head>
+            <title>{`${ui?.siteName} | Upload a track`}</title>
+          </Head>
+          <div className="main-container mt-12 sm:mt-16 px-3 ">
+            <PageHeading title="Verify email to add new content" />
+
+          </div>
+        </Layout>
+      );
+    }
+
     return (
-      <Layout>
+      <Layout className='bg-trax-zinc-900'>
         <Head>
           <title>{`${ui?.siteName} | Upload a track`}</title>
         </Head>
-        <div className="main-container">
+        <div className="main-container mt-12 sm:mt-16 px-3 ">
           <PageHeading title="" />
           <FormUploadVideo
             user={user}

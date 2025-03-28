@@ -199,7 +199,7 @@ class Music extends PureComponent<IProps> {
         <Head>
           <title>{`${ui?.siteName} | Tracks`}</title>
         </Head>
-        <div className="main-container">
+        <div className="">
           {/* <PageHeading title="Tracks" /> */}
           <div>
             <Row className='w-full justify-end'>

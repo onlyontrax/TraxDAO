@@ -1,7 +1,7 @@
 /* eslint-disable react/sort-comp */
 import { SendOutlined, SmileOutlined } from '@ant-design/icons';
 import { ImageMessageUpload } from '@components/messages/uploadPhoto';
-import TipPerformerForm from '@components/performer/tip-form';
+import TipPerformerForm from '@components/performer/TipPerformerForm';
 import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import { sendMessage, sentFileSuccess } from '@redux/message/actions';
 import { updateBalance } from '@redux/user/actions';
@@ -107,17 +107,13 @@ class Compose extends PureComponent<IProps> {
     if(ticker === 'USD'){
       await this.sendTipFiat(price)
     }else{
-      if(paymentOption === 'plug'){
-        await this.sendTipPlug(price, ticker)
-      }else{
-        await this.sendTipCrypto(price, ticker);
-      }
+      
     }
   }
 
   async sendTipFiat(price) {
     const { currentUser, conversation, updateBalance: handleUpdateBalance } = this.props;
-    if (currentUser.balance < price) {
+    if (currentUser?.account?.balance < price) {
       message.error('Your wallet balance is not enough');
       Router.push('/wallet');
       return;
@@ -183,7 +179,7 @@ class Compose extends PureComponent<IProps> {
     const participants = [];
 
     const obj2: Participants = {
-      participantID: Principal.fromText(conversation?.recipientInfo?.wallet_icp),
+      participantID: Principal.fromText(conversation?.recipientInfo.account?.wallet_icp),
       participantPercentage: 1
     };
     participants.push(obj2);
@@ -195,9 +191,9 @@ class Compose extends PureComponent<IProps> {
       this.setState({ tipProgress: 30 });
       await ledgerActor.transfer(transferArgs).then(async (res) => {
         this.setState({ tipProgress: 50 });
-        await tippingActor.sendTip(res.Ok, Principal.fromText(conversation?.recipientInfo?.wallet_icp), BigInt(amountToSend), 'ICP').then(() => {
+        await tippingActor.sendTip(res.Ok, Principal.fromText(conversation?.recipientInfo.account?.wallet_icp), BigInt(amountToSend), 'ICP').then(() => {
           this.setState({ tipProgress: 100 });
-          tokenTransctionService.sendCryptoTip(conversation?.recipientInfo?.wallet_icp, { performerId: conversation?.recipientInfo?.wallet_icp, price: Number(amountToSend), tokenSymbol: ticker }).then(() => {
+          tokenTransctionService.sendCryptoTip(conversation?.recipientInfo.account?.wallet_icp, { performerId: conversation?.recipientInfo.account?.wallet_icp, price: Number(amountToSend), tokenSymbol: ticker }).then(() => {
           });
         });
       })
@@ -225,235 +221,7 @@ class Compose extends PureComponent<IProps> {
 
 
 
-  async sendTipPlug(amount:number, ticker:string) {
-    const { conversation, settings } = this.props;
-    let transfer;
-    let amountToSend = BigInt(Math.trunc(Number(amount) * 100000000));
 
-    const tippingCanID = settings.icTipping;
-    const ledgerCanID = settings.icLedger;
-    const ckBTCLedgerCanID = settings.icCKBTCMinter;
-    this.setState({
-      requesting: false,
-      submiting: false,
-      openTipProgressModal: false,
-      tipProgress: 0
-    });
-
-    const whitelist = [
-      tippingCanID,
-    ];
-
-    const plugWalletProvider = await getPlugWalletProvider();
-    const agent = await getPlugWalletAgent('tippingCanID');
-    const connected = await getPlugWalletIsConnected();
-
-    !connected && message.info("Failed to connected to canister. Please try again later or contact us. ")
-
-    this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 20 });
-
-    let tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
-      agent: agent,
-      canisterId: tippingCanID
-    });
-
-    const participants = [];
-
-    if(connected){
-      //@ts-ignore
-      const requestBalanceResponse = await plugWalletProvider.requestBalance();
-      const icp_balance = requestBalanceResponse[0]?.amount;
-      const ckBTC_balance = requestBalanceResponse[1]?.amount;
-
-      if(ticker === 'ckBTC'){
-        if(ckBTC_balance >= amount){
-          this.setState({ tipProgress: 30 });
-          const params = {
-            to: tippingCanID,
-            strAmount: amount,
-            token: 'mxzaz-hqaaa-aaaar-qaada-cai'
-          };
-          //@ts-ignore
-          transfer = await plugWalletProvider.requestTransferToken(params);
-
-        } else {
-          this.setState({
-            requesting: false,
-            submiting: false,
-            openTipProgressModal: false,
-            tipProgress: 0
-          })
-          message.error('Insufficient balance, please top up your wallet and try again.');
-        }
-      }
-
-      if (ticker === 'ICP') {
-        this.setState({ tipProgress: 30 });
-        if(icp_balance >= amount){
-          const requestTransferArg = {
-            to: tippingCanID,
-            amount: Math.trunc(Number(amount) * 100000000)
-          }
-          //@ts-ignore
-          transfer = await plugWalletProvider.requestTransfer(requestTransferArg);
-
-        } else {
-          this.setState({
-            requesting: false,
-            submiting: false,
-            openTipProgressModal: false,
-            tipProgress: 0
-          })
-          message.error('Insufficient balance, please top up your wallet and try again.');
-        }
-      }
-
-      this.setState({ tipProgress: 50 });
-
-      if(transfer.height){
-        const obj2: Participants = {
-          participantID: Principal.fromText(conversation?.recipientInfo?.wallet_icp),
-          participantPercentage: 1
-        };
-        participants.push(obj2);
-        const participantArgs: TippingParticipants = participants;
-
-        await tippingActor.sendTip(transfer.height, participantArgs, amountToSend, ticker).then(() => {
-          this.setState({ tipProgress: 100 });
-          tokenTransctionService.sendCryptoTip(conversation?.recipientInfo?._id, {
-              performerId: conversation?.recipientInfo?._id,
-              price: Number(amountToSend),
-              tokenSymbol: ticker
-            }).then(() => {});
-          setTimeout(
-            () => this.setState({
-              requesting: false,
-              submiting: false,
-              openTipProgressModal: false,
-              tipProgress: 0
-            }),1000);
-          message.success(`Payment successful! ${conversation?.recipientInfo?.name} has recieved your tip`);
-          this.setState({ requesting: false, submiting: false });
-        }).catch((error) => {
-          this.setState({
-            requesting: false,
-            submiting: false,
-            openTipProgressModal: false,
-            tipProgress: 0
-          });
-          message.error(error.message || 'error occured, please try again later');
-          return error;
-        });
-      }else{
-        message.error('Transaction failed. Please try again later.');
-      }
-    }
-  }
-
-
-  async sendTipCrypto(amount: number, ticker: string) {
-    const { conversation, settings } = this.props;
-
-    if (!conversation?.recipientInfo?.wallet_icp) {
-      this.setState({
-        requesting: false,
-        submiting: false,
-        openTipProgressModal: false,
-        tipProgress: 0
-      });
-      message.info('This artist is not a web3 user and therefore cannot recieve tips in crypto at this time.');
-      return;
-    }
-
-    let amountToSend: any = 0;
-    if (ticker === 'ICP') {
-      amountToSend = BigInt(amount * 100000000);
-    }
-
-    try {
-      this.setState({ requesting: true, submitting: true });
-
-      let identity;
-      let ledgerActor;
-      const authClient = await AuthClient.create();
-      let sender;
-      let tippingActor;
-      let agent;
-
-      const tippingCanID = settings.icTipping;
-      const ledgerCanID = settings.icLedger;
-
-      if (settings.icNetwork !== true) {
-        await authClient.login({
-          identityProvider: cryptoService.getIdentityProviderLink(),
-          onSuccess: async () => {
-            identity = authClient.getIdentity();
-
-            const host = settings.icHost;
-
-            agent = new HttpAgent({
-              identity,
-              host
-            });
-
-            agent.fetchRootKey();
-            sender = await agent.getPrincipal();
-
-            ledgerActor = Actor.createActor<_SERVICE_LEDGER>(idlFactoryLedger, {
-              agent,
-              canisterId: ledgerCanID
-            });
-
-            tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
-              agent,
-              canisterId: tippingCanID
-            });
-
-            await this.handleSendTipCrypto(
-              Principal.fromText(tippingCanID),
-              sender,
-              amountToSend,
-              ledgerActor,
-              tippingActor,
-              ticker
-            );
-          }
-        });
-      } else {
-        const host = settings.icHost;
-
-        await authClient.login({
-          onSuccess: async () => {
-            identity = await authClient.getIdentity();
-            agent = new HttpAgent({ identity, host });
-            sender = await agent.getPrincipal();
-
-            ledgerActor = Actor.createActor<_SERVICE_LEDGER>(idlFactoryLedger, {
-              agent,
-              canisterId: ledgerCanID
-            });
-
-            tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
-              agent,
-              canisterId: tippingCanID
-            });
-
-            await this.handleSendTipCrypto(
-              Principal.fromText(tippingCanID),
-              sender,
-              amountToSend,
-              ledgerActor,
-              tippingActor,
-              ticker
-            );
-          }
-        });
-      }
-    } catch (e) {
-      const err = await e;
-      message.error(err.message || 'error occured, please try again later');
-    }
-  }
 
   render() {
     const {
@@ -512,7 +280,7 @@ class Compose extends PureComponent<IProps> {
             </div>
           </div>
 
-          <Modal
+          {/* <Modal
             key="tip_performer"
             className="subscription-modal"
             title={null}
@@ -522,8 +290,8 @@ class Compose extends PureComponent<IProps> {
             footer={null}
             onCancel={() => this.setState({ openTipModal: false })}
           >
-            <TipPerformerForm performer={conversation.recipientInfo} submiting={submiting} onFinish={this.sendTip.bind(this)} isProfile />
-          </Modal>
+            <TipPerformerForm performer={conversation.recipientInfo} submiting={submiting} onFinish={this.sendTip.bind(this)} />
+          </Modal> */}
           <Modal
             key="tip_progress"
             className="tip-progress"

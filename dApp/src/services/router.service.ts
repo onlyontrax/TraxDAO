@@ -1,8 +1,8 @@
 import Router from 'next/router';
 
 const defaultPages = [
-  'artist', 'auth', 'contact', 'event-store', 'explore', 'gallery', 'home', 'login', 'messages',
-  'nft', 'page', 'payment', 'post', 'register', 'store', 'streaming', 'unsubscribe', 'user', 'video', 'wallet',
+  'account', 'artist', 'auth', 'contact', 'event-store', 'explore', 'gallery', 'home', 'login', 'messages',
+  'nft', 'page', 'payment', 'post', 'register', 'store', 'streaming', 'unsubscribe', 'user', 'video', 'track', 'wallet',
   'dashboard', 'cart', 'error', 'search'
 ];
 
@@ -11,7 +11,7 @@ export class RouterService {
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
 
     if (currentPath === '/') {
-      return true;
+      return false;
     }
 
     const currentPathParts = currentPath.split('/').filter((part) => part !== '');
@@ -29,9 +29,11 @@ export class RouterService {
         undefined,
         { shallow: true }
       );
+
+      return true;
     }
 
-    return true;
+    return false;
   }
 
   async changeUrlPath() {
@@ -47,6 +49,39 @@ export class RouterService {
         //window.dispatchEvent(new Event('popstate'));
       }
     }
+  }
+
+  async redirectAfterSwitchSubaccount(account: any, ) {
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+
+    if (currentPath === '/') {
+      return false;
+    }
+
+    const currentPathParts = currentPath.split('/').filter((part) => part !== '');
+    const firstSegment = currentPathParts.length > 0 ? currentPathParts[0] : '';
+
+    // Check if the first segment matches any of the default pages
+    const isDefaultPage = currentPathParts.length > 1 || defaultPages.includes(firstSegment);
+
+    if (isDefaultPage) {
+      const secondSegment = currentPathParts.length > 1 ? currentPathParts[1] : '';
+      if (account.activeSubaccount === 'performer') {
+        if (firstSegment === 'user') {
+          await Router.push({ pathname: `/artist/studio` }, `/artist/studio`);
+          //await Router.push({ pathname: `/artist/profile/?id=${account.performerInfo.username || account.performerId}` }, `/artist/profile/?id=${account.performerInfo.username || account.performerId}`);
+        }
+      }
+      if (account.activeSubaccount === 'user') {
+        if (firstSegment === 'artist') {
+          await Router.push({ pathname: `/user/library` }, `/user/library`);
+        }
+      }
+
+      return true;
+    }
+
+    return false;
   }
 }
 

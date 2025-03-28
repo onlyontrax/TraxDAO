@@ -1,5 +1,5 @@
 /* eslint-disable no-template-curly-in-string, react/require-default-props */
-import { GoogleOutlined, TwitterOutlined, UploadOutlined } from '@ant-design/icons';
+import { AppleOutlined, GoogleOutlined, TwitterOutlined, UploadOutlined } from '@ant-design/icons';
 import { VideoPlayer } from '@components/common';
 import { DatePicker } from '@components/common/datePicker';
 import { AvatarUpload } from '@components/user/avatar-upload';
@@ -11,6 +11,8 @@ import {
 import moment from 'moment';
 import { PureComponent } from 'react';
 import { ICountry, IMusic, IPerformer } from 'src/interfaces';
+
+import TraxButton from '@components/common/TraxButton';
 
 const { Option } = Select;
 
@@ -313,16 +315,15 @@ export class PerformerAccountInformationForm extends PureComponent<IProps> {
               </Form.Item>
             )}
           </Col>
-          <Form.Item wrapperCol={{ ...layout.wrapperCol, offset: 4 }}>
-            <Button
-              className="profile-following-btn-card"
+          <Form.Item>
+            <TraxButton
               htmlType="submit"
+              styleType="primary"
+              buttonSize='full'
+              buttonText="Save Changes"
               loading={updating || isUploadingVideo}
               disabled={updating || isUploadingVideo}
-              style={{ float: 'right' }}
-            >
-              Save Changes
-            </Button>
+            />
           </Form.Item>
           <Col md={24} xs={24} className='mt-14' >
             <div className=' flex flex-row gap-4 w-full'>
@@ -365,16 +366,15 @@ export class PerformerAccountInformationForm extends PureComponent<IProps> {
               </Form.Item>
             </div>
           </Col>
-          <Form.Item wrapperCol={{ ...layout.wrapperCol, offset: 4 }}>
-            <Button
-              className="profile-following-btn-card"
+          <Form.Item>
+            <TraxButton
               htmlType="submit"
+              styleType="primary"
+              buttonSize='full'
+              buttonText="Update password"
               loading={updating || isUploadingVideo}
               disabled={updating || isUploadingVideo}
-              style={{ float: 'right' }}
-            >
-              Update password
-            </Button>
+            />
           </Form.Item>
         </div>
       </Form>

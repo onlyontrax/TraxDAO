@@ -76,7 +76,7 @@ class PostDetail extends PureComponent<IProps> {
     const { ui } = this.props;
     const { post } = this.state;
     if (post === null) {
-      return <div style={{ margin: 30, textAlign: 'center' }}><Spin /></div>;
+      return <div style={{ margin: 30, textAlign: 'center' }}><img src="/static/trax_loading_optimize.gif" alt="Loading..." className='w-40 m-auto'/></div>;
     }
     return (
       <Layout>

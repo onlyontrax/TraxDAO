@@ -56,7 +56,7 @@ export default function VideoCardSuggested({ video }: IProps) {
   );
 
   return (
-    <Link href={`/video?id=${video.slug || video._id}`} passHref>
+    <Link href={`/${video?.trackType === 'video' ? 'video' : 'track'}?id=${video.slug || video._id}`} passHref>
       <div className="flex flex-row">
         <div className="prd-card-suggested"
           onMouseEnter={() => setHover(true)}
@@ -68,7 +68,7 @@ export default function VideoCardSuggested({ video }: IProps) {
         <div>
           <div className="prd-info-suggested">
             <span className="text-[0.95rem]">{video.title}</span>
-            <Link href={`/${video.performer.username || video.performer._id}`} className="prd-info-name">
+            <Link href={`/artist/profile/?id=${video.performer.username || video.performer._id}`} className="prd-info-name">
               <span>{video.performer.name}</span>
             </Link>
             {video.limitSupply && (

@@ -194,7 +194,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
     if (user?.isPerformer) return;
     const fee = payload.shippingFee ? payload.shippingFee : 0;
 
-    if (payload.currencyOption === 'USD' && (user.balance < product.price + fee)) {
+    if (payload.currencyOption === 'USD' && (user?.account?.balance < product.price + fee)) {
       message.error('You have an insufficient token balance. Please top up.');
       return;
     }
@@ -424,11 +424,11 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
     const ledgerCanID = settings.icLedger;
     const ckBTCLedgerCanID = Principal.fromText(settings.icCKBTCMinter);
 
-    const recipientAccountIdBlob = this.getRecipientAccountIdentity(Principal.fromText(product?.performer?.wallet_icp))
+    const recipientAccountIdBlob = this.getRecipientAccountIdentity(Principal.fromText(product?.performer.account?.wallet_icp))
     const platformAccountIdBlob = this.getPlatformAccountIdentity(Principal.fromText(settings.icTraxAccountPercentage))
 
     const fanAI = AccountIdentifier.fromPrincipal({
-      principal: Principal.fromText(user.wallet_icp)
+      principal: Principal.fromText(user.account?.wallet_icp)
     });
     // @ts-ignore
     const fanBytes = fanAI.bytes;
@@ -462,7 +462,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
         fee: BigInt(10),
         from_subaccount: null,
         to: {
-          owner: Principal.fromText(product?.performer?.wallet_icp),
+          owner: Principal.fromText(product?.performer.account?.wallet_icp),
           subaccount: [],
         },
         created_at_time: BigInt(Date.now() * 1000000)
@@ -523,7 +523,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
             });
 
             let balICRC1 = await ledgerActor.balance({
-              owner: Principal.fromText(user?.wallet_icp),
+              owner: Principal.fromText(user.account?.wallet_icp),
               certified: false,
             });
             if(Number(balICRC1) < Number(amountToSend + amountToSendPlatform) + 20){
@@ -605,7 +605,7 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
               canisterId: ckBTCLedgerCanID
             });
             let balICRC1 = await ledgerActor.balance({
-              owner: Principal.fromText(user?.wallet_icp),
+              owner: Principal.fromText(user.account?.wallet_icp),
               certified: false,
             });
             if(Number(balICRC1) < Number(amountToSend) + 20){
@@ -856,8 +856,8 @@ class ProductViewPage extends PureComponent<IProps, IStates> {
                             {/* onClick={() => this.handleFollow()} */}
                             <Link
                               className='prod-profile-link'
-                              href={`/${product?.performer?.username || product?.performer?._id}`}
-                              as={`/${product?.performer?.username || product?.performer?._id}`}>
+                              href={`/artist/profile/?id=${product?.performer?.username || product?.performer?._id}`}
+                              as={`/artist/profile/?id=${product?.performer?.username || product?.performer?._id}`}>
                               <Button className={`${isFollowed ? 'prod-profile-following-btn' : 'prod-profile-follow-btn'} `}>Visit profile</Button>
                             </Link>
                         </div>

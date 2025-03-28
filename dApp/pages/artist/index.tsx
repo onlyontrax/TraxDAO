@@ -204,7 +204,7 @@ class Performers extends PureComponent<IProps> {
     } = this.state;
 
     if (countries === null) {
-      return <div style={{ margin: 30, textAlign: 'center' }}><Spin /></div>;
+      return <div style={{ margin: 30, textAlign: 'center' }}><Image src="/static/trax_loading_optimize.gif" alt="Loading..." className='w-40 m-auto'/></div>;
     }
 
     return (
@@ -215,12 +215,13 @@ class Performers extends PureComponent<IProps> {
         <div className="main-container" style={{maxWidth: '1400px', width: '95% !important'}}>
           <div className="artist-explore-wrapper">
             <div className="explore-sidebar">
-              <PerformerAdvancedFilter
+              {/* <PerformerAdvancedFilter
                 onSubmit={this.handleFilter.bind(this)}
                 countries={countries}
                 musicInfo={musicInfo}
                 onSearch={this.changeEmptySearchBar.bind(this)}
-              />
+                onOpen={null}
+              /> */}
             </div>
             <div className='genre-select-wrapper'>
               {showMoreGenres ? (
@@ -253,8 +254,8 @@ class Performers extends PureComponent<IProps> {
                   {recentlyJoinedPerformers.map((artist) => (
                     <div key={artist._id} className="new-join-wrapper">
                       <Link
-                        href={`/${artist?.username || artist?._id}`}
-                        as={`/${artist?.username || artist?._id}`}
+                        href={`/artist/profile/?id=${artist?.username || artist?._id}`}
+                        as={`/artist/profile/?id=${artist?.username || artist?._id}`}
                         style={{ cursor: 'pointer' }}
                         className="new-join-link"
                       >
@@ -284,8 +285,8 @@ class Performers extends PureComponent<IProps> {
                   {trendingPerformers.map((artist) => (
                     <div className='trending-artists-cont-relative' key={artist._id} >
                       <Link
-                        href={`/${artist?.username || artist?._id}`}
-                        as={`/${artist?.username || artist?._id}`}
+                        href={`/artist/profile/?id=${artist?.username || artist?._id}`}
+                        as={`/artist/profile/?id=${artist?.username || artist?._id}`}
                         style={{ cursor: 'pointer' }}
                         className=""
                       >
@@ -355,7 +356,7 @@ class Performers extends PureComponent<IProps> {
               )}
               {fetching && (
                 <div className="text-center" style={{ margin: 30 }}>
-                  <Spin />
+                  <Image src="/static/trax_loading_optimize.gif" alt="Loading..." className='w-28 '/>
                 </div>
               )}
               {total && total > limit ? (

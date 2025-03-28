@@ -519,9 +519,31 @@ const policies = {
         <li><b>Strictly necessary cookies.</b> These are cookies that are required for the operation of our website. These essential cookies are always enabled because our website won’t work properly without them. They include, for example, cookies that enable you to log into secure areas of our website, use a shopping cart or make use of e-billing services. You can switch off these cookies in your browser settings but you may then not be able to access all or parts of our website.</li>
         <li><b>Analytical or performance cookies.</b> These allow us to recognise and count the number of visitors and to see how visitors move around our website when they are using it. This helps us to improve the way our website works, for example, by ensuring that users are finding what they are looking for easily.</li>
         <li><b>Functionality cookies.</b> These are used to recognise you when you return to our website. This enables us to personalise our content for you, greet you by name and remember your preferences (for example, your choice of language or region).</li>
-        <li><b>Targeting cookies.</b> These cookies record your visit to our website, the pages you have visited and the links you have followed. We will use this information to make our website and the advertising displayed on it more relevant to your interests. [We may also share this information with third parties for this purpose so that they can serve you with relevant advertising on their websites.]</li>
+        <li><b>Targeting cookies.</b> These cookies record your visit to our website, the pages you have visited and the links you have followed. We will use this information to make our website and the advertising displayed on it more relevant to your interests. [We may also share this information with third parties for this purpose so that they can serve you with relevant advertising on their websites.</li>
       </ul>
+      <p>You can find more information about the individual cookies we use and the purposes for which we use them in the table below:</p>
+      <table>
+        <tr>
+          <th>Cookie Name</th>
+          <th>Purpose</th>
+          <th>More information</th>
+        </tr>
+        <tr>
+          <td>Strictly necessary cookies ‘Identity and Consent Cookies’</td>
+          <td>These cookies record user consent to cookies and track user activity throughout the website with a unique identifier. The cookies record data which we are legally required to collect and which prevents users from being asked for consent to cookies multiple times. By collecting this data we may improve the user experience and act in compliance with GDPR regulations.</td>
+          <td><a href="https://gdpr.eu/cookies/">https://gdpr.eu/cookies/</a></td>
+        </tr>
+        <tr>
+          <td>Strictly necessary cookies ‘Security Cookies’</td>
+          <td>These cookies detect unusual activity and help to protect the website against bot-style attacks. This is vital to protect user data against cyber attacks and ensure a positive experience.</td>
+          <td>N/A</td>
+        </tr>
+      </table>
+      <p>We do not share the information collected by the cookies with any third parties; we cannot control cookies activity when users visit a third party website, even if the website is linked to on our site.</p>
+      <p>You can choose to "Accept All" or to "Reject All" cookies in the cookie banner.</p>
+      <p>All accepted cookies will expire after one year.</p>
       <p>If you use your browser settings to block all cookies (including essential cookies) you may not be able to access all or parts of our website.</p>
+      <p>If you have any questions or concerns about our use of cookies, please send us an email at <i>support@trax.so</i>.</p>
     `
   },
   'complaints-policy': {
@@ -838,7 +860,7 @@ const policies = {
       <p><b>PLEASE READ THE TERMS OF THIS POLICY CAREFULLY BEFORE USING THE SITE</b></p>
       <p>Please click <a href="/page/?id=platform-to-business-regulation-terms/">here</a> to see a full list of definitions which apply to all of our terms.</p>
       <p><b>Introduction</b></p>
-      <p>This privacy policy sets out how we use and protect your personal data. This privacy policy is provided in a layered format so you can click through to the specific areas set out below. Alternatively, you can [view the full version of the privacy policy here [LINK] OR download a copy of the policy here: [LINK].]</p>
+      <p>This privacy policy sets out how we use and protect your personal data.</p>
       <h2>1. Important information and who we are</h2>
       <p><b>Privacy policy</b></p>
       <p>This privacy policy gives you information about how we collect and use your personal data through your use of the Site. It applies to your use of any of the Site’s services including the ability to view Content, enter into Transactions, the referral scheme and uploading Content as an Artist User (we will refer to all of this and any other uses of the Site as the ‘<b>Site Service</b>’).</p>
@@ -1195,6 +1217,24 @@ const policies = {
       <p>It is important that the personal data we hold about you is accurate and current. Please keep us informed if your personal data changes during your relationship with us, for example a new address or email address.</p>
       <h2>13. Third-party links</h2>
       <p>This website may include links to third-party websites, plug-ins and applications. Clicking on those links or enabling those connections may allow third parties to collect or share data about you. We do not control these third-party websites and are not responsible for their privacy statements. When you leave our website, we encourage you to read the privacy policy of every website you visit.</p>
+    `
+  },
+  'cookie-policy': {
+    title: 'Cookie Policy',
+    content: `
+      <p><b>PLEASE READ THE TERMS OF THIS POLICY CAREFULLY BEFORE USING THE SITE</b></p>
+      <p><b>Defined terms in this Policy have the same meanings as in our Terms of Use for All Users.</b></p>
+      <p>Our Site uses cookies to distinguish you from other users of our Site. This helps us to provide you with a good experience when you browse our Site and also allows us to improve our Site.</p>
+      <p>A cookie is a small file of letters and numbers that we store on your browser or the hard drive of your computer if you agree. Cookies contain information that is transferred to your computer's hard drive.</p>
+      <p>We use the following cookies:</p>
+      <ul>
+        <li><b>Strictly necessary cookies.</b> These are cookies that are required for the operation of our website. These essential cookies are always enabled because our website won’t work properly without them. They include, for example, cookies that enable you to log into secure areas of our website, use a shopping cart or make use of e-billing services. You can switch off these cookies in your browser settings but you may then not be able to access all or parts of our website.</li>
+        <li><b>Analytical or performance cookies.</b> These allow us to recognise and count the number of visitors and to see how visitors move around our website when they are using it. This helps us to improve the way our website works, for example, by ensuring that users are finding what they are looking for easily.</li>
+        <li><b>Functionality cookies.</b> These are used to recognise you when you return to our website. This enables us to personalise our content for you, greet you by name and remember your preferences (for example, your choice of language or region).</li>
+        <li><b>Targeting cookies.</b> These cookies record your visit to our website, the pages you have visited and the links you have followed. We will use this information to make our website and the advertising displayed on it more relevant to your interests. [We may also share this information with third parties for this purpose so that they can serve you with relevant advertising on their websites.</li>
+      </ul>
+      <p>You can find more information about the individual cookies we use and the purposes for which we use them in the table below:</p>
+
     `
   },
 };

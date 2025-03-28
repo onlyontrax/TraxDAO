@@ -1,6 +1,6 @@
 /*
   This example requires some changes to your config:
-  
+
   ```
   // tailwind.config.js
   module.exports = {
@@ -88,7 +88,7 @@ export default function Example({performers, onSearch}) {
                 {performers.length > 0 && (
                   <Combobox.Options static className="max-h-72 scroll-py-2 overflow-y-auto py-2 text-sm text-gray-800">
                     {filteredPeople.map((person) => (
-                    <Link href={`/${person?.username || person?._id}`} >
+                    <Link href={`/artist/profile/?id=${person?.username || person?._id}`} >
                       <Combobox.Option
                         key={person.id}
                         value={person.name}
@@ -112,13 +112,13 @@ export default function Example({performers, onSearch}) {
         </div>
       </Dialog>
     </Transition.Root>
-      
+
   )
 }
 
 
 
-{/* 
+{/*
 
 // {performers.length > 0 && (
 //     <Combobox.Options static className="max-h-72 scroll-py-2 overflow-y-auto py-2 text-sm text-gray-800">

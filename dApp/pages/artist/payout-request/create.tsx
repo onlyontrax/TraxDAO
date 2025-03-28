@@ -5,12 +5,13 @@ import Router from 'next/router';
 import React from 'react';
 import { connect } from 'react-redux';
 import { ISettings, IUIConfig, IUser } from 'src/interfaces/index';
-import { payoutRequestService } from 'src/services';
+import { payoutRequestService, accountService } from 'src/services';
 
 interface Props {
   ui: IUIConfig;
   user: IUser;
   settings: ISettings;
+  reloadCurrentUser: Function;
 }
 
 interface States {
@@ -49,17 +50,18 @@ class PayoutRequestCreatePage extends React.PureComponent<Props, States> {
   };
 
   async submit(data) {
-    const { user } = this.props;
-    if (data.requestTokens > user.balance) {
+    const { user, reloadCurrentUser } = this.props;
+    if (data.requestTokens > user?.account?.balance) {
       message.error('Requested amount must be less than or equal your wallet balance');
       return;
     }
     try {
       await this.setState({ submiting: true });
-      const body = { ...data, source: 'performer' };
+      const body = { ...data, source: 'account' };
       await payoutRequestService.create(body);
       message.success('Your payout request was sent!');
-      Router.push('/artist/earnings');
+      await reloadCurrentUser();
+      Router.push('/account/wallet');
     } catch (e) {
       const error = await Promise.resolve(e);
       message.error(error?.message || 'Error occured, please try again later');
@@ -99,4 +101,8 @@ const mapStateToProps = (state) => ({
   settings: state.settings
 });
 
-export default connect(mapStateToProps)(PayoutRequestCreatePage);
+const mapDispatchToProps = (dispatch) => ({
+  reloadCurrentUser: () => accountService.reloadCurrentUser(dispatch)
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(PayoutRequestCreatePage);

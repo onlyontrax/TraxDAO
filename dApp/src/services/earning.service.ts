@@ -1,16 +1,16 @@
 import { APIRequest } from './api-request';
 
 export class EarningService extends APIRequest {
-  performerStarts(param?: any) {
-    return this.get(this.buildUrl('/earning/performer/stats', param));
+  accountStats(param?: any) {
+    return this.get(this.buildUrl('/earning/account/stats', param));
   }
 
-  performerSearch(param?: any) {
-    return this.get(this.buildUrl('/earning/performer/search', param));
+  accountSearch(param?: any) {
+    return this.get(this.buildUrl('/earning/account/search', param));
   }
 
   userSearch(param?: any) {
-    return this.get(this.buildUrl('/earning/user/search', param));
+    return this.get(this.buildUrl('/earning/account/search', param));
   }
 
   performerReferralSearch(param?: any) {

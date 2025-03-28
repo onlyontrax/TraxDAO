@@ -10,11 +10,14 @@ export class Banner extends PureComponent<IProps> {
 
   render() {
     const { banners } = this.props;
+    const sortedBanners = banners
+        ? [...banners].sort((a, b) => (a.index || 0) - (b.index || 0))
+        : [];
     return (
       <div className='home-banner-div'>
-        {banners && banners.length > 0 && (
+        {sortedBanners && sortedBanners.length > 0 && (
           <Carousel style={{marginTop: '10px'}} effect="fade" adaptiveHeight autoplay swipeToSlide arrows autoplaySpeed={6000} dots={false}>
-            {banners.map((item) => (
+            {sortedBanners.map((item) => (
               // eslint-disable-next-line jsx-a11y/control-has-associated-label
               <a key={item._id} href={(item.link || null)} target="_.blank"><Image style={{ borderRadius: '12px'}} preview={false} src={item?.photo?.url} alt="banner" key={item._id} /></a>
             ))}

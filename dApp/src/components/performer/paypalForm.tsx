@@ -1,85 +1,90 @@
-import {
-  Button,
-  Col,
-  Form,
-  Input, Row
-} from 'antd';
-import { PureComponent } from 'react';
-import { IPerformer } from 'src/interfaces';
-
-const layout = {
-  labelCol: { span: 24 },
-  wrapperCol: { span: 24 }
-};
-
-const validateMessages = {
-  required: 'This field is required!',
-  types: {
-    email: 'Not a validate email!',
-    number: 'Not a validate number!'
-  }
-};
+import React, { PureComponent } from 'react';
+import { Form } from 'antd';
+import { IPerformer, IAccount } from 'src/interfaces';
+import TraxButton from '@components/common/TraxButton';
+import TraxInputField from '@components/common/layout/TraxInputField';
+import { Mail } from 'lucide-react';
 
 interface IProps {
   onFinish: Function;
-  user: IPerformer;
+  account: IAccount;
   updating?: boolean;
 }
 
-export class PerformerPaypalForm extends PureComponent<IProps> {
-  static defaultProps: Partial<IProps>;
+export class AccountPaypalForm extends PureComponent<IProps> {
+  static defaultProps: Partial<IProps> = {
+    updating: false
+  };
+
+  state = {
+    email: this.props.account?.paypalSetting?.value?.email || '',
+  };
+
+  handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    this.setState({ email: e.target.value });
+  };
+
+  handleSubmit = (values: any) => {
+    const { onFinish } = this.props;
+    onFinish(values);
+  };
 
   render() {
-    const { onFinish, user, updating } = this.props;
+    const { account, updating } = this.props;
+    const { email } = this.state;
+
     return (
       <Form
-        {...layout}
-        name="nest-messages"
-        onFinish={onFinish.bind(this)}
-        validateMessages={validateMessages}
-        initialValues={user?.paypalSetting?.value || {
+        name="paypal-form"
+        onFinish={this.handleSubmit}
+        initialValues={account?.paypalSetting?.value || {
           email: '',
-          phoneNumber: ''
         }}
-        labelAlign="left"
         className="w-full"
       >
-        <Row className='gap-4 justify-between'>
-          {/* <p className="account-form-item-tag">Paypal account email</p> */}
+        <div className="flex flex-col gap-4 w-full">
           <Form.Item
             name="email"
-            className='flex w-3/5'
-
+            rules={[
+              { required: true, message: 'Email is required' },
+              { type: 'email', message: 'Please enter a valid email' }
+            ]}
+            className="w-full m-0"
           >
-            <Input
-              className="account-form-input"
-              placeholder='Add your email'
+            <TraxInputField
+              type="email"
+              name="email"
+              label="PayPal Email"
+              placeholder="Enter your PayPal email"
+              required
+              value={email}
+              onChange={this.handleEmailChange}
             />
           </Form.Item>
-          {user?.paypalSetting?.value?.email ? (
-            <div className='flex'>
-              <Form.Item className="flex w-1/5 justify-end">
-                <Button className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 h-[38px] flex w-fit justify-center" htmlType="submit" disabled={updating} loading={updating}>
-                  Submit
-                </Button>
-              </Form.Item>
-            </div>
-          ) : (
-            <div className='flex'>
-              <Form.Item className="flex w-1/5 justify-end">
-                <Button className="rounded-lg bg-[#1e1e1e] text-trax-white p-2 h-[38px] flex w-fit justify-center" htmlType="submit" disabled={updating} loading={updating}>
-                  Connect
-                </Button>
-              </Form.Item>
-            </div>
-          )}
 
-        </Row>
+          <Form.Item className="w-full m-0">
+            {account?.paypalSetting?.value?.email ? (
+              <TraxButton
+                htmlType="submit"
+                styleType="secondary"
+                buttonSize="full"
+                buttonText="Submit"
+                disabled={!email || updating}
+                loading={updating}
+              />
+            ) : (
+              <TraxButton
+                htmlType="submit"
+                styleType="primary"
+                buttonSize="full"
+                buttonText="Connect"
+                disabled={!email || updating}
+                loading={updating}
+              />
+            )}
+          </Form.Item>
+        </div>
       </Form>
     );
   }
 }
-
-PerformerPaypalForm.defaultProps = {
-  updating: false
-} as Partial<IProps>;

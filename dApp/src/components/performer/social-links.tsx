@@ -12,6 +12,8 @@ import moment from 'moment';
 import { PureComponent } from 'react';
 import { ICountry, IMusic, IPerformer } from 'src/interfaces';
 
+import TraxButton from '@components/common/TraxButton';
+
 const { Option } = Select;
 
 const layout = {
@@ -82,7 +84,7 @@ export class PerformerSocialLinkForm extends PureComponent<IProps> {
 
         <div className="account-form-settings">
           <h1 className="profile-page-heading">Social links</h1>
-          <span className='profile-page-subtitle'>Make changes to your profile here. Click save changes when you're done.</span>
+          <span className='profile-page-subtitle'>Please copy and paste the full URL from your social media profiles into the spaces provided.</span>
 
           <Col lg={24} md={24} xs={24} >
             <div className=' flex flex-row gap-4 w-full'>
@@ -100,7 +102,7 @@ export class PerformerSocialLinkForm extends PureComponent<IProps> {
                 ]}
                 hasFeedback
               >
-                <Input className="account-form-input" placeholder="spotify.com/" />
+                <Input className="account-form-input" placeholder="https://open.spotify.com/" />
               </Form.Item>
             </div>
           </Col>
@@ -119,7 +121,7 @@ export class PerformerSocialLinkForm extends PureComponent<IProps> {
                 ]}
                 hasFeedback
               >
-                <Input className="account-form-input" placeholder="applemusic.com/" />
+                <Input className="account-form-input" placeholder="https://music.apple.com/us/artist/" />
               </Form.Item>
             </div>
           </Col>
@@ -138,7 +140,7 @@ export class PerformerSocialLinkForm extends PureComponent<IProps> {
                 ]}
                 hasFeedback
               >
-                <Input className="account-form-input" placeholder="soundcloud.com/" />
+                <Input className="account-form-input" placeholder="https://soundcloud.com/" />
               </Form.Item>
             </div>
           </Col>
@@ -158,7 +160,7 @@ export class PerformerSocialLinkForm extends PureComponent<IProps> {
                 ]}
                 hasFeedback
               >
-                <Input className="account-form-input" placeholder="instagram.com/" />
+                <Input className="account-form-input" placeholder="https://www.instagram.com/" />
               </Form.Item>
             </div>
           </Col>
@@ -177,20 +179,19 @@ export class PerformerSocialLinkForm extends PureComponent<IProps> {
                 ]}
                 hasFeedback
               >
-                <Input className="account-form-input" placeholder="twitter.com/" />
+                <Input className="account-form-input" placeholder="https://x.com/" />
               </Form.Item>
             </div>
           </Col>
-          <Form.Item wrapperCol={{ ...layout.wrapperCol, offset: 4 }}>
-            <Button
-              className="profile-following-btn-card"
+          <Form.Item>
+            <TraxButton
               htmlType="submit"
+              styleType="primary"
+              buttonSize='full'
+              buttonText="Save Changes"
               loading={updating || isUploadingVideo}
               disabled={updating || isUploadingVideo}
-              style={{ float: 'right' }}
-            >
-              Save Changes
-            </Button>
+            />
           </Form.Item>
         </div>
 

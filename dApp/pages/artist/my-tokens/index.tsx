@@ -8,6 +8,30 @@ import {
 } from 'src/interfaces';
 import { earningService } from 'src/services';
 // import styles from './index.module.scss';
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronRightIcon } from "@heroicons/react/20/solid";
+import { Capacitor } from '@capacitor/core';
+
+
+const initial_1 = { opacity: 0, y: 20 };
+const animate_1 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 0.8,
+    delay: 1.2,
+    ease: "easeOut",
+  },
+}
+const animate_2 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 0.8,
+    delay: 1.4,
+    ease: "easeOut",
+  },
+}
 
 interface IProps {
   performer: IPerformer;
@@ -41,6 +65,7 @@ const initialState = {
   dateRange: null
 };
 
+
 class EarningPage extends PureComponent<IProps, IStates> {
   static authenticate = true;
 
@@ -56,7 +81,7 @@ class EarningPage extends PureComponent<IProps, IStates> {
   async getPerformerStats() {
     const { dateRange, type } = this.state;
     const { onGetStats } = this.props;
-    const resp = await earningService.performerStarts({
+    const resp = await earningService.accountStats({
       type,
       ...dateRange
     });
@@ -67,9 +92,13 @@ class EarningPage extends PureComponent<IProps, IStates> {
   render() {
     const { stats } = this.state;
 
-    const { ui } = this.props;
+    const { ui, performer } = this.props;
+
+    const activeSubaccount = performer?.account?.activeSubaccount || 'user';
+    const isPerformer = activeSubaccount === 'performer';
     return (
-      <Layout>
+      <AnimatePresence mode="wait">
+      <Layout className={`${isPerformer ? 'dark:bg-trax-zinc-900' : ''}`}>
         <Head>
           <title>{`${ui?.siteName} | Earnings`}</title>
         </Head>
@@ -77,58 +106,39 @@ class EarningPage extends PureComponent<IProps, IStates> {
         <div className="main-container-table">
           <div className="table-responsive">
             <div className='tokens-container'>
-              <div className='tokens-wrapper'>
-                <img src="/static/usd-logo.png" alt="dollars" className='tokens-img' />
+              <motion.div initial={initial_1} animate={animate_1} className='tokens-wrapper'>
+                <img src='/static/credit.png' alt="TRAX logo" className='tokens-img my-auto rounded-none' />
                 <div className='tokens-split'>
                   <div className='tokens-data'>
-                    <span className='tokens-symbol'>US Dollars</span>
-                    <span className='tokens-balance'>{stats?.totalNetPrice.toFixed(2) || 0} USD</span>
+                    <span className='tokens-symbol'>TRAX credit</span>
+                    <span className='tokens-balance'>{performer?.account?.balance?.toFixed(2) || 0.00} USD</span>
                   </div>
                   <div className='tokens-ex-rate'>
-                    <span>${stats?.totalNetPrice.toFixed(2) || 0}</span>
+                    <span>${performer?.account?.balance?.toFixed(2) || 0.00}</span>
                   </div>
                 </div>
-              </div>
-              <div className='tokens-wrapper'>
-                <img src="/static/icp-logo.png" alt="icp" className='tokens-img' />
-                <div className='tokens-split'>
-                  <div className='tokens-data'>
-                    <span className='tokens-symbol'>ICP</span>
-                    <span className='tokens-balance'>{stats?.totalSiteCommissionICP.toFixed(3) || 0} ICP</span>
+              </motion.div>
+              
+              {!Capacitor.isNativePlatform() && (
+                <motion.div initial={initial_1} animate={animate_2} className='tokens-wrapper'>
+                  <img src="/static/logo_48x48.png" alt="trax" className='tokens-img rounded-full border border-custom-green border-solid' />
+                  <div className='tokens-split'>
+                    <div className='tokens-data'>
+                      <span className='tokens-symbol'>TRAX</span>
+                      <span className='tokens-balance'>{stats?.totalSiteCommissionTRAX.toFixed(2) || 0.00} TRAX <span className='text-[#6b7280]'>&#40;Crypto&#41;</span></span>
+                    </div>
+                    <div className='tokens-ex-rate'>
+                      <span>${stats?.totalNetPriceTRAX.toFixed(2) || 0.00}</span>
+                    </div>
                   </div>
-                  <div className='tokens-ex-rate'>
-                    <span>${stats?.totalNetPriceICP.toFixed(2) || 0}</span>
-                  </div>
-                </div>
-              </div>
-              <div className='tokens-wrapper'>
-                <img src="/static/ckbtc_nobackground.svg" alt="ckbtc" className='tokens-img' />
-                <div className='tokens-split'>
-                  <div className='tokens-data'>
-                    <span className='tokens-symbol'>ckBTC</span>
-                    <span className='tokens-balance'>{stats?.totalSiteCommissionCKBTC || 0} ckBTC</span>
-                  </div>
-                  <div className='tokens-ex-rate'>
-                    <span>${stats?.totalNetPriceCKBTC.toFixed(2) || 0}</span>
-                  </div>
-                </div>
-              </div>
-              <div className='tokens-wrapper'>
-                <img src="/static/trax-token.png" alt="trax" className='tokens-img' />
-                <div className='tokens-split'>
-                  <div className='tokens-data'>
-                    <span className='tokens-symbol'>TRAX</span>
-                    <span className='tokens-balance'>{stats?.totalSiteCommissionTRAX.toFixed(2) || 0} TRAX</span>
-                  </div>
-                  <div className='tokens-ex-rate'>
-                    <span>${stats?.totalNetPriceTRAX.toFixed(2) || 0}</span>
-                  </div>
-                </div>
-              </div>
+                </motion.div>
+              )}
             </div>
           </div>
         </div>
+
       </Layout>
+      </AnimatePresence>
     );
   }
 }

@@ -90,11 +90,11 @@ class CreateSongNftForm extends PureComponent<IProps> {
 
       for (let i = 0; i < ids.length; i += 1) {
         const resp = await performerService.findOne(ids[i]);
-        if (resp.data.wallet_icp) {
+        if (resp.data._id) {
           result.push(resp.data);
         } else {
           message.config({ duration: 6 });
-          message.info('This artist cannot benefit from royalty sharing as they have not connected their wallet.');
+          message.info('This artist cannot be found. Please try again.');
         }
       }
 
@@ -171,8 +171,8 @@ class CreateSongNftForm extends PureComponent<IProps> {
       let file = this.state.fileList[0];
       const MAX_CHUNK_SIZE = 1024 * 500;
       const chunkCount = BigInt(Number(Math.ceil(file.size / MAX_CHUNK_SIZE)));
-  
-  
+
+
       if (settings.icNetwork !== true) {
         await authClient.login({
           identityProvider: cryptoService.getIdentityProviderLink(),
@@ -182,7 +182,7 @@ class CreateSongNftForm extends PureComponent<IProps> {
               identity,
               host
             });
-      
+
             await agent.fetchRootKey();
 
             nftActor = Actor.createActor<_SERVICE_TRAX_NFT>(idlFactoryTraxNFT, {
@@ -251,7 +251,7 @@ class CreateSongNftForm extends PureComponent<IProps> {
               size: file.size,
               logo: encodeArrayBuffer(await (new Response(this.state.thumbnail).arrayBuffer()))
             });
-            
+
             message.success('Posted successfully!');
             Router.push('/artist/studio');
           }
@@ -359,7 +359,7 @@ class CreateSongNftForm extends PureComponent<IProps> {
     const participantsSharing = payload.feedParticipants ? payload.feedParticipants : [];
     formValues.feedParticipants = [...[], ...participantsSharing];
     // let royaltySharing = [...[], ...this.state.royaltyCut];
-    formValues.royaltySharing = [...[], ...royaltyCut];
+    formValues.royaltySharing = royaltyCut;
     this.onsubmit(feed, formValues);
   }
 
@@ -419,7 +419,7 @@ class CreateSongNftForm extends PureComponent<IProps> {
         }}
         >
           <Form.Item style={{ width: '50%' }} name="percentageCut">
-            <InputNumber id={performers._id} defaultValue={0} onChange={(e) => this.updatePercentages(performers._id, performers.wallet_icp, e)} style={{ width: '100%' }} min={1} max={100} />
+            <InputNumber id={performers._id} defaultValue={0} onChange={(e) => this.updatePercentages(performers._id, performers.account?.wallet_icp, e)} style={{ width: '100%' }} min={1} max={100} />
             {' '}
             %
           </Form.Item>
@@ -436,7 +436,7 @@ class CreateSongNftForm extends PureComponent<IProps> {
       uploading, fileList, fileIds, text, isShowPreviewTeaser, uploadToIC, thumbnail, teaser, shareTip, performers, featuring
     } = this.state;
     const dataSource = featuring.map((p) => ({ ...p, key: p._id }));
-    
+
     return (
       <div>
         <div className="feed-form">

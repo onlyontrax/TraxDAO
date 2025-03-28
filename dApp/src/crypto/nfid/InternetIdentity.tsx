@@ -1,14 +1,9 @@
-import { attachNfidLogout, logout } from '@redux/auth/actions';
-import {
-  Button
-} from 'antd';
-import { connect, useDispatch } from 'react-redux';
+import React, { useState } from 'react';
+import { connect } from 'react-redux';
 import { AuthClient } from "@dfinity/auth-client";
-import { HttpAgent } from "@dfinity/agent";
 import { userService, cryptoService, performerService, authService } from '@services/index';
-import { NFIDIcon } from '../../icons/index';
-import React, {useState} from 'react';
 import { LoadingOutlined } from '@ant-design/icons';
+import TraxButton from '@components/common/TraxButton';
 interface IAuthButton {
   onSignOut: Function
   onConnect: Function,
@@ -47,60 +42,25 @@ function InternetIdentity({ onSignOut, onConnect, isAuthenticated, handleConnect
     });
   };
 
-  const handleConnectUp = () => connectInternetIdentity();
+  const handleClick = isAuthenticated ? connectInternetIdentity : authenticateNow;
+
+
+  const icon = (
+    loading || iiLoading ?
+    <LoadingOutlined style={{color: '#c8ff00', fontSize: 17}} /> :
+    <img src="/static/icp-logo.png" alt="Icp logo" />
+  );
 
   return (
-    <div>
-      {!isAuthenticated ? (
-        <Button onClick={authenticateNow} htmlType="button" className="nfid-button-wrapper">
-            {from === 'sign-up' || 'log-in' ? (
-              <>
-                {loading || iiLoading ? (
-                  <LoadingOutlined style={{color: '#c8ff00', fontSize: 17, marginRight: '0.5rem'}}/>
-                ):(
-                  <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
-                )}
-                <span className='font-medium'>{from === 'sign-up' ? 'Sign up with Internet Identity' : 'Continue with Internet Identity'}</span>
-              </>
-          )
-          :
-          (
-            <>
-              {loading || iiLoading ? (
-                <LoadingOutlined style={{color: '#c8ff00', fontSize: 23, marginTop: 2}}/>
-              ):(
-                <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
-              )}
-            </>
-          )}
-        </Button>
-      ) : (
-        <div>
-          <Button onClick={handleConnectUp} htmlType="button" type="primary" className={from === 'sign-up' ? "nfid-button-wrapper-sign-up" : "nfid-button-wrapper"}>
-            {from === 'sign-up' || 'log-in' ? (
-            <>
-              {loading || iiLoading ? (
-                <LoadingOutlined style={{color: '#c8ff00', fontSize: 17, marginRight: '0.5rem'}}/>
-              ):(
-                <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
-              )}
-              <p className='internet-identity-span'>Internet Identity</p>
-            </>
-          )
-          :
-          (
-            <>
-              {loading || iiLoading ? (
-                  <LoadingOutlined style={{color: '#c8ff00', fontSize: 23, marginTop: 2}}/>
-                ):(
-                  <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
-                )}
-              </>
-          )}
-          </Button>
-        </div>
-      )}
-    </div>
+    <TraxButton
+      htmlType="button"
+      styleType="picture"
+      buttonSize="auth"
+      buttonText="Continue with Internet Identity"
+      icon={icon}
+      onClick={handleClick}
+      disabled={loading || iiLoading}
+    />
   );
 }
 
@@ -111,4 +71,5 @@ const mapState = (state: any) => ({
   state: { ...state }
 });
 const mapDispatch = { };
+
 export default connect(mapState, mapDispatch)(InternetIdentity);

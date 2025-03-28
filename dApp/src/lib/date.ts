@@ -1,10 +1,10 @@
 import moment from 'moment';
 
-export function formatDate(date: Date, format = 'DD/MM/YYYY HH:mm') {
+export function formatDate(date: Date, format = 'DD/MM/YY HH:mm') {
   return moment(date).format(format);
 }
 
-export function formatDateNoTime(date: Date, format = 'DD.MM.YYYY.') {
+export function formatDateNoTime(date: Date, format = 'DD/MM/YYYY') {
   return moment(date).format(format);
 }
 

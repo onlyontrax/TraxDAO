@@ -52,7 +52,7 @@ export function PaymentTableList({
           <span>
             <div className="tx-wrapper">
               <span className="tx-avatar-wrapper">
-                <img className="tx-avatar" src={res.performerInfo?.avatar || '/static/no-avatar.png'} alt="avatar" />
+                <img className="tx-avatar" src={res.performerInfo?.avatar || '/static/no-avatar-dark-mode.png'} alt="avatar" />
               </span>
               <div className="tx-info-wrapper">
 

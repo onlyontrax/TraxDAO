@@ -59,7 +59,7 @@ export function PurchaseTicketForm({
 
   const handleChangeQuantity = (q: number) => {
     if (q < 1) return;
-    
+
    if(selectedCurrency === 'ICP'){
     setPrice(Number((selectedTier.price / icpRate).toFixed(4)) * q);
    }
@@ -77,13 +77,13 @@ export function PurchaseTicketForm({
 
   useEffect(() => {
     onLoadHandleTierSelection();
-    
+
     async function fetchCardData(){
       await getData();
     }
 
     const getRates = async () =>{
-      
+
       const icp = (await tokenTransctionService.getExchangeRate()).data.rate;
       const ckbtc = (await tokenTransctionService.getExchangeRateBTC()).data.rate;
       const trax = (await tokenTransctionService.getExchangeRateTRAX()).data.rate;
@@ -163,12 +163,12 @@ export function PurchaseTicketForm({
             setPrice(ticket.tiers[i].price);
             break;
           }
-        } 
-       
-      }else if(user?.wallet_icp){
+        }
+
+      }else if(user.account?.wallet_icp){
         setPaymentOption('plug');
         setSelectedCurrency('ICP');
-        
+
         for(let i = 0; i < ticket.tiers.length; i++){
           if(Number(ticket.tiers[i].supply) > 0){
             setPrice(Number((selectedTier.price / icpRate).toFixed(3)));
@@ -206,8 +206,8 @@ export function PurchaseTicketForm({
 
   return (
     <div className={styles.componentsticketModule}>
-     
-     
+
+
       <div className='send-tip-container'>
         <div className='tip-header-wrapper'>
           <span>Purchase ticket</span>
@@ -223,7 +223,7 @@ export function PurchaseTicketForm({
           data.quantity = quantity;
           data.paymentOption = paymentOption;
           data.price = price;
-          data.wallet_address = performer.wallet_icp;
+          data.wallet_address = performer.account?.wallet_icp;
 
           onFinish.bind(this)({ ...data})
         }}
@@ -236,9 +236,9 @@ export function PurchaseTicketForm({
         }}
         className=""
       >
-        
 
-        
+
+
         <div className='payment-details'>
           {/* <span>Payment details</span> */}
           <div className='payment-recipient-wrapper'>
@@ -250,7 +250,7 @@ export function PurchaseTicketForm({
                 <span>{performer?.name}</span>
                   <p style={{color: '#c8ff02'}}>Verified Artist</p>
               </div>
-              <a href={`/${performer?.username || performer?._id}`} className='info-icon-wrapper'>
+              <a href={`/artist/profile/?id=${performer?.username || performer?._id}`} className='info-icon-wrapper'>
                 <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
               </a>
             </div>
@@ -271,7 +271,7 @@ export function PurchaseTicketForm({
                   </div>
               </Option>
             ))}
-            {(user.wallet_icp && performer.wallet_icp) && (
+            {(user.account?.wallet_icp && performer.account?.wallet_icp) && (
               <>
                 <Option value="plug" key="plug" className="payment-type-option-content">
                   <div className='payment-type-img-wrapper'>
@@ -279,19 +279,19 @@ export function PurchaseTicketForm({
                   </div>
                   <div className='payment-type-info'>
                     <span>Plug wallet</span>
-                      <p>{`${user.wallet_icp.slice(0, 6)} **** ${user.wallet_icp.slice(-4)}`}</p>
+                      <p>{`${user.account?.wallet_icp.slice(0, 6)} **** ${user.account?.wallet_icp.slice(-4)}`}</p>
                       <p>Internet Computer</p>
                   </div>
                 </Option>
-              
-              
+
+
                 <Option value="II" key="II" className="payment-type-option-content">
                   <div className='payment-type-img-wrapper'>
                     <img src='/static/icp-logo.png' width={40} height={40}/>
                   </div>
                   <div className='payment-type-info'>
                     <span>Internet Identity</span>
-                      <p>{`${user.wallet_icp.slice(0, 6)} **** ${user.wallet_icp.slice(-4)}`}</p>
+                      <p>{`${user.account?.wallet_icp.slice(0, 6)} **** ${user.account?.wallet_icp.slice(-4)}`}</p>
                       <p>Internet Computer</p>
                   </div>
                 </Option>
@@ -305,7 +305,7 @@ export function PurchaseTicketForm({
                   </div>
                   <div className='payment-type-info'>
                     <span>NFID</span>
-                      <p>{`${user.wallet_icp.slice(0, 6)} **** ${user.wallet_icp.slice(-4)}`}</p>
+                      <p>{`${user.account?.wallet_icp.slice(0, 6)} **** ${user.account?.wallet_icp.slice(-4)}`}</p>
                       <p>Internet Computer</p>
                   </div>
                 </Option>
@@ -329,11 +329,11 @@ export function PurchaseTicketForm({
         <div className="ticket-tiers-container" style={{marginTop: '1rem'}}>
           {/* <span className='ticket-tier-header'>Select a ticket</span> */}
           {ticket.tiers.map((t, i) => (
-            <div 
-              className={t.name === selectedTier.name ? 'ticket-selected' : 'ticket-tiers-wrapper'} 
-              onClick={() => handleSelectTier(t.name)} 
+            <div
+              className={t.name === selectedTier.name ? 'ticket-selected' : 'ticket-tiers-wrapper'}
+              onClick={() => handleSelectTier(t.name)}
               style={{borderTopRightRadius: `${i == 0 ? '7px' : '0px'}`, borderTopLeftRadius: `${i == 0 ? '7px' : '0px'}`, borderBottomRightRadius: `${i == ticket.tiers.length -1 ? '7px' : '0px'}`, borderBottomLeftRadius: `${i == ticket.tiers.length -1 ? '7px' : '0px'}`}}>
-                
+
                 <div className={Number(t.supply) === 0 ? 'ticket-tier-name-sold-out' : 'ticket-tier-name'}>
                     <span>{t.name}</span>
                 </div>
@@ -355,7 +355,7 @@ export function PurchaseTicketForm({
               <img src='/static/usd-logo.png' width={40} height={40} style={{border: selectedCurrency === 'USD' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
             </div>
             )}
-            {(user.wallet_icp && performer.wallet_icp) && (
+            {(user.account?.wallet_icp && performer.account?.wallet_icp) && (
               <>
                 <div className='currency-picker-btn-wrapper' onClick={()=> changeTicker('ICP')}>
                   <img src='/static/icp-logo.png' width={40} height={40} style={{border: selectedCurrency === 'ICP' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
@@ -373,7 +373,7 @@ export function PurchaseTicketForm({
 
         <div className='select-quantity-container' style={{marginTop: '1rem'}}>
           <span>Select quantity</span>
-          <InputNumber 
+          <InputNumber
                 type="number"
                 value={quantity}
                 max={Number(selectedTier.supply)}
@@ -385,7 +385,7 @@ export function PurchaseTicketForm({
               />
         </div>
 
-        
+
 
         <div className='tip-input-number-container' style={{marginTop: '1rem'}}>
             <span>Total</span>
@@ -402,7 +402,7 @@ export function PurchaseTicketForm({
               {selectedCurrency === 'TRAX' && (
                 <img src='/static/trax-token.png' width={40} height={40}/>
               )}
-              <InputNumber 
+              <InputNumber
                 disabled={true}
                 type="number"
                 value={price}
@@ -430,9 +430,9 @@ export function PurchaseTicketForm({
             loading={loading}
           >
             <span>Confirm</span>
-        
+
           </Button>
-        
+
       </Form>
       </div>
     </div>

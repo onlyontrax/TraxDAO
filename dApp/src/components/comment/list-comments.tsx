@@ -24,7 +24,7 @@ export class ListComments extends PureComponent<IProps> {
     return (
       <div className="cmt-list">
         {comments.map((comment: IComment) => <CommentItem canReply={canReply} key={comment._id} item={comment} user={user} onDelete={onDelete} />)}
-        {requesting && <div className="text-center"><Spin /></div>}
+        {requesting && <div className="text-center"><img src="/static/trax_loading_optimize.gif" alt="Loading..." className='w-28 m-auto'/></div>}
         {!requesting && !comments.length && <div className="first-to-comment">Be the first to comment</div>}
       </div>
     );

@@ -22,7 +22,7 @@ export default function MappedElement(video) {
 
   return (
     <div key={video.video.id} className="new-track-wrapper">
-      <Link href={`/video?id=${video.video.slug}`}
+      <Link href={`/${video?.video?.trackType === 'video' ? 'video' : 'track'}?id=${video.video.slug}`}
           className="new-track-link"
           onPointerOver={() => setHover(true)}
           onPointerOut={() => setHover(false)}>

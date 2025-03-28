@@ -66,6 +66,8 @@ export interface StreamSettings {
   icTraxAccountPercentage: string;
   icNFTTicket: string;
   icNFTSong: string;
+  stripeFeesPercentageAmount: string;
+  stripeFeesFixedAmount: string;
 }
 
 export const HLS = 'hls';

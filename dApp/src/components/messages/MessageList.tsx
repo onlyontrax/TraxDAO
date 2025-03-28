@@ -161,7 +161,7 @@ class MessageList extends PureComponent<IProps> {
                   <span
                     className="recipient"
                     aria-hidden
-                    onClick={() => conversation?.recipientInfo?.isPerformer && Router.push({ pathname: `/${conversation?.recipientInfo?.username || conversation?.recipientInfo?._id}` }, `/${conversation?.recipientInfo?.username || conversation?.recipientInfo?._id}`)}
+                    onClick={() => conversation?.recipientInfo?.isPerformer && Router.push({ pathname: `/artist/profile/?id=${conversation?.recipientInfo?.username || conversation?.recipientInfo?._id}` }, `/artist/profile/?id=${conversation?.recipientInfo?.username || conversation?.recipientInfo?._id}`)}
                   >
                     <Avatar alt="avatar" src={conversation?.recipientInfo?.avatar || '/static/no-avatar.png'} />
                     {' '}
@@ -177,8 +177,8 @@ class MessageList extends PureComponent<IProps> {
                   {!fetching && !message.items.length && <p className="text-center" style={{ margin: '30px 0' }}>Let&apos;s talk</p>}
                   {!conversation.isSubscribed && (
                   <Link
-                    href={`/${conversation?.recipientInfo?.username || conversation?.recipientInfo?._id}`}
-                    as={`/${conversation?.recipientInfo?.username || conversation?.recipientInfo?._id}`}
+                    href={`/artist/profile/?id=${conversation?.recipientInfo?.username || conversation?.recipientInfo?._id}`}
+                    as={`/artist/profile/?id=${conversation?.recipientInfo?.username || conversation?.recipientInfo?._id}`}
                     legacyBehavior
                   >
                     <div className="sub-text">Please subscribe to this artist to start the conversation!</div>

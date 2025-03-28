@@ -157,7 +157,7 @@ class Sidebar extends PureComponent<IProps> {
     const {
       isNotMobile, isTablet,
     } = this.state;
-    const referralCode = user?.userReferral;
+    const referralCode = user?.account?.userReferral;
 
     return (
       (
@@ -180,9 +180,9 @@ class Sidebar extends PureComponent<IProps> {
                     </div>
                     )} */}
                 <nav className={`nav-bar ${ setSidebar ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
-                
+
                   <ul className='nav-icons'>
-                  
+
                     <li className={router.pathname === '/' ? 'active' : ''}>
                       <Link href="/" className={user._id ? 'nav-link' : 'nav-link logged-out'}>
                         <HomeIconActive className={router.pathname === '/' ? 'active-icon size-6' : 'display-none'} />
@@ -191,7 +191,7 @@ class Sidebar extends PureComponent<IProps> {
                       </Link>
                     </li>
 
-                    {user._id && !user.isPerformer && (
+                    {/* {user._id && !user.isPerformer && (
                       <li key="wallet_user" className={router.pathname === '/user/wallet' ? 'active' : ''}>
                         <Link href="/user/wallet" className='nav-link'>
                           <>
@@ -201,10 +201,21 @@ class Sidebar extends PureComponent<IProps> {
                             </>
                         </Link>
                       </li>
-                    )}
+                    )} */}
 
                     {user._id && !user.isPerformer && (
                       <>
+
+                        <li key="earnings" className={router.pathname === '/account/wallet' ? 'active' : ''}>
+                          <Link href="/account/wallet" as="/account/walletwallet" className='nav-link'>
+                            <>
+                              <WalletIconActive className={router.pathname === '/account/wallet' ? 'active-icon size-6' : 'display-none'} />
+                              <WalletIcon className={router.pathname === '/account/wallet' ? 'display-none' : 'size-6'} />
+                              <span className={router.pathname === '/account/wallet' ? 'page-name-active' : 'page-name'}>Wallet</span>
+                            </>
+                          </Link>
+                        </li>
+
                         <li key="library" className={router.pathname === '/user/library' ? 'active' : ''}>
                           <Link href="/user/library" as="/user/library" className='nav-link'>
                             <>
@@ -221,7 +232,7 @@ class Sidebar extends PureComponent<IProps> {
 
                           </div>
                         </li> */}
-                  
+
                       </>
                     )}
                     {user._id && user.isPerformer && (
@@ -235,19 +246,19 @@ class Sidebar extends PureComponent<IProps> {
                             </>
                           </Link>
                         </li>
-                        <li key="earnings" className={router.pathname === '/artist/earnings' ? 'active' : ''}>
-                          <Link href="/artist/earnings" as="/artist/earnings" className='nav-link'>
+                        <li key="earnings" className={router.pathname === '/account/wallet' ? 'active' : ''}>
+                          <Link href="/account/wallet" as="/account/wallet" className='nav-link'>
                             <>
-                              <WalletIconActive className={router.pathname === '/artist/earnings' ? 'active-icon size-6' : 'display-none'} />
-                              <WalletIcon className={router.pathname === '/artist/earnings' ? 'display-none' : 'size-6'} />
-                              <span className={router.pathname === '/artist/earnings' ? 'page-name-active' : 'page-name'}>Earnings</span>
+                              <WalletIconActive className={router.pathname === '/account/wallet' ? 'active-icon size-6' : 'display-none'} />
+                              <WalletIcon className={router.pathname === '/account/wallet' ? 'display-none' : 'size-6'} />
+                              <span className={router.pathname === '/account/wallet' ? 'page-name-active' : 'page-name'}>Wallet</span>
                             </>
                           </Link>
                         </li>
                         <li key="profile" className={router.pathname === '/artist/profile' ? 'active' : ''}>
                           <Link
-                            href={`/${user?.username || user?._id}`}
-                            as={`/${user?.username || user?._id}`}
+                            href={`/artist/profile/?id=${user?.username || user?._id}`}
+                            as={`/artist/profile/?id=${user?.username || user?._id}`}
                             className='nav-link'
                           >
                             <>
@@ -263,7 +274,7 @@ class Sidebar extends PureComponent<IProps> {
                             <LogoutOutlined style={{ fontSize: '17px' }} />
                           </div>
                         </li> */}
-                  
+
                       </>
                     )}
                   </ul>

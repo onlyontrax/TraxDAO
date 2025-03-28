@@ -84,7 +84,7 @@ class CreateTicket extends PureComponent<IProps> {
     try {
       await ticketService.createTicket(files, data, this.onUploading.bind(this));
       message.success('New product was successfully created');
-      Router.push(`/${user?.username || user?._id}`);
+      Router.push(`/artist/profile/?id=${user?.username || user?._id}`);
     } catch (error) {
       message.error(getResponseError(error) || 'Something went wrong, please try again!');
       this.setState({

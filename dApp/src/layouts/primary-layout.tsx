@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, FloatButton, message, Image } from 'antd';
 import Link from 'next/link';
+import Head from 'next/head';
 import { connect } from 'react-redux';
 import { useRouter } from 'next/router';
 import { IUIConfig } from 'src/interfaces/ui-config';
@@ -14,17 +15,36 @@ import Sidebar from '@components/common/layout/sidebar';
 import styles from './primary-layout.module.scss';
 import { performerService } from 'src/services';
 import VideoSearch from '@components/video/Video-search';
-import {
-   IUser
-} from 'src/interfaces';
+import WavePlayer from '@components/common/wave-audio-player';
+import { IAccount, IUser } from 'src/interfaces';
+import { motion } from 'framer-motion';
+import { bannerService } from '@services/banner.service';
+import FeedContainer from '@components/common/FeedContainer';
+import { SplideBanner } from '@components/common';
+import { Store } from 'redux';
+import { EmailVerificationBanner } from '@components/common/email-verification-banner';
+
 interface DefaultProps {
   loadUIValue: Function;
   children: any;
   ui: IUIConfig;
   user: IUser;
+  account: IAccount;
 }
 
-const PrimaryLayout: React.FC<DefaultProps> = ({ loadUIValue, children, ui, user }) => {
+const initial2 = { opacity: 0, y: 20 };
+const animate1 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 1.3,
+    delay: 0.3,
+    ease: 'easeOut',
+    once: true,
+  },
+};
+
+const PrimaryLayout: React.FC<DefaultProps> = ({ loadUIValue, children, ui, user, account }) => {
   const [routerChange, setRouterChange] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
@@ -39,11 +59,38 @@ const PrimaryLayout: React.FC<DefaultProps> = ({ loadUIValue, children, ui, user
   const [fetching, setFetching] = useState(false);
   const [genreFromChild, setGenreFromChild] = useState('');
   const [title, setTitle] = useState('');
+  const [banners, setBanners] = useState([]);
 
   const router = useRouter();
 
   function handleGenreFromChild(selectedGenre) {
     setGenreFromChild(selectedGenre);
+  }
+
+  // New handler for logo clicks
+  const handleLogoClick = (e) => {
+    // Reset search state
+    setIsSearch(false);
+    setGenreFromChild('');
+  };
+
+  // New handler for header clicks
+  const handleHeaderClick = (e) => {
+    if (e) {
+      e.preventDefault(); // Prevent any default navigation if needed
+      e.stopPropagation(); // Stop event bubbling if needed
+    }
+    setIsSearch(false);
+    setGenreFromChild('');
+  };
+
+  const getBanners = async () => {
+    try {
+      const response = await bannerService.search({ limit: 99 });
+      setBanners(response?.data?.data || []);
+    } catch (e) {
+      setBanners([]);
+    }
   }
 
   useEffect(() => {
@@ -53,27 +100,29 @@ const PrimaryLayout: React.FC<DefaultProps> = ({ loadUIValue, children, ui, user
     currentPathCleaned !== '' && setIsSearch(false);
     currentPathCleaned === '' && setTitle('');
     currentPathCleaned === 'artist/studio' &&  setTitle('Studio');
-    currentPathCleaned === 'artist/earnings' && setTitle('Earnings');
+    currentPathCleaned === 'artist/editor' &&  setTitle('Editor');
+    currentPathCleaned === 'account/wallet' && setTitle('Wallet');
     currentPathCleaned === 'artist/account'  && setTitle('Settings');
     currentPathCleaned === 'user/account'  && setTitle('Settings');
-    currentPathCleaned === 'user/wallet'  && setTitle('Wallet');
     currentPathCleaned === 'user/purchased'  && setTitle('Purchased');
     currentPathCleaned === 'user/library'  && setTitle('Library');
 
     loadUIValue();
     handleStateChange();
-
-    setIsMobile(window.innerWidth < 640);
-    setIsTablet(window.innerWidth < 1000);
+    getBanners();
+    updateMedia();
 
     window.addEventListener('resize', updateMedia);
 
     return () => window.removeEventListener('resize', updateMedia);
   }, [router.asPath]);
 
-
   const updateMedia = () => {
-    setIsMobile(window.innerWidth < 640);
+    if (user?.account?.activeSubaccount === "performer") {
+      setIsMobile(window.innerWidth < 1024);
+    } else {
+      setIsMobile(window.innerWidth < 640);
+    }
     setIsTablet(window.innerWidth < 1000);
   };
 
@@ -94,8 +143,8 @@ const PrimaryLayout: React.FC<DefaultProps> = ({ loadUIValue, children, ui, user
 
   const getPerformers = async (offset: any, filter: any, limit: any) => {
     try {
-        setFetching(true);
-        const resp = await performerService.search({
+      setFetching(true);
+      const resp = await performerService.search({
         limit,
         ...filter,
         offset: limit * offset,
@@ -122,53 +171,85 @@ const PrimaryLayout: React.FC<DefaultProps> = ({ loadUIValue, children, ui, user
     setIsClicked(false);
   };
 
+  
+
+  const topBanners = banners && banners.length > 0 && banners.filter((b) => b.position === 'top');
+  const isEmailVerified = !account._id || account?.verifiedEmail ? true : false;
+  const activeSubaccount = account.activeSubaccount || 'user';
+  const isPerformer = activeSubaccount === 'performer';
+
   return (
     <>
       <div className={styles.layoutModule}>
-        <Layout className={`${isMobile ? '' : 'sidebar-layout'} ${sidebar ? 'sidebar-expanded' : 'sidebar-collapsed'} ${!user?._id && isMobile ? 'overflow-hidden' : ''}`}>
-          <div className={ui?.theme === 'dark' ? 'container dark' : 'container'} id="primaryLayout" key="primaryLayout">
-              <Link href={'/'} className={isMobile ? "fixed-nav-logo-mobile" : "fixed-nav-logo"}>
-                {(isMobile && title !== '') ? (
-                  <span className='top-[5px] relative text-[#b3b3b3] text-2xl uppercase font-heading'>{title}</span>
-                ) : (
-                  <>
-                    {isMobile ? (
-                        <Image alt="logo" preview={false} width="130px" className='' src="/static/trax_primary_logotype.svg" />
-                    ):(
-                        <Image alt="logo" preview={false} width="100px" className='' src="/static/trax_primary_logotype.svg" />
-                    )}
-                  </>
-                )}
-              </Link>
-
-            {isMobile ? (
+      <Layout className={`
+        ${isEmailVerified 
+          ? isMobile 
+            ? 'pb-[60px]' 
+            : `${isPerformer 
+                ? 'dark:bg-trax-zinc-900 pb-[120px] rounded-lg' 
+                : 'py-[80px]'}`
+          : isMobile 
+            ? 'pb-[168px] pt-[113px]' 
+            : 'py-[188px]'
+        }
+      `}>
+        <div className={ui?.theme === 'dark' ? 'container dark' : 'container'} id="primaryLayout" key="primaryLayout">
+            {isMobile && !isPerformer ? (
               <>
-                <NewHeader insideComponent={handleClickInside} isClickedOutside={isClicked} onOutsideClick={handleOutsideClick} onFinish={handleSearch} onSidebarToggle={handleSidebarToggle} setSidebar={sidebar} sendGenreToParent={handleGenreFromChild} />
-                <Header />
+                <NewHeader 
+                  insideComponent={handleClickInside} 
+                  isClickedOutside={isClicked} 
+                  onOutsideClick={handleOutsideClick} 
+                  onFinish={handleSearch} 
+                  onSidebarToggle={handleSidebarToggle} 
+                  setSidebar={sidebar} 
+                  sendGenreToParent={handleGenreFromChild}
+                  onClick={handleHeaderClick}
+                />
+                <Header onClick={handleHeaderClick} />
               </>
-            ) : (
+            ) : !isPerformer ? (
               <>
-                <NewHeader onOutsideClick={handleOutsideClick} onFinish={handleSearch} onSidebarToggle={handleSidebarToggle} setSidebar={sidebar} sendGenreToParent={handleGenreFromChild} />
+                <NewHeader 
+                  onOutsideClick={handleOutsideClick} 
+                  onFinish={handleSearch} 
+                  onSidebarToggle={handleSidebarToggle} 
+                  setSidebar={sidebar} 
+                  sendGenreToParent={handleGenreFromChild}
+                  onClick={handleHeaderClick}
+                />
                 <Sidebar onSidebarToggle={handleSidebarToggle} setSidebar={sidebar} />
               </>
+            ) : isMobile && isPerformer ? (
+              <>
+                <Header onClick={handleHeaderClick} />
+              </>
+            ) : (
+              <>
+              {/* Remove the header for performer */}
+              </>
             )}
-            {!isSearch  || genreFromChild === 'featured' ? (
-              <Layout.Content className="content" style={{ position: 'relative' }}>
+            {!isSearch || genreFromChild === 'featured' ? (
+              <Layout.Content 
+              className={`content ${isPerformer ? 'bg-trax-zinc-900 mb-[25px] rounded-lg' : ''}`} 
+              style={{ position: 'relative'}}
+            >
                 {routerChange && <Loader />}
                 {children}
-                <NewFooter />
+                <NewFooter isPerformer={isPerformer}/>
               </Layout.Content>
             ) : (
-              <Layout.Content className="content" style={{ position: 'relative' }}>
-                {routerChange && <Loader />}
-                <div  className='mt-[4.5rem] sm:mt-8 px-0 sm:px-12'>
-                  <VideoSearch tags={genreFromChild}/>
-                </div>
-                <NewFooter />
-              </Layout.Content>
+              <motion.div initial={initial2} animate={animate1}>
+                <Layout.Content className="content" style={{ position: 'relative' }}>
+                  {routerChange && <Loader />}
+                  <div className=''>
+                    <SplideBanner banners={topBanners}/>
+                    <FeedContainer options={{ type: 'genres', genresTag: genreFromChild}} />
+                  </div>
+                  <NewFooter isPerformer={isPerformer}/>
+                </Layout.Content>
+              </motion.div>
             )}
-            {/* <FloatButton.BackTop className="backTop" /> */}
-
           </div>
         </Layout>
       </div>
@@ -180,6 +261,7 @@ const PrimaryLayout: React.FC<DefaultProps> = ({ loadUIValue, children, ui, user
 const mapStateToProps = (state: any) => ({
   ui: { ...state.ui },
   user: state.user.current,
+  account: { ...state.user.account}
 });
 
 const mapDispatchToProps = { loadUIValue };

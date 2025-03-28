@@ -13,6 +13,8 @@ import { IPerformer } from 'src/interfaces';
 import { Button } from 'antd';
 import styles from './performer.module.scss';
 
+import TraxButton from '@components/common/TraxButton';
+
 const layout = {
   labelCol: { span: 24 },
   wrapperCol: { span: 24 }
@@ -54,14 +56,16 @@ export class PerformerVerificationForm extends PureComponent<IProps> {
           <div>
             <p className="text-trax-gray-500 text-base py-6 text-left">To verify your account, click on the button below.</p>
             <div className='log-in-btn-wrapper'>
-              <Form.Item style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-                <Button
-                  className="log-in-btn sign-up place-content-center"
-                  href={user ? user.identityVerificationStatus.link : ''}
-                  target="_blank"
-                >
-                  Verify your identity
-                </Button>
+              <Form.Item>
+                <TraxButton
+                  htmlType="button"
+                  styleType="primary"
+                  buttonSize='full'
+                  buttonText="Verify your identity"
+                  onClick={() => {
+                    window.location.href = user ? user.identityVerificationStatus.link : '';
+                  }}
+                />
               </Form.Item>
             </div>
           </div>
@@ -75,6 +79,14 @@ export class PerformerVerificationForm extends PureComponent<IProps> {
               <div className='profile-form-box-connected'>
                 <span className='text-lg text-trax-white '>You are now verified!</span>
                 <span className='text-trax-gray-300'>You have already completed identity verification, to re-verify your account please click 'Re-verify'.</span>
+                <Form.Item>
+                  <TraxButton
+                    htmlType="button"
+                    styleType="primary"
+                    buttonSize='full'
+                    buttonText="Re-verify"
+                  />
+                </Form.Item>
                 <div className='w-full flex justify-end'>
                   <div className='cursor-pointer rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-4 flex w-20 justify-center'>
                     <span>Re-verify</span>

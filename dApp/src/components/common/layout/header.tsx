@@ -1,18 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { PureComponent } from 'react';
-
 import {
-  Layout, Drawer, Divider, Modal, Avatar,
+  Layout, Drawer, Divider, Avatar,
+  Modal
 } from 'antd';
 import { connect } from 'react-redux';
 import Link from 'next/link';
 import {
-  IUser, StreamSettings, IUIConfig, ISettings
+  IUser, StreamSettings, IUIConfig, ISettings,
+  IAccount
 } from 'src/interfaces';
 import { logout } from '@redux/auth/actions';
-import {
-  LogoutOutlined, SettingOutlined,
-} from '@ant-design/icons';
 import Router, { withRouter, Router as RouterEvent } from 'next/router';
 import {
   authService
@@ -20,34 +18,32 @@ import {
 import { Event, SocketContext } from 'src/socket';
 import { addPrivateRequest, accessPrivateRequest } from '@redux/streaming/actions';
 import { updateUIValue } from 'src/redux/ui/actions';
-import { updateBalance } from '@redux/user/actions';
+import { updateBalance, setAccount } from '@redux/user/actions';
 import { SubscribePerformerModal } from 'src/components/subscription/subscribe-performer-modal';
 import CopyReferralCode from 'src/components/common/referralCode';
 import styles from './header.module.scss';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faUser } from '@fortawesome/free-solid-svg-icons'
-import {
-  CheckBadgeIcon,
-  HomeIcon as HomeIconActive, VideoCameraIcon as VideoCameraIconActive, UserIcon as UserIconActive,
-  WalletIcon as WalletIconActive, BookmarkIcon as BookmarkIconActive,
-} from '@heroicons/react/24/solid';
-import { HomeIcon, VideoCameraIcon, UserIcon, WalletIcon, BookmarkIcon, UserCircleIcon, } from '@heroicons/react/24/outline';
+import { ArrowRightEndOnRectangleIcon  } from '@heroicons/react/24/outline';
+import { Home, Bookmark, WalletCards, Settings, Video, User, CircleUserRound, Search, UserRoundPlus, UserPen, InfoIcon, ChevronRight, Clapperboard, ChartColumn } from 'lucide-react';
 import LogInModal from 'src/components/log-in/log-in-modal';
 import SignUpModal from '@components/sign-up/sign-up-modal';
 import Forgot from 'pages/auth/forgot-password';
 import { Sheet } from 'react-modal-sheet';
-import AnimatedSplashScreenWithSignIn from './animated-splash-screen-with-login';
-import AnimatedSplashScreen from './animated-splash-screen-with-login';
-import logo from '../../../../public/static/trax_primary_logotype.svg'
-import Image from "next/image"
+import NavigationContents from "../navigation"
+import DropdownModal from "../base/drop-down-modal";
+import { videoService } from 'src/services';
+import SlideUpModal from '@components/common/layout/slide-up-modal';
+import CreateArtistModal from '@components/sign-up/create-artist';
+
 
 interface IProps {
   updateBalance: Function;
   updateUIValue: Function;
+  setAccount: Function;
   user: IUser;
   logout: Function;
   router: any;
   ui: IUIConfig;
+  account: IAccount;
   privateRequests: any;
   addPrivateRequest: Function;
   accessPrivateRequest: Function;
@@ -64,27 +60,50 @@ class Header extends PureComponent<IProps> {
     openLogInSheet: false,
     openSignUpSheet: false,
     openForgotSheet: false,
+    openSplashScreen: false,
+    openNavDropDown: false,
+    performers: [],
+    featuredContent: [],
+    username: '',
+    openSignUpModal: false,
+    openCreateArtistModal: false
   };
 
   componentDidMount() {
+    const { user } = this.props;
+
+    if(!user._id && window.innerWidth < 640){
+      this.setState({ openSplashScreen: true})
+    }else{
+      this.setState({ openSplashScreen: false})
+    }
+
     RouterEvent.events.on('routeChangeStart', this.handleChangeRoute);
 
-    this.setState({ isMobile: window.innerWidth < 640 });
+    this.updateMedia();
+
     window.addEventListener('resize', this.updateMedia);
     return () => window.removeEventListener('resize', this.updateMedia);
   }
 
   updateMedia = () => {
     // @ts-ignore
-    this.setState({ isMobile: window.innerWidth < 640 });
+    const { user } = this.props;
+    if (user?.account?.activeSubaccount === "performer") {
+      this.setState({ isMobile: window.innerWidth < 1024 });
+    } else {
+      this.setState({ isMobile: window.innerWidth < 640 });
+    }
   };
+
 
   componentWillUnmount() {
     RouterEvent.events.off('routeChangeStart', this.handleChangeRoute);
     const token = authService.getToken() || '';
     const socket = this.context;
+
+
     // @ts-ignore
-    //token && socket && socket.emit('auth/logout', { token });
   }
 
   handleChangeRoute = () => {
@@ -102,7 +121,7 @@ class Header extends PureComponent<IProps> {
 
   async handleUpdateBalance(event) {
     const { user, updateBalance: handleUpdateBalance } = this.props;
-    if (user.isPerformer) {
+    if (user?.account?.activeSubaccount === "performer") {
       handleUpdateBalance({ token: event.token });
     }
   }
@@ -124,9 +143,8 @@ class Header extends PureComponent<IProps> {
     handleLogout();
   }
 
-  handleOpenSignUp = (isOpen: boolean, loggedIn: boolean) => {
-    //console.log('result from handleOpenSignUp in header', isOpen, loggedIn );
-    loggedIn ? this.setState({ openLogInSheet: isOpen, openSignUpSheet: false }) : this.setState({ openLogInSheet: isOpen, openSignUpSheet: true })
+  handleOpenSignUp = (isOpen: boolean, loggedIn: boolean, username?: string) => {
+    loggedIn ? this.setState({ openLogInSheet: isOpen, openSignUpSheet: false, username }) : this.setState({ openLogInSheet: isOpen, openSignUpSheet: true, username })
   }
 
   handleOpenModal = (isOpen: boolean, modal: string) => {
@@ -152,23 +170,94 @@ class Header extends PureComponent<IProps> {
     }
   };
 
+  handleNavigationPage = () => {
+    const {openNavDropDown} = this.state;
+    this.setState({openNavDropDown: !openNavDropDown});
+  }
+
+  async getFeaturedContent(){
+    let featured = [];
+    await videoService.homePageSearch({
+      limit: 10,
+      sortBy: 'latest',
+      tags: 'featured',
+      offset: 0,
+    }).then((res) => {
+      res.data.data.map((v)=>{
+        if(v._id){
+          featured.length === 0 && featured.push(v);
+          const exists = featured.some(obj => obj['_id'] === v['_id']);
+          if (!exists) {
+            if(v.trackType === 'audio'){
+              featured.push(v);
+            }
+          }
+        }
+      })
+    })
+
+    this.setState({featuredContent: this.shuffleArray(featured)});
+  }
+
+
+  async switchSubaccount(activeSubaccount) {
+    const { user, account, setAccount: handleSetAccount } = this.props;
+    const setActiveSubaccount = activeSubaccount === 'user' ? 'user' : 'performer';
+    const updatedAccount = await authService.setActiveSubaccount({ activeSubaccount : setActiveSubaccount });
+    await handleSetAccount(updatedAccount.data);
+  }
+
+  async createArtistProfile() {
+    this.setState({openLogInModal: false, openSignUpModal: true, openCreateArtistModal: true, username: '' });
+  }
+
+
+  shuffleArray(array){
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  getProfileImage(){
+    const {account} = this.props;
+    let pic;
+    if(account.activeSubaccount === 'user'){
+      pic = account.performerInfo?.avatar ? account.performerInfo?.avatar : "/static/no-avatar.png"
+    }else if(account.activeSubaccount === 'performer'){
+      pic = account?.userInfo?.avatar ? account?.userInfo?.avatar : "/static/no-avatar.png"
+    }else{
+      pic = "/static/no-avatar.png"
+    }
+
+    return pic
+  }
+
   render() {
     const {
-      user, router, ui,
+      user, router, ui, account
     } = this.props;
     const {
-      openProfile, isMobile, openLogInSheet, openSignUpSheet, openForgotSheet
+      openProfile, isMobile, openSplashScreen, featuredContent, performers, openCreateArtistModal, openSignUpModal, openNavDropDown, openLogInSheet, openSignUpSheet, openForgotSheet, username
     } = this.state;
-    const referralCode = user?.userReferral;
+    const referralCode = user?.account?.userReferral;
 
-    //console.log("user object in header:", user);
-
+    const activeSubaccount = account?.activeSubaccount || 'user';
+    const isUser = activeSubaccount === 'user';
+    const isPerformer = activeSubaccount === 'performer';
 
     return (
 
       (
+        <div>
+          <DropdownModal isOpen={openNavDropDown} onClose={() => this.setState({openNavDropDown: false})} isMobile={isMobile} isNavigation={true}>
+              <NavigationContents user={user} isMobile={isMobile}/>
+            </DropdownModal>
+
         <div className={styles.headerModule}>
-          <div className={isMobile ? 'main-header mobile-navbar' : 'main-header'} style={{ backdropFilter: 'blur(10px)' }}>
+          <div className={isMobile ? user._id ? 'main-header mobile-navbar' : 'main-header pb-0'  : 'main-header'} style={{ backdropFilter: 'blur(10px)' }}>
             <Event
               event="update_balance"
               handler={this.handleUpdateBalance.bind(this)}
@@ -177,88 +266,51 @@ class Header extends PureComponent<IProps> {
               event="payment_status_callback"
               handler={this.handlePaymentStatusCallback.bind(this)}
             />
-            {!user._id && isMobile && (
-              <div className='sign-in-prompt-container'>
 
-                <div className='sign-in-logo'>
-                <Image alt="" src={logo} className="h-12 mb-12 mx-auto w-auto" />
-                <AnimatedSplashScreen/>
-                </div>
-                <div className='sign-in-prompt-header'>
-                  <span>New Music Starts Here</span>
-                </div>
-                <div className='sign-in-btn-wrapper'>
-                  <div className='sign-up-btn' onClick={() => this.setState({ openSignUpSheet: true })}>
-                    <span>Create an account</span>
-                  </div>
-                </div>
-                <div className='sign-in-btn-wrapper'>
-                  <div className='sign-in-btn' onClick={() => this.setState({ openLogInSheet: true })}>
-                    <span>Sign in</span>
-                  </div>
-                  </div>
-
-              </div>
-            )}
             <div className="feed-container main-container">
               {user._id && (
                 <Layout.Header className="header" id="layoutHeader">
                   <div className="nav-bar">
                     <ul className='nav-icons' style={{ justifyContent: user._id ? 'space-between' : 'space-around' }}>
-                      <li className={router.pathname === '/' ? 'active' : ''}>
-                        <Link href="/" className='nav-link'>
-                          <HomeIconActive className={router.pathname === '/' ? 'active-icon size-6' : 'display-none'} />
-                          <HomeIcon className={router.pathname === '/' ? 'display-none' : 'size-6'} />
-                          <span className={router.pathname === '/' ? 'page-name-active' : 'page-name'}>Home</span>
-                        </Link>
-                      </li>
-
-                      {user._id && (user?.isPerformer && (
+                      {user._id && !isPerformer && (
                         <>
-                          <li className={router.pathname === '/artist/studio' ? 'active' : ''}>
-                            <Link href="/artist/studio" as="/artist/studio" className='nav-link'>
-                              <VideoCameraIconActive className={router.pathname === '/artist/studio' ? 'active-icon size-6' : 'display-none'} />
-                              <VideoCameraIcon className={router.pathname === '/artist/studio' ? 'display-none' : 'size-6'} />
-                              <span className={router.pathname === '/artist/studio' ? 'page-name-active' : 'page-name'} >Studio</span>
+                          <li>
+                            <Link href="/" className='nav-link'>
+                              <Home className={router.pathname === '/' ? 'active-icon' : 'menu-icon-mobile size-6'} />
                             </Link>
                           </li>
-                          <li key="earnings" className={router.pathname === '/artist/earnings' ? 'active' : ''}>
-                            <Link href="/artist/earnings" as="/artist/earnings" className='nav-link'>
-                              <WalletIconActive className={router.pathname === '/artist/earnings' ? 'active-icon size-6' : 'display-none'} />
-                              <WalletIcon className={router.pathname === '/artist/earnings' ? 'display-none' : 'size-6'} />
-                              <span className={router.pathname === '/artist/earnings' ? 'page-name-active' : 'page-name'}>Earnings</span>
-                            </Link>
+                          <li key="wallet_user">
+                            <div className='nav-link'>
+                              <Search className={`size-6  ${openNavDropDown ? 'trax-white-trax' : 'menu-icon-mobile'}`} onClick={() => this.handleNavigationPage()} />
+                            </div>
                           </li>
-                          <li key="profile" className={router.pathname === '/artist/profile' ? 'active' : ''}>
-                            <Link
-                              href={`/${user?.username || user?._id}`}
-                              as={`/${user?.username || user?._id}`}
-                              className='nav-link'
-                            >
-                              <UserIconActive className={router.pathname === '/artist/profile' ? 'active-icon size-6' : 'display-none'} />
-                              <UserIcon className={router.pathname === '/artist/profile' ? 'display-none' : 'size-6'} />
-                              <span className={router.pathname === '/artist/profile' ? 'page-name-active' : 'page-name'}>You</span>
+                          <li key="library">
+                            <Link href="/user/library" as="/user/library" className='nav-link'>
+                              <Bookmark className={router.pathname === '/user/library' ? 'active-icon' : 'menu-icon-mobile size-6'} />
                             </Link>
                           </li>
                         </>
-                      ))}
+                      )}
 
-                      {user._id && !user.isPerformer && (
+                      {user._id && isPerformer && (
                         <>
-                          <li key="wallet_user" className={router.pathname === '/user/wallet' ? 'active' : ''}>
-                            <Link href="/user/wallet" className='nav-link'>
-                              <WalletIconActive className={router.pathname === '/user/wallet' ? 'active-icon size-6' : 'display-none'} />
-                              <WalletIcon className={router.pathname === '/user/wallet' ? 'display-none' : 'size-6'} />
-                              <span className={router.pathname === '/user/wallet' ? 'page-name-active' : 'page-name'} >Wallet</span>
+                          <li key="profile" className={router.pathname === '/artist/profile' ? 'active' : ''}>
+                            <Link
+                              href={`/artist/profile/?id=${user?.username || user?._id}`}
+                              as={`/artist/profile/?id=${user?.username || user?._id}`}
+                              className='nav-link'
+                            >
+                              <User className={router.pathname === '/artist/profile' ? 'active-icon' : 'menu-icon-mobile size-6'} />
                             </Link>
                           </li>
-                          <li key="library" className={router.pathname === '/user/library' ? 'active' : ''}>
-                            <Link href="/user/library" as="/user/library" className='nav-link'>
-                              <>
-                                <BookmarkIconActive className={router.pathname === '/user/library' ? 'active-icon size-6' : 'display-none'} />
-                                <BookmarkIcon className={router.pathname === '/user/library' ? 'display-none' : 'size-6'} />
-                                <span className={router.pathname === '/user/library' ? 'page-name-active' : 'page-name'}>Library</span>
-                              </>
+                          <li key="studio" className={router.pathname === '/artist/studio' ? 'active' : ''}>
+                            <Link href="/artist/studio" as="/artist/studio" className='nav-link'>
+                              <Clapperboard className={router.pathname === '/artist/studio' ? 'active-icon' : 'menu-icon-mobile size-6'} />
+                            </Link>
+                          </li>
+                          <li key="analytics" className={router.pathname === '/artist/analytics' ? 'active' : ''}>
+                            <Link href="/artist/analytics" as="/artist/analytics" className='nav-link'>
+                              <ChartColumn className={router.pathname === '/artist/analytics' ? 'active-icon' : 'menu-icon-mobile size-6'} />
                             </Link>
                           </li>
                         </>
@@ -266,44 +318,36 @@ class Header extends PureComponent<IProps> {
 
                       {user._id && (
                         <li key="avatar" aria-hidden onClick={() => this.setState({ openProfile: true })} className='nav-link'>
-                          {user?.avatar ? <Avatar className='size-9' src={user?.avatar || '/static/no-avatar.png'} /> : <UserCircleIcon className='size-6' />}
+                          {user?.avatar ? <Avatar className='size-9' src={user?.avatar || '/static/no-avatar.png'} /> : <CircleUserRound className='menu-icon-mobile size-6' />}
                         </li>
                       )}
                     </ul>
                   </div>
                 </Layout.Header>
               )}
+
               <Drawer
                 style={{ backdropFilter: 'blur(12px)' }}
                 title={(
                   <Link
-                    href={user.isPerformer ? `/${user?.username || user?._id}` : "/user/account"}
-                    as={user.isPerformer ? `/${user?.username || user?._id}` : "/user/account"}
+                    href={isPerformer ? `/artist/profile/?id=${user?.username || user?._id}` : "/user/account"}
+                    as={isPerformer ? `/artist/profile/?id=${user?.username || user?._id}` : "/user/account"}
                     legacyBehavior
                   >
-                    <div className="profile-user">
-                      {user.isPerformer && (
-
-                        <Link
-                          href={user.isPerformer ? `/${user?.username || user?._id}` : "/user/account"}
-                          as={user.isPerformer ? `/${user?.username || user?._id}` : "/user/account"}
-                          className='performer-profile-btn-wrapper'
-                        >
-                          <FontAwesomeIcon className='performer-profile-btn-icon' icon={faUser} />
-                        </Link>
-                      )}
+                    <div className="profile-user mt-4">
                       <img className="avatar" src={user?.avatar || '/static/no-avatar.png'} alt="avatar" />
-                      <span className="profile-name">
-                        <span>
+                      <div className="flex flex-col">
+                        <span className='font-body flex mx-auto text-4xl uppercase text-trax-white font-[600] font-heading'>
                           {user?.name || 'N/A'}
-                          {' '}
-                          {user?.verifiedAccount ? <CheckBadgeIcon className="sidebar-v-badge" /> : ''}
-                          &nbsp;
-
-                          {user?.earlyBird ? <Image alt="Early Bird Icon" className="early-bird-icon" src="/static/traxXLogoGreen.svg" /> : ''}
-                          {' '}
                         </span>
-                      </span>
+                        <span className='font-body flex text-lg mx-auto text-trax-white/50 mt-1 font-light'>
+                        {isUser ? (
+                        <span>@{account?.userInfo?.username || 'N/A'}</span>
+                      ) : (
+                        <span>@{account?.performerInfo?.username || 'N/A'}</span>
+                      )}
+                        </span>
+                      </div>
                     </div>
                   </Link>
                 )}
@@ -311,123 +355,165 @@ class Header extends PureComponent<IProps> {
                 onClose={() => this.setState({ openProfile: false })}
                 open={openProfile}
                 key="profile-drawer"
-                className={ui.theme === 'light' ? 'profile-drawer mobile-navbar' : 'profile-drawer dark mobile-navbar'}
-                width={300}
+                className={`${styles.headerModule} profile-drawer ${ui.theme === 'light' ? '' : 'dark'} mobile-navbar`}
+                width="100%"
               >
-                {user.isPerformer && (
-                  <div className="profile-menu-item">
-                    <Link href="/artist/account" as="/artist/account" legacyBehavior>
-                      <div className={router.pathname === '/artist/account' ? 'menu-item active flex items-center' : 'menu-item flex items-center'}>
-                        <SettingOutlined className={router.pathname === '/artist/account' ? 'active-icon ' : ''} />
-                        {' '}
-                        Settings
+
+                  {(isUser && account.performerId) || isPerformer ? (
+                    <div
+                      className='flex flex-row bg-slaps-gray rounded-full justify-between pr-4 border border-trax-transparent hover:border-custom-green cursor-pointer'
+                      onClick={() => isUser ? this.switchSubaccount('artist') : this.switchSubaccount('user')}
+                    >
+                      <div className='flex flex-row gap-2'>
+                        <div className='rounded-full border border-trax-white'>
+                          <img src={this.getProfileImage()} alt="" className='w-10 h-10 rounded-full'/>
+                        </div>
+                        <span className='flex items-center'>
+                          {isUser ? account?.performerInfo?.name : account?.userInfo?.name}
+                        </span>
+                      </div>
+
+                      <span className='flex items-center text-trax-gray-400'>
+                      {isUser ? 'Artist' : 'Fan'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      className='flex flex-row bg-slaps-gray rounded-full justify-center pr-4 py-2 border border-trax-transparent hover:border-custom-green cursor-pointer'
+                      onClick={() => this.createArtistProfile()}
+                    >
+                      <div className='flex flex-row gap-2'>
+                        <div className=''>
+                          <UserRoundPlus className='w-6 h-6'/>
+                        </div>
+                        <span className='flex items-center'>
+                          Create artist account
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="profile-menu-items mt-3 bg-slaps-gray rounded-lg">
+                    <Link href={"/account"} as={"/account"} legacyBehavior >
+                      <div className='border-b border-[#4f4f4f]'>
+                        <div  className="menu-item">
+                          <span className='menu-icon-text'>My Account</span>
+                          <ChevronRight className="menu-icon" />
+                        </div>
                       </div>
                     </Link>
 
-                    {/* <Divider /> */}
-
-                    <div aria-hidden className="menu-item flex items-center" onClick={() => this.beforeLogout()}>
-                      <LogoutOutlined className='pl-1' />
-                      {' '}
-                      Sign Out
-                    </div>
-
-                    <Divider />
-
-                    <CopyReferralCode referralCode={referralCode} />
-
-                    <Divider />
-
-                  </div>
-                )}
-                {!user.isPerformer && (
-                  <div className="profile-menu-item">
-                    <Link href="/user/account" as="/user/account" legacyBehavior>
-                      <div className={router.pathname === '/user/account' ? 'menu-item active flex items-center' : 'menu-item flex items-center'}>
-                        <SettingOutlined className={router.pathname === '/user/account' ? 'active-icon' : ''} />
-                        {' '}
-                        Settings
+                    <Link href={isUser ? "/user/account" : "/artist/account"} as={isUser ? "/user/account" : "/artist/account"} legacyBehavior >
+                      <div className='border-b border-[#4f4f4f]'>
+                        <div className="menu-item">
+                          <span className='menu-icon-text'>Edit profile</span>
+                          <ChevronRight className="menu-icon" />
+                        </div>
                       </div>
                     </Link>
-                    {/* <Divider /> */}
 
-                    <div className="menu-item flex items-center" aria-hidden onClick={() => this.beforeLogout()}>
-                      <LogoutOutlined className='pl-2' />
-                      {' '}
-                      Sign Out
+                    {/* {(!isPerformer && user._id) &&(
+                      <Link href="/user/wallet/" as="/user/wallet/" legacyBehavior >
+                        <div className='border-b border-[#4f4f4f]'>
+                          <div className="menu-item">
+                            <span className='menu-icon-text'>Wallet</span>
+                            <ChevronRight className="menu-icon" />
+                          </div>
+                        </div>
+                      </Link>
+                    )} */}
+
+                    {user._id && (
+                      isPerformer ? (
+                        <Link href="/account/earnings" as="/account/earnings" legacyBehavior >
+                          <div className='border-b border-[#4f4f4f]'>
+                            <div className="menu-item">
+                              <span className='menu-icon-text'>Earnings</span>
+                              <ChevronRight className="menu-icon" />
+                            </div>
+                          </div>
+                        </Link>
+                      ) : (
+                        <Link href="/user/wallet/" as="/user/wallet/" legacyBehavior >
+                          <div className='border-b border-[#4f4f4f]'>
+                            <div className="menu-item">
+                              <span className='menu-icon-text'>Wallet</span>
+                              <ChevronRight className="menu-icon" />
+                            </div>
+                          </div>
+                        </Link>
+                      )
+                    )}
+
+                    <Link href='https://info.trax.so/contact' legacyBehavior >
+                      <div className="menu-item">
+                        <span className='menu-icon-text'>Support</span>
+                        <ChevronRight className="menu-icon" />
+                      </div>
+                    </Link>
+                  </div>
+                  <div className="profile-menu-items mt-3 bg-slaps-gray rounded-lg">
+                    <div className="menu-item" onClick={() => this.beforeLogout()}>
+                      <span className='menu-icon-text'>Sign out</span>
+                      <ChevronRight className="menu-icon" />
                     </div>
-
-                    <Divider />
-
-                    <CopyReferralCode referralCode={referralCode} />
-
-                    <Divider />
                   </div>
 
-                )}
+
+                  <div className='mt-4'>
+                      <CopyReferralCode referralCode={referralCode} isMobile={isMobile} />
+                    </div>
               </Drawer>
 
               <SubscribePerformerModal onSubscribed={this.handleSubscribe} />
 
               <div className='log-in-modal-wrapper'>
-                <Sheet
+                <SlideUpModal
                   isOpen={openLogInSheet}
                   onClose={() => this.setState(prevState => ({ ...prevState, openLogInSheet: false }))}
-                  detent='content-height'
                   className="auth-modal"
                 >
-                  <Sheet.Container>
-                    <Sheet.Header />
-                    <Sheet.Content>
-                      <LogInModal
-                        onFinish={this.handleOpenSignUp.bind(this)}
-                        onForgotPassword={this.handleOpenForgotSheet}
-                      />
-                    </Sheet.Content>
-                  </Sheet.Container>
-                  <Sheet.Backdrop onTap={() => this.setState({ openLogInSheet: false })} />
-                </Sheet>
+                  <LogInModal
+                    onFinish={this.handleOpenSignUp.bind(this)}
+                    onForgotPassword={this.handleOpenForgotSheet}
+                  />
+                </SlideUpModal>
               </div>
 
               <div className='sign-in-modal-wrapper'>
-                <Sheet
+                <SlideUpModal
+                  isOpen={openSignUpModal}
+                  onClose={() => this.setState(prevState => ({ ...prevState, openSignUpModal: false }))}
+                >
+                  {openCreateArtistModal ?
+                    <CreateArtistModal onFinish={this.handleOpenModal.bind(this)} /> :
+                    <SignUpModal onFinish={this.handleOpenModal.bind(this)} username={username} />
+                  }
+                </SlideUpModal>
+              </div>
+
+              <div className='sign-in-modal-wrapper'>
+                <SlideUpModal
                   isOpen={openSignUpSheet}
                   onClose={() => this.setState(prevState => ({ ...prevState, openSignUpSheet: false }))}
-                  detent='content-height'
-                  snapPoints={[0.9, 0.5, 100]}
-                  initialSnap={0}
-                  prefersReducedMotion={true}
                   className="auth-modal"
                 >
-                  <Sheet.Container>
-                    <Sheet.Header />
-                    <Sheet.Content>
-                      <SignUpModal onFinish={this.handleOpenModal.bind(this)} />
-                    </Sheet.Content>
-                  </Sheet.Container>
-                  <Sheet.Backdrop onTap={() => this.setState(prevState => ({ ...prevState, openSignUpSheet: false }))} />
-                </Sheet>
+                  <SignUpModal onFinish={this.handleOpenModal.bind(this)} username={username} />
+                </SlideUpModal>
               </div>
 
               {/* Forgot Password Sheet for Mobile */}
               {isMobile && openForgotSheet && (
-                <Sheet
+                <SlideUpModal
                   isOpen={openForgotSheet}
                   onClose={this.handleCloseForgotSheet}
-                  detent="content-height"
-                  className="auth-modal"
                 >
-                  <Sheet.Container>
-                    <Sheet.Header />
-                    <Sheet.Content>
-                      <Forgot onClose={this.handleCloseForgotSheet} />
-                    </Sheet.Content>
-                  </Sheet.Container>
-                  <Sheet.Backdrop onTap={this.handleCloseForgotSheet} />
-                </Sheet>
+                  <Forgot onClose={this.handleCloseForgotSheet} />
+                </SlideUpModal>
               )}
             </div>
           </div>
+        </div>
         </div>
       )
     );
@@ -437,12 +523,13 @@ class Header extends PureComponent<IProps> {
 Header.contextType = SocketContext;
 
 const mapState = (state: any) => ({
+  account: { ...state.user.account },
   user: { ...state.user.current },
   ui: { ...state.ui },
   config: { ...state.settings },
   ...state.streaming
 });
 const mapDispatch = {
-  logout, addPrivateRequest, accessPrivateRequest, updateUIValue, updateBalance
+  logout, addPrivateRequest, accessPrivateRequest, updateUIValue, updateBalance, setAccount
 };
 export default withRouter(connect(mapState, mapDispatch)(Header)) as any;

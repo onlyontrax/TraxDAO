@@ -41,11 +41,30 @@ export class BannerNew extends PureComponent<IProps> {
     this.setState({ isMobile: window.innerWidth < 640 });
   };
 
+  transformMobileLinks(rawLink: string){
+    const baseUrls = [
+      "https://trax.so",
+      "https://stagingapp.trax.so"
+    ];
+
+    if (rawLink) {
+      for (const baseUrl of baseUrls) {
+        if (rawLink.startsWith(baseUrl)) {
+          return rawLink.replace(baseUrl, '');
+        }
+      }
+    }
+
+    return rawLink;
+  }
 
 
   render() {
     const { banners } = this.props;
     const { isMobile } = this.state;
+    const sortedBanners = banners
+        ? [...banners].sort((a, b) => (a.index || 0) - (b.index || 0))
+        : [];
     return (
       <div className={isMobile ? 'explore-banner-div' :  'explore-banner-div-desktop'}>
 
@@ -70,9 +89,9 @@ export class BannerNew extends PureComponent<IProps> {
             lazyLoad: false,
             gap: 5
         }}>
-            {banners.map((item, index) => (
+            {sortedBanners.map((item, index) => (
               <SplideSlide key={`image-${index}`} style={{width: !isMobile ? 650 : 417, height: "100%", position: 'relative'}}>
-                <Link key={index} href={item.btnLinkOne} target="_.blank" style={{
+                <Link key={index} href={this.transformMobileLinks(item.btnLinkOne)} style={{
                         width: "100%",
                         height: "100%",
                         position: 'relative'

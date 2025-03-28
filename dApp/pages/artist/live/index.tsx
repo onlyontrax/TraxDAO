@@ -232,7 +232,7 @@ class PerformerLivePage extends PureComponent<IProps, IStates> {
                   </span>
                   <span>
                     $
-                    {user?.balance?.toFixed(2)}
+                    {user?.account?.balance?.toFixed(2)}
                   </span>
                   <span>
                     <EyeOutlined />
@@ -258,8 +258,8 @@ class PerformerLivePage extends PureComponent<IProps, IStates> {
                       key="start-btn"
                       className="primary"
                       onClick={() => Router.push(
-                        { pathname: `/${user?.username || user?._id}` },
-                        `/${user?.username || user?._id}`
+                        { pathname: `/artist/profile/?id=${user?.username || user?._id}` },
+                        `/artist/profile/?id=${user?.username || user?._id}`
                       )}
                       disabled={loading}
                       block

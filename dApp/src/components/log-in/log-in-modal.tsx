@@ -1,13 +1,11 @@
 /* eslint-disable no-unsafe-optional-chaining */
 /* eslint-disable react/require-default-props */
 /* eslint-disable react/sort-comp */
-import { PureComponent } from 'react';
+import React, { PureComponent } from 'react';
 import { InternetIdentityProvider } from '@internet-identity-labs/react-ic-ii-auth';
 import { login, loginSocial, loginSuccess, loginNfid } from '@redux/auth/actions';
-import { updateCurrentUser } from '@redux/user/actions';
-import {
-  Button, Select, Input, Form, message, Modal
-} from 'antd';
+import { setAccount } from '@redux/user/actions';
+import { Form, message, Modal, FormInstance, Button } from 'antd';
 import { connect } from 'react-redux';
 import Link from 'next/link'
 import { Auth } from 'src/crypto/nfid/Auth';
@@ -20,26 +18,39 @@ import SmsModal from './sms-modal';
 import { Sheet } from 'react-modal-sheet';
 import Forgot from 'pages/auth/forgot-password';
 import Image from 'next/image';
-import logo from '../../../public/static/trax_primary_logotype.svg'
+// import logo from '../../../public/static/trax_primary_logotype.svg'
+import logo from '../../../public/static/TRAX_LOGOMARK_VERDE.png'
+
+import TraxButton from '@components/common/TraxButton';
+import TraxInputField from '@components/common/layout/TraxInputField';
+import { AppleIcon, Facebook, PlaneLandingIcon } from 'lucide-react';
+import { GrGooglePlay } from 'react-icons/gr';
+import { FacebookFilled, GoogleCircleFilled } from '@ant-design/icons';
+import SlideUpModal from '@components/common/layout/slide-up-modal';
+import GoogleLoginButton from '@components/auth/google-login-button';
+import AppleLoginButton from '@components/auth/apple-login-button';
+import FacebookLoginButton from '@components/auth/facebook-login-button';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 
 interface IProps {
   loginAuth: any;
   store: any;
   login: Function;
   loginNfid: Function;
-  updateCurrentUser: Function;
+  setAccount: Function;
   loginSuccess: Function;
   loginSocial: Function;
   ui: IUIConfig;
   settings: ISettings;
   oauth_verifier?: string;
-  onFinish(isOpen: boolean, loggedIn: boolean): Function;
+  onFinish(isOpen: boolean, loggedIn: boolean, username?: string): Function;
   onForgotPassword?: () => void;
   authStatus?: string;
   twoFactorError?: string;
 }
 
 class LogInModal extends PureComponent<IProps> {
+  formRef = React.createRef<FormInstance>();
   static authenticate = false;
 
   static layout = 'blank';
@@ -62,12 +73,39 @@ class LogInModal extends PureComponent<IProps> {
     smsKey: '',
     enabledSms: false,
     smsError: '',
+    usernameError: '',
+    passwordError: '',
+    isMobile: false,
+    stage: 1,
+    myError: ''
+  };
+
+  // Get referral code from URL or localStorage
+  getReferralCode = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const refFromUrl = urlParams.get('referralCode');
+
+    if (refFromUrl) {
+      return refFromUrl;
+    } else {
+      return '';
+    }
   };
 
   async componentDidMount() {
     this.redirectLogin();
     this.callbackTwitter();
+    this.checkIsMobile();
+    window.addEventListener('resize', this.checkIsMobile);
   }
+
+  componentWillUnmount() {
+    window.removeEventListener('resize', this.checkIsMobile);
+  }
+
+  checkIsMobile = () => {
+    this.setState({ isMobile: window.innerWidth <= 768 });
+  };
 
   componentDidUpdate(prevProps) {
     if (this.props.authStatus === '2FA_REQUIRED' && prevProps.authStatus !== '2FA_REQUIRED') {
@@ -75,7 +113,7 @@ class LogInModal extends PureComponent<IProps> {
     }
 
     // Handle the successful login after 2FA submission
-    if (this.props.store.user.current._id !== null) {
+    if (this.props.store.user.current?._id !== null) {
       this.setState({ show2FAModal: false });
       this.hasLoggedIn(true);
     }
@@ -88,10 +126,41 @@ class LogInModal extends PureComponent<IProps> {
     this.setState({ enabledSms: this.props.store.auth.isSmsEnabled });
   }
 
+  checkExistingEmail = async () => {
+    const { usernameValue } = this.state;
+    try {
+      const resp = (
+        await authService.registerCheckField({
+          username: usernameValue
+        })
+      ).data;
+      return resp;
+    } catch (e) {
+      const err = await e;
+      message.error(err?.message || 'Error occured');
+      return { result: 1 };
+    }
+  };
+
   async handleLogin(values: any) {
     const { login: _login } = this.props;
+    const { stage, usernameValue } = this.state;
     try {
-      const response = await _login(values);
+      if (stage === 1) {
+        const res = await this.checkExistingEmail();
+        if (res && res.result === 0) {
+          // New user, email does not exist
+          this.props.onFinish(false, false, usernameValue);
+          return;
+        }
+        this.setState({ stage: 2 });
+
+        return;
+      }
+
+      if (stage === 2) {
+        const response = await _login(values);
+      }
     } catch (error) {
       this.handleLoginError(error);
     }
@@ -169,7 +238,7 @@ class LogInModal extends PureComponent<IProps> {
   }
 
   async redirectLogin() {
-    const { loginSuccess: handleLogin, updateCurrentUser: handleUpdateUser, onFinish: loggedIn } = this.props;
+    const { loginSuccess: handleLogin, setAccount: handleUpdateUser, onFinish: loggedIn } = this.props;
     const token = authService.getToken() || '';
     if (!token || token === 'null') {
       this.setState({ isLoading: false });
@@ -184,6 +253,7 @@ class LogInModal extends PureComponent<IProps> {
       if (!user || !user.data || !user.data._id) return;
       handleLogin();
       handleUpdateUser(user.data);
+      console.log("user LOGIN", user)
       user.data.isPerformer
         ? Router.push(
           { pathname: `/${user.data.username || user.data._id}` },
@@ -227,171 +297,262 @@ class LogInModal extends PureComponent<IProps> {
     const { name, value } = event.target;
     this.setState({
       [name]: value,
+      [`${name.replace('Value', '')}Error`]: ''
     });
   }
+
+  handleFieldBlur = (fieldName: string) => {
+    this.formRef.current?.validateFields([fieldName])
+      .catch(() => {
+        const error = this.formRef.current?.getFieldError(fieldName)?.[0];
+        this.setState({ [`${fieldName}Error`]: error });
+      });
+  };
 
   onNFIDLogin(resp: any) {
     const { loginNfid: loginNfidHandle } = this.props;
     return cryptoService.onNFIDLogin(resp, 'log-in', loginNfidHandle, this.hasLoggedIn.bind(this));
   }
 
-  handleForgotPassword = () => {
-    const { onForgotPassword } = this.props;
-    if (onForgotPassword) {
-      onForgotPassword(); // Close login modal
-      this.setState({ openForgotSheet: true }); // Open forgot password modal
+  handleForgotPassword = (e: React.MouseEvent) => {
+    if (this.state.isMobile) {
+      e.preventDefault();
+      this.setState({ openForgotSheet: true });
     }
   };
 
-  handleForgotPasswordClose = () => {
+  handleForgotClose = () => {
     this.setState({ openForgotSheet: false });
   };
 
+  async onGoogleLogin(resp: any) {
+    if (!resp?.credential) {
+      return;
+    }
+    const { loginSocial: handleLogin } = this.props;
+    const referralCode = this.getReferralCode();
+    const payload = {
+      tokenId: resp.credential,
+      referralCode: referralCode
+    };
+    try {
+      await this.setState({ isLoading: true });
+      const response = await (await authService.loginGoogle(payload)).data;
+      response.token && handleLogin({ token: response.token });
+    } catch (e) {
+      const error = await e;
+      message.error(error && error.message ? error.message : 'Google login authenticated fail');
+    } finally {
+      this.setState({ isLoading: false });
+    }
+  }
+
+  async onAppleLogin(resp: any) {
+    let tokenId = resp?.authorization?.id_token || resp?.response?.identityToken || resp?.authorization?.code;
+
+    if (!tokenId) {
+      message.error('Apple login failed: No valid token received.');
+      return;
+    }
+
+    const { loginSocial: handleLogin } = this.props;
+    const referralCode = this.getReferralCode();
+    const payload = {
+      tokenId,
+      referralCode: referralCode
+     };
+    try {
+      await this.setState({ isLoading: true });
+      const response = await (await authService.loginApple(payload)).data;
+      response.token && handleLogin({ token: response.token });
+    } catch (e) {
+      const error = await e;
+      message.error(error && error.message ? error.message : 'Apple login authenticated fail');
+    } finally {
+      this.setState({ isLoading: false });
+    }
+  }
+
+  async onFacebookLogin(resp: any) {
+    if (!resp?.accessToken) {
+      return;
+    }
+    const { loginSocial: handleLogin } = this.props;
+    const referralCode = this.getReferralCode();
+    const payload = { tokenId: resp.accessToken, userId: resp?.userID, referralCode: referralCode };
+    try {
+      await this.setState({ isLoading: true });
+      const response = await (await authService.loginFacebook(payload)).data;
+      response.token && handleLogin({ token: response.token });
+    } catch (e) {
+      const error = await e;
+      message.error(error && error.message ? error.message : 'Apple login authenticated fail');
+    } finally {
+      this.setState({ isLoading: false });
+    }
+  }
+
   render() {
     const { ui, settings, loginAuth, store } = this.props;
-    const { isLoading, welcomeMsg, passwordVisible, usernameValue, passwordValue, firstVisit, openForgotSheet, show2FAModal, twoFactorError, twoFactorKey, showSmsModal, smsError, smsKey, enabled2fa, enabledSms } = this.state;
-    const isMobile = window.innerWidth <= 768;
+    const { isMobile, isLoading, welcomeMsg, passwordVisible, usernameValue, passwordValue, firstVisit, openForgotSheet, show2FAModal, twoFactorError, twoFactorKey, showSmsModal, smsError, smsKey, enabled2fa, enabledSms, stage, myError } = this.state;
+    const platform = Capacitor.getPlatform();
+
+    const appleIcon = (
+      <img src="/static/apple.png" alt="Apple logo" />
+    );
+
+    const googleIcon = (
+      <img src='/static/google.png' alt="Google logo"/>
+    );
+
+    const facebookIcon = (
+      <img src='/static/facebook.png' alt="Facebook logo"/>
+    )
 
     return (
       <AuthFrame>
+        {/* <div className='h-fit '> */}
         <div className="log-in-header mx-auto flex font-heading flex-col justify-center items-left mt-6 sm:mt-auto">
-          <Image alt="logo" width={120} height={100} className='mt-3 mb-3' src={logo}/>
-          <span className='main-title'>{firstVisit ? "Welcome to TRAX" : "Welcome back"}</span>
-          {/* <span className='main-subtitle'>Log in to TRAX below</span> */}
+          <div className='flex flex-col w-full justify-between gap-2'>
+            <img alt="logo" width={80} height={80} className='flex mx-auto mt-0' src="/static/TRAX_LOGOMARK_VERDE.png" />
+            <span className='text-[#FFF] font-body text-[26px] text-center mt-2 mb-3 sm:mb-0 sm:mt-2'>Log in or sign up</span>
+          </div>
         </div>
         <Form
+          ref={this.formRef}
           name="normal_login"
           initialValues={{ remember: true }}
           onFinish={this.handleLogin.bind(this)}
           className='log-in-form'
         >
-          <div className='email-wrapper pb-2'>
-            <Form.Item
-              name="username"
-              validateTrigger={['onChange', 'onBlur']}
-              rules={[{ required: true, message: 'Please enter your email or username!' }]}
-            // validateStatus={usernameValue.trim() ? 'success' : 'error'}
-            >
-              <div className="relative pulse-border">
-                <Input
-                  onChange={this.handleInputChange}
-                  name="usernameValue"
+
+           {/* Insert logic for sign in or sign up with Google, Facebook, Apple and X */}
+           {!Capacitor.isNativePlatform() && (<><Form.Item>
+                <FacebookLoginButton
+                  appId={settings.facebooklientId}
+                  onSuccess={this.onFacebookLogin.bind(this)}
+                  onFailure={this.onFacebookLogin.bind(this)}
+                />
+              </Form.Item>
+            <Form.Item>
+                <GoogleLoginButton
+                  clientId={settings.googleClientId}
+                  onSuccess={this.onGoogleLogin.bind(this)}
+                  onFailure={this.onGoogleLogin.bind(this)}
+                />
+              </Form.Item>
+            </>)}
+            <Form.Item>
+              <AppleLoginButton
+                clientId={settings.appleClientId}
+                onSuccess={this.onAppleLogin.bind(this)}
+                onFailure={this.onAppleLogin.bind(this)}
+                redirectUri={window.location.origin}
+              />
+            </Form.Item>
+
+            {!Capacitor.isNativePlatform() && (
+              <Form.Item>
+                <InternetIdentityProvider
+                  {...cryptoService.getNfidInternetIdentityProviderProps(this.onNFIDLogin.bind(this))}
+                >
+                  <Auth from="log-in" onLoggedIn={this.hasLoggedIn.bind(this)} />
+                  {/* onLoggedIn={()=> this.props.onFinish(false, true)} */}
+                </InternetIdentityProvider>
+              </Form.Item>
+            )}
+            <div className="text-center my-4">
+                <div className="flex items-center justify-center gap-0">
+                  <span className="text-trax-gray-500 w-20">or</span>
+                </div>
+              </div>
+            <div className='email-wrapper pb-2'>
+              <Form.Item
+                name="username"
+                rules={[{ required: true, message: 'Please enter your email or username!' }]}
+              >
+                <TraxInputField
                   type="text"
-                  id="usernameInput"
+                  name="usernameValue"
+                  label="Continue with email or username"
+                  value={usernameValue}
+                  onChange={this.handleInputChange}
+                  onBlur={() => this.handleFieldBlur('username')}
+                  disabled={loginAuth.requesting || isLoading}
+                  error={this.state.usernameError}
+                />
+              </Form.Item>
+            </div>
+
+            <div className={`email-wrapper ${stage === 2 ? 'display-contents gap-2' : 'no-display'}`}>
+              <Form.Item
+                name="password"
+                rules={stage === 2 ? [
+                  { required: false, message: 'Please input your password.' }
+                ] : []}
+              >
+                <TraxInputField
+                  type="password"
+                  name="passwordValue"
+                  label="Password"
+                  value={passwordValue}
+                  onChange={this.handleInputChange}
+                  onBlur={() => this.handleFieldBlur('password')}
+                  error={this.state.passwordError}
                   disabled={loginAuth.requesting || isLoading}
                 />
-                <label
-                  htmlFor="usernameInput"
-                  className={`floating-label ${this.state.usernameValue ? 'label-transition-active' : 'label-transition-initial'
-                    }`}
-                >
-                  Email or username
-                </label>
-              </div>
-            </Form.Item>
-          </div>
-
-          <div className='email-wrapper'>
-            <Form.Item
-              name="password"
-              validateTrigger={['onChange', 'onBlur']}
-              rules={[{ required: true, message: 'Please enter your password!' }]}
-            // validateStatus={usernameValue.trim() ? 'success' : 'error'}
-            >
-              <div className="relative pulse-border">
-                <Input.Password
-                  onChange={this.handleInputChange}
-                  name="passwordValue"
-                  type={passwordVisible ? 'text' : 'password'}
-                  id="passwordInput"
-                />
-                <label
-                  htmlFor="passwordInput"
-                  className={`floating-label ${this.state.passwordValue ? 'label-transition-active' : 'label-transition-initial'
-                    }`}
-                >
-                  Password
-                </label>
-              </div>
-            </Form.Item>
-            <div className='forgot-links'>
-            {isMobile ? (
-              <span
-                onClick={this.handleForgotPassword}
-                className="forgot-password"
-              >
-                Forgot password?
-              </span>
-            ) : (
-              <Link
-                href={{
-                  pathname: '/auth/forgot-password',
-                }}
-                className="forgot-password"
-              >
-                Forgot password?
-              </Link>
-            )}
-
-            {/* Forgot Password Sheet for Mobile */}
-            {isMobile && (
-              <Sheet
-                isOpen={openForgotSheet}
-                onClose={this.handleForgotPasswordClose}
-                detent="content-height"
-                className="auth-modal"
-              >
-                <Sheet.Container>
-                  <Sheet.Header />
-                  <Sheet.Content>
-                    <Forgot onClose={this.handleForgotPasswordClose} />
-                  </Sheet.Content>
-                </Sheet.Container>
-                <Sheet.Backdrop onTap={this.handleForgotPasswordClose} />
-              </Sheet>
-            )}
-              {/* <h3 className="forgot-password-dot">&#x2022;</h3>
-              <p>
+              </Form.Item>
+              <div className='forgot-links'>
                 <Link
-                  href={{
-                    pathname: '/auth/forgot-password'
-                  }}
+                  href="/auth/forgot-password"
                   className="forgot-password"
+                  onClick={this.handleForgotPassword}
                 >
-                  Forgot username?
+                  Need help signing in?
                 </Link>
-              </p> */}
+                {/* Forgot Password Sheet for Mobile */}
+                {isMobile && openForgotSheet && (
+                  <SlideUpModal
+                    isOpen={openForgotSheet}
+                    onClose={this.handleForgotClose}
+                    className="auth-modal"
+                  >
+                    <Forgot onClose={this.handleForgotClose} />
+                  </SlideUpModal>
+                )}
+              </div>
+            </div>
+          <div>
+            <Form.Item>
+              <TraxButton
+                htmlType="submit"
+                styleType="primary"
+                buttonSize='full'
+                buttonText="Continue"
+                loading={loginAuth.requesting || isLoading}
+                disabled={!usernameValue.trim() || loginAuth.requesting || isLoading}
+              />
+            </Form.Item>
+            <div className='mx-auto px-4 flex text-center mt-6'>
+              <span className='text-[#ffffff99] text-[11px] font-light tracking-[0.025rem]'>
+                By signing up, you are creating a TRAX account and agree to TRAX’s
+                <Link className='text-[#ffffff99] font-bold hover:text-custom-green' href="/page/?id=terms-of-service"> Terms </Link>
+                and
+                <Link className='text-[#ffffff99] font-bold hover:text-custom-green' href="/page/?id=privacy-policy"> Privacy Policy </Link>
+              </span>
             </div>
           </div>
 
-          <div className='log-in-btn-wrapper'>
-            <Form.Item style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-              <Button
-                disabled={!usernameValue.trim() || !passwordValue.trim() || loginAuth.requesting || isLoading}
-                loading={loginAuth.requesting || isLoading}
-                htmlType="submit"
-                className='log-in-btn'
-              >
-                CONTINUE
-              </Button>
-            </Form.Item>
-          </div>
-
-          <div className='divider'>
-            OR
-          </div>
-          <InternetIdentityProvider
-            {...cryptoService.getNfidInternetIdentityProviderProps(this.onNFIDLogin.bind(this))}
-          >
-            <Auth from="log-in" onLoggedIn={this.hasLoggedIn.bind(this)} />
-            {/* onLoggedIn={()=> this.props.onFinish(false, true)} */}
-          </InternetIdentityProvider>
-
         </Form>
+
+
+
+{/*
         <div className='sign-in-link py-3 lg:pt-16'>
           <span className='new-to'>Don’t have an account?</span>
-          <span onClick={() => this.props.onFinish(false, false)} className='get-started'>Sign up</span>
-        </div>
+          <span onClick={() => this.props.onFinish(false, false, '')} className='get-started'>Sign up</span>
+        </div> */}
+        {/* </div> */}
 
         {/* Two Factor Authentication Modal or Sheet */}
         {show2FAModal && (
@@ -437,7 +598,7 @@ const mapDispatchToProps = {
   login,
   loginSocial,
   loginSuccess,
-  updateCurrentUser,
+  setAccount,
   loginNfid
 };
 

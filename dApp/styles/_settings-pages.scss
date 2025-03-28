@@ -1,30 +1,18 @@
+// Main container for account settings
 .account-form-settings {
-  max-width: 650px;
-  width: 100%;
-  background: #0e0e0e00;
-  border-radius: 8px;
-  padding: 2px 28px;
-  padding-bottom: 30px;
-  margin-bottom: 24px;
-  border: 1px solid #20212300;
+  @apply max-w-[650px] w-full bg-trax-transparent rounded-lg pl-24;
 
   @media screen and (max-width: 650px) {
-    padding: 2px 10px;
+    @apply px-0;
   }
 
-  // Styling for user 'Profile' page
-
+  // Profile page elements
   .profile-page-heading {
-    font-size: 24px;
-    font-weight: 500;
-    margin-top: 1.2rem;
-    color: #FFF;
-    margin-bottom: 0rem;
-    font-family: HeadingPro;
+    @apply font-heading text-4xl my-0 text-custom-green font-bold uppercase;
   }
 
   .profile-page-subtitle {
-    @apply text-trax-gray-300 mb-6 flex text-sm;
+    @apply text-trax-white/50 mb-6 flex text-lg leading-[1.2rem] mx-auto sm:mr-1 justify-center sm:justify-start;
   }
 
   .profile-form-box-connected {
@@ -35,51 +23,283 @@
     @apply p-4 rounded-lg bg-trax-white border-none text-trax-black flex flex-col w-full;
   }
 
-  /* PhoneInput container styles */
+  .profile-box-heading {
+    @apply font-heading text-3xl uppercase tracking-tighter font-bold;
+  }
+
+  .profile-box-text {
+    @apply text-sm py-5;
+  }
+
+  // Form elements
+  .account-form-item {
+    @apply text-left text-font-gray text-base;
+  }
+
+  .avatar-upload {
+    @apply flex flex-col gap-2 w-full mb-2;
+  }
+
+  .edit-avatar-wrapper {
+    @apply justify-center;
+    .ant-image {
+      @apply w-20 h-20;
+      .ant-image-img {
+        @apply rounded-full w-full h-full object-cover border-2 border-custom-green;
+      }
+    }
+  }
+
+  .cover-wrapper {
+    @apply mb-2 -mt-4;
+
+    .cover-upload {
+      @apply w-full rounded-lg overflow-hidden border-custom-green;
+    }
+  }
+
+  .form-row {
+    @apply flex flex-col w-full mt-2;
+  }
+
+  // Connected/Unconnected boxes
+  .profile-form-box-connected {
+    @apply p-4 rounded-lg bg-custom-gray border-none text-trax-white flex flex-col w-full;
+  }
+
+  .profile-form-box-unconnected {
+    @apply p-4 rounded-lg bg-font-disabled border-none text-font-light-gray flex flex-col w-full;
+  }
+
+  .notification-toggle {
+    @apply flex flex-row justify-between items-center py-2 pb-6;
+
+    .toggle-label {
+      @apply text-font-gray text-base;
+    }
+  }
+
+
+  // Phone input styling
   .PhoneInput {
     @apply flex flex-col gap-4;
 
     .PhoneInputCountry {
-      @apply flex text-right items-center space-x-4 mb-2;
+      @apply flex items-center gap-8 w-fit;
 
       .PhoneInputCountryIcon {
-        @apply w-12 h-12 place-content-center;
+        @apply h-16 flex items-center pr-2;
+        img {
+          @apply h-10 w-auto;
+        }
       }
 
       .PhoneInputCountrySelect {
-        @apply bg-custom-gray text-trax-white border py-2.5 px-2.5 rounded-lg text-sm;
-      }
+        @apply h-16 bg-custom-gray text-font-light-gray border border-border-gray
+        rounded-lg px-4 text-sm transition-all duration-200;
 
-      .PhoneInputCountrySelect option {
-        @apply bg-custom-gray text-trax-white;
+        &:hover {
+          @apply border-custom-green;
+        }
+
+        &:focus {
+          @apply border-custom-green outline-none;
+        }
+
+        option {
+          @apply bg-custom-gray text-font-light-gray;
+        }
       }
     }
 
     .PhoneInputInput {
-      @apply bg-custom-gray text-trax-white border py-2.5 px-2.5 rounded-lg text-sm;
+      @apply h-16 w-full bg-custom-gray text-font-light-gray border border-border-gray
+      rounded-lg px-4 text-sm transition-all duration-200;
+
+      &::placeholder {
+        @apply text-border-gray;
+      }
+
+      &:hover {
+        @apply border-custom-green;
+      }
+
+      &:focus {
+        @apply border-custom-green outline-none;
+      }
     }
-    .PhoneInputInput:focus-visible {
-      @apply outline-none;
+  }
+
+  // Form items
+  .ant-form-item {
+
+    &-required {
+      @apply text-custom-green;
     }
+  }
+
+  // Referees table
+  .infinite-scroll-component {
+    @apply w-full;
+
+    .referral-item {
+      @apply flex justify-between items-center p-2 text-sm max-w-[50rem];
+
+      .user-info {
+        @apply flex items-center space-x-3;
+
+        .avatar-link {
+          @apply block;
+
+          .ant-avatar {
+            @apply cursor-pointer;
+          }
+        }
+
+        .user-details {
+          .username-link {
+            @apply text-trax-white hover:text-trax-lime-500;
+          }
+
+          .member-since {
+            @apply text-trax-gray-500;
+          }
+        }
+      }
+
+      .status {
+        @apply text-custom-green;
+      }
+    }
+  }
+
+  .no-referrals {
+    @apply flex blur-[1px] opacity-50 mx-auto max-w-[400px] mt-12;
+
+    .message {
+      @apply text-3xl text-trax-white font-heading font-semibold uppercase flex m-auto max-w-[50rem];
+    }
+  }
+
+  .infinite-scroll-loader {
+    @apply text-trax-white text-center py-4;
   }
 }
 
+// Stripe Elements styling
 .StripeElement {
-  @apply w-full p-2 text-base text-font-gray bg-trax-black border-none rounded-lg;
+  @apply w-full p-2 text-base text-font-gray bg-trax-transparent rounded-lg ;
 
   .CardField {
     @apply text-font-gray;
   }
+
+  &::placeholder {
+    @apply text-font-gray;
+  }
+
+  &--focus {
+    @apply border-custom-green;
+  }
+
+  &--invalid {
+    @apply border-trax-red-500;
+  }
 }
 
-.StripeElement::placeholder {
-  @apply text-font-gray;
+.settings-tabs.ant-tabs {
+  .ant-tabs-nav {
+    @apply mb-0 min-w-52;
+
+    .ant-tabs-nav-list {
+      .ant-tabs-tab {
+        @apply px-0 py-0 mt-0 w-full font-heading text-2xl tracking-tight uppercase;
+
+        .ant-tabs-tab-btn {
+          @apply text-trax-white py-4 w-full no-underline hover:text-custom-green border-b border-slaps-gray;
+
+          .tab-label {
+            @apply flex items-center justify-between w-full;
+
+            .tab-text {
+              @apply text-trax-white;
+            }
+
+            .tab-icon {
+              @apply h-7 w-7 bg-font-disabled text-trax-white rounded-md p-0.5;
+            }
+          }
+        }
+
+        &.ant-tabs-tab-active {
+          .tab-label {
+            .tab-icon {
+              @apply border border-custom-green text-custom-green;
+            }
+            .tab-text {
+              @apply text-custom-green;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .ant-tabs-ink-bar {
+    @apply hidden;
+  }
+
+  .ant-tabs-content {
+    @apply h-full p-0;
+  }
+
+  .ant-tabs-content-holder {
+    @apply overflow-auto border-none;
+  }
 }
 
-.StripeElement--focus {
-  @apply border-custom-green;
-}
+.settings-page-container {
+  @apply px-4  md:px-10 pt-14 sm:pt-2 w-full border-none;
 
-.StripeElement--invalid {
-  @apply border-trax-red-500;
+  .content-heading {
+    @apply font-heading text-6xl py-7 mb-6 text-trax-white font-bold uppercase tracking-tight border-y border-slaps-gray;
+  }
+
+  .profile-page-heading {
+    @apply pb-2 text-4xl uppercase text-center sm:text-left mb-2 font-heading font-bold text-trax-white tracking-tight;
+  }
+
+  .settings-list-item {
+    @apply w-full py-4 flex items-center justify-between text-custom-green border-b border-slaps-gray;
+
+    .settings-label {
+      @apply text-2xl uppercase font-heading text-trax-white; 
+    }
+
+    .settings-icon {
+      @apply h-8 w-8 bg-font-disabled rounded p-1.5;
+    }
+
+    &:hover {
+      @apply text-custom-green;
+    }
+
+    &:active {
+      .settings-icon {
+        @apply bg-trax-transparent border border-custom-green text-custom-green;
+      }
+    }
+  }
+
+  .back-button {
+    @apply flex items-center text-font-gray pb-5 mb-0 pt-[0.2rem] pr-4  w-full;
+
+    .back-icon {
+      @apply h-8 w-8 bg-font-disabled rounded p-1.5 mr-2;
+
+      &:active {
+        @apply bg-trax-transparent border border-custom-green text-font-gray;
+      }
+    }
+  }
 }

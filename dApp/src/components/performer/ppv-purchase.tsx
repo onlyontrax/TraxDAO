@@ -1,397 +1,572 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Button, Avatar, Select, message, InputNumber
-} from 'antd';
-import { IPerformer, IUser, ISettings, IVideo } from 'src/interfaces';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { message, Progress } from 'antd';
+import { IUser, ISettings, IVideo } from 'src/interfaces';
 import { connect } from 'react-redux';
-import styles from './performer.module.scss';
-import { paymentService } from '@services/index';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
-import { getResponseError } from '@lib/utils';
+import { paymentService, userService, cryptoService } from '@services/index';
 import { idlFactory as idlFactoryPPV } from '../../smart-contracts/declarations/ppv/ppv.did.js';
-import type { _SERVICE as _SERVICE_PPV, Content } from '../../smart-contracts/declarations/ppv/ppv2.did';
+import type { _SERVICE as _SERVICE_PPV } from '../../smart-contracts/declarations/ppv/ppv2.did';
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { AuthClient } from '@dfinity/auth-client';
 
-const { Option } = Select;
+import TraxButton from 'src/components/common/TraxButton';
+import PaymentOptionsSelect from './common/PaymentOptionsSelect';
+import { useRouter } from 'next/router';
+import AddCard from './add-card';
+import { useDispatch } from 'react-redux';
+import { AuthConnect } from 'src/crypto/nfid/AuthConnect';
+import { InternetIdentityProvider } from '@internet-identity-labs/react-ic-ii-auth';
+import StripeExpressCheckout from '../user/stripe-express-checkout/express-checkout';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { CircleCheck } from 'lucide-react';
+import { progress } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
+import PriceBreakdown from '@components/user/price-breakdown';
+
+const SUPPORTED_CURRENCIES = {
+  FIAT: ['USD'],
+  CRYPTO: ['TRAX']
+};
 
 interface IProps {
-  type: string;
-  performer: IPerformer;
-  onFinish(ticker: string, paymentOption?: string): Function;
+  onFinish(ticker: string, paymentOption?: string): void;
   submiting: boolean;
   settings: ISettings;
   user: IUser;
   video: IVideo;
-  contentPriceICP: number;
-  contentPriceCKBTC: number;
   contentPriceTRAX: number;
-  isPriceICPLoading: boolean;
+  progress: number;
+  openProgress: boolean;
+}
+
+interface IState {
+  price: number;
+  selectedCurrency: string;
+  paymentOption: string;
+  loading: boolean;
+  isNewContent: boolean;
+  errorMessage: string;
+  contentExistsOnChain: boolean;
+  canPayCrypto: boolean,
+  canPayCredit: boolean,
+  canPayCard: boolean,
+  showStripe: boolean,
 }
 
 const PPVPurchaseModal: React.FC<IProps> = ({
-  performer,
   onFinish,
   submiting,
   settings,
   user,
   video,
-  contentPriceICP,
-  contentPriceCKBTC,
-  contentPriceTRAX
+  contentPriceTRAX,
+  progress,
+  openProgress
 }) => {
-  const [price, setPrice] = useState(0);
-  const [selectedCurrency, setSelectedCurrency] = useState(video.selectedCurrency ? video.selectedCurrency : 'USD');
-  const [paymentOption, setPaymentOption] = useState('noPayment');
+
+
+  const stripeFee = (Number(video.price.toFixed(2)) * (parseFloat(settings.stripeFeesPercentageAmount) / 100)) + parseFloat(settings.stripeFeesFixedAmount);
+
+  const getPriceForCurrency = useCallback((currency: string) => {
+    if (currency === 'USD') {
+      if (user?.account?.balance >= video.price) {
+        return Number(video.price.toFixed(2));
+      }
+      const price = Number(video.price.toFixed(2));
+      // const stripeFee = (price * (parseFloat(settings.stripeFeesPercentageAmount) / 100)) + parseFloat(settings.stripeFeesFixedAmount);
+      return price + stripeFee;
+    }
+    return currency === 'TRAX' ? contentPriceTRAX : 0;
+  }, [user?.account?.balance, video.price, settings.stripeFeesPercentageAmount, settings.stripeFeesFixedAmount, contentPriceTRAX]);
+
+
+  const getInitialPaymentOption = (currency: string, user: IUser): string => {
+    if (currency === 'USD') {
+      return (user?.account?.balance >= state.price || cards.length > 0) ? 'credit' : 'noPayment';
+    }else if(currency === 'TRAX'){
+      return user.account?.wallet_icp ? 'plug' : 'noPayment';
+    }else{
+      return 'noPayment';
+    }
+  };
+
+  const initialState = useMemo(() => ({
+    price: getPriceForCurrency(video.selectedCurrency || 'USD'),
+    selectedCurrency: video.selectedCurrency || 'USD',
+    paymentOption: user.account?.wallet_icp ? 'plug' : 'noPayment',
+    loading: false,
+    canPayCrypto: false,
+    canPayCredit: false,
+    canPayCard: false,
+    errorMessage: '',
+    contentExistsOnChain: false,
+    showStripe: false
+  }), [video.selectedCurrency, user.account?.wallet_icp, getPriceForCurrency]);
+
+  const [state, setState] = useState(initialState);
   const [cards, setCards] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [isNewContent, setIsNewContent] = useState(false);
-  const [canPay, setCanPay] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isContentICP, setIsContentICP] = useState(false);
+  const [walletNFID, setWalletNFID] = useState<string>(user.account?.wallet_icp || '');
+
+
+  const dispatch = useDispatch();
+  const router = useRouter();
+  const InternetIdentityProviderProps: any = cryptoService.getNfidInternetIdentityProviderProps();
 
   useEffect(() => {
-    setIsNewContent(!!video.selectedCurrency);
-    getData();
-    checkContentExistsICP();
-  }, []);
+    video.selectedCurrency === 'USD' && getCards();
+    video.selectedCurrency === 'TRAX' && checkContentExistsICP();
 
-  useEffect(() => {
-    checkPaymentCapability();
-  }, [selectedCurrency, cards, user.balance, user.wallet_icp]);
+    const newPaymentOption = getInitialPaymentOption(state.selectedCurrency, user);
+    updateState({ paymentOption: newPaymentOption });
+    validatePaymentMethod();
 
-  const getData = async () => {
+  }, [
+    state.selectedCurrency,
+    user,
+    state.price,
+    state.canPayCrypto,
+    state.canPayCredit,
+    state.canPayCard,
+  ]);
+
+
+  const updateState = (newState: Partial<IState>) => {
+    setState(prevState => ({ ...prevState, ...newState }));
+  };
+
+  const onNFIDCopy = (value: string) => {
+    setWalletNFID(value);
+    // setOpenConnectModal(false);
+  };
+
+  const getCards = async () => {
     try {
-      setLoading(true);
       const resp = await paymentService.getStripeCards();
-      const fetchedCards = resp.data.data.map((d) => {
+      setCards(resp.data.data.map((d) => {
         if (d.card) return { ...d.card, id: d.id };
         if (d.three_d_secure) return { ...d.three_d_secure, id: d.id };
         return d;
-      });
-
-      setCards(fetchedCards);
-
-      let initialPaymentOption = 'noPayment';
-      let initialCurrency = video.selectedCurrency || 'USD';
-
-
-
-      if (isNewContent) {
-        initialPaymentOption = getDefaultPaymentOption(initialCurrency);
-      } else if (initialCurrency === 'USD' && fetchedCards.length > 0) {
-        initialPaymentOption = 'card';
-      } else if (initialCurrency === 'USD' && user.balance > Number(video.price.toFixed(2))) {
-        initialPaymentOption = 'credit';
-      } else if (initialCurrency !== 'USD' && user?.wallet_icp) {
-        initialPaymentOption = 'plug';
-        initialCurrency = 'ICP';
-      }
-
-
-      setPaymentOption(initialPaymentOption);
-      setSelectedCurrency(initialCurrency);
-      setPrice(getPriceForCurrency(initialCurrency));
+      }));
     } catch (error) {
-      message.error(getResponseError(await error) || 'An error occurred. Please try again.');
+      message.error('An error occurred while fetching cards. Please try again.');
     } finally {
-      setLoading(false);
     }
   };
 
-  const checkContentExistsICP = async () => {
-    let identity;
-    const authClient = await AuthClient.create();
-    const ppvCanID = settings.icPPV;
-    const host = settings.icHost;
-    let agent;
-    let ppvActor;
 
-    if (settings.icNetwork !== true) {
-      identity = authClient.getIdentity();
-      agent = new HttpAgent({
-        identity,
-        host
-      });
 
-      await agent.fetchRootKey();
-
-      ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
-        agent,
-        canisterId: ppvCanID
-      });
-
-      try {
-        //@ts-ignore
-        let result: Array<Content> = await ppvActor.getContent(video?._id);
-        if (result.length > 0 && result[0].price) {
-          setIsContentICP(true);
-        }
-      } catch (err) {
-        console.log(err);
-      }
-    } else {
-      identity = authClient.getIdentity();
-      agent = new HttpAgent({
-        identity,
-        host
-      });
-
-      ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
-        agent,
-        canisterId: ppvCanID
-      });
-
-      // setIsContentICP(true);
-
-      try {
-        //@ts-ignore
-        let result: Content = await ppvActor.getContent(video?._id);
-        if (result[0].price) {
-          setIsContentICP(true);
-        }
-      } catch (err) {
-        console.log(err);
-      }
-    }
-  };
-
-  const getDefaultPaymentOption = (currency) => {
-    switch (currency) {
-      case 'USD':
-        return user.balance > video.price ? 'credit' : 'card';
-      case 'ICP':
-      case 'ckBTC':
-      case 'TRAX':
-        return 'plug';
-      default:
-        return 'noPayment';
-    }
-  };
-
-  const getPriceForCurrency = (currency) => {
-    switch (currency) {
-      case 'USD':
-        return Number(video.price.toFixed(2));
-      case 'ICP':
-        return contentPriceICP;
-      case 'ckBTC':
-        return contentPriceCKBTC;
-      case 'TRAX':
-        return contentPriceTRAX;
-      default:
-        return 0;
-    }
-  };
-
-  const checkPaymentCapability = () => {
-    let newCanPay = false;
-    let newErrorMessage = '';
-
-    const isCryptoCurrency = ['ICP', 'ckBTC', 'TRAX'].includes(selectedCurrency);
-
-    if (isCryptoCurrency && !isContentICP) {
-      newErrorMessage = "This artist has disabled the option to pay in crypto";
-    } else if (isNewContent) {
-      const currency = video.selectedCurrency;
-      if (['ICP', 'ckBTC', 'TRAX'].includes(currency)) {
-        newCanPay = (!!user.wallet_icp);
-        newErrorMessage = newCanPay ? '' : 'Please connect your crypto wallet in Settings to proceed.';
-      } else if (currency === 'USD') {
-        if(cards.length !> 0){
-          newCanPay = false;
-          newErrorMessage = 'Please add your card in Settings and proceed to your wallet to purchase credit in order to purchase this content.'
-        }else if(cards.length > 0 && user.balance < video.price){
-          newCanPay = false;
-          newErrorMessage = 'Please add your card in Settings and proceed to your wallet to purchase credit in order to purchase this content.'
-        }else if(cards.length > 0 && user.balance >= video.price){
-          newCanPay = true;
-        }
-
-        newCanPay = cards.length > 0 || user.balance >= video.price;
-        newErrorMessage = newCanPay ? '' : 'Please connect a card or add credit to your account.';
-      }
-    } else {
-      if (['ICP', 'ckBTC', 'TRAX'].includes(selectedCurrency)) {
-        newCanPay = !!user.wallet_icp;
-        newErrorMessage = newCanPay ? '' : 'Please connect your crypto wallet in Settings to proceed.';
-      } else if (selectedCurrency === 'USD') {
-        newCanPay = cards.length > 0 || user.balance >= video.price;
-        newErrorMessage = newCanPay ? '' : 'Please connect a card or add credit to your account.';
-      }
-    }
-
-    setCanPay(newCanPay);
-    setErrorMessage(newErrorMessage);
-  };
-
-  const changeCurrency = (val: string) => {
-    if (isNewContent) return;
-
-    setSelectedCurrency(val);
-    setPaymentOption(getDefaultPaymentOption(val));
-    setPrice(getPriceForCurrency(val));
-  };
 
   const changePaymentOption = (val: string) => {
-    setPaymentOption(val);
+    updateState({ paymentOption: val });
   };
 
-  const renderPaymentOptions = () => {
-    const isCryptoCurrency = ['ICP', 'ckBTC', 'TRAX'].includes(selectedCurrency);
 
-    return (
-      <>
-      {canPay && (
-      <Select
-        onChange={changePaymentOption}
-        value={paymentOption}
-        className="payment-type-select"
-      >
-        {!isCryptoCurrency && cards.length > 0 && (
-          <Option value="card" key="card" className="payment-type-option-content">
-            <div className='payment-type-img-wrapper'>
-              <img src='/static/visa_logo.png' width={50} height={50}/>
-            </div>
-            <div className='payment-type-info'>
-              <span>Card</span>
-              <p>{`**** **** **** ${cards[0].last4}`}</p>
-            </div>
-          </Option>
-        )}
-        {!isCryptoCurrency && user.balance > 0 && (
-          <Option value="credit" key="credit" className="payment-type-option-content">
-            <div className='payment-type-img-wrapper'>
-              <img src='/static/LogoAlternateCropped.png' style={{borderRadius: 0, width: '48px', height: '36px'}} width={40} height={30}/>
-            </div>
-            <div className='payment-type-info'>
-              <span>TRAX Credit</span>
-              <p className='mt-1'>${user.balance.toFixed(2)}</p>
-            </div>
-          </Option>
-        )}
-        {isCryptoCurrency && user.wallet_icp && (
-          <Option value="plug" key="plug" className="payment-type-option-content">
-            <div className='payment-type-img-wrapper'>
-              <img src='/static/plug-favicon.png' width={40} height={40}/>
-            </div>
-            <div className='payment-type-info'>
-              <span>Plug wallet</span>
-              <p>{`**** **** **** -a3eio`}</p>
-              <p>Internet Computer</p>
-            </div>
-          </Option>
-        )}
-        {isCryptoCurrency && user.wallet_icp && (
-          <Option value="II" key="II" className="payment-type-option-content">
-            <div className='payment-type-img-wrapper'>
-              <img src='/static/ii-logo.png' width={40} height={40}/>
-            </div>
-            <div className='payment-type-info'>
-              <span>Internet Identity</span>
-              <p>{`**** **** **** -****`}</p>
-              <p>Internet Computer</p>
-            </div>
-          </Option>
-        )}
-      </Select>
-      )}
-      </>
-    );
+  const addFund = async ({ amount }) => {
+    if (settings.paymentGateway === 'stripe' && !user?.stripeCardIds?.length) {
+      message.error('Please add a payment card to complete your purchase');
+      router.push('/user/account');
+      return;
+    };
+
+    try {
+      updateState({ loading: true  });
+
+      const resp = await paymentService.addFunds({
+        paymentGateway: settings.paymentGateway,
+        amount,
+        couponCode: null
+      });
+
+      if (settings.paymentGateway === '-ccbill') {
+        window.location.href = resp?.data?.paymentUrl;
+      };
+
+      if (resp?.data?.status === 'success') {
+        message.success('Payment successful! Your wallet has been topped up.');
+        await userService.reloadCurrentUser(dispatch);
+      } else {
+        message.success('Payment pending! The transaction is taking longer than usual. Please refresh page after few minutes.', 7);
+      }
+
+      onFinish(state.selectedCurrency, state.paymentOption)
+    } catch (e) {
+      message.error(e.message || 'Error occured, please try again later');
+
+      updateState({ loading: false  });
+    } finally {
+      updateState({ loading: false  });
+    };
   };
 
-  const renderCurrencyPicker = () => {
-    if (isNewContent) return null;
 
-    return (
-      <div className='currency-picker-btns-container'>
-        <div className='currency-picker-btns-wrapper'>
-          <div className='currency-picker-btn-wrapper' onClick={() => changeCurrency('USD')}>
-            <img src='/static/usd-logo.png' width={40} height={40} style={{border: selectedCurrency === 'USD' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
-          </div>
-          {(user.wallet_icp) && isContentICP && (
-            <>
-              <div className='currency-picker-btn-wrapper' onClick={() => changeCurrency('ICP')}>
-                <img src='/static/icp-logo.png' width={40} height={40} style={{border: selectedCurrency === 'ICP' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
-              </div>
-              <div className='currency-picker-btn-wrapper' onClick={() => changeCurrency('ckBTC')}>
-                <img src='/static/ckbtc_nobackground.png' width={40} height={40} style={{border: selectedCurrency === 'ckBTC' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
-              </div>
-              <div className='currency-picker-btn-wrapper' onClick={() => changeCurrency('TRAX')}>
-                <img src='/static/trax-token.png' width={40} height={40} style={{border: selectedCurrency === 'TRAX' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    );
+  const afterAddCard = (cards: any, selected: boolean) => {
+
+    // console.log("afterAddCard: ", cards);
+    setCards(cards);
+
+    updateState({ paymentOption: !selected ? 'noPayment' : 'card'});
+  }
+
+
+
+  const checkContentExistsICP = async () => {
+    if (!video?._id) {
+      // console.log('No video ID provided');
+      return;
+    }
+
+    try {
+      const actor = await ppvActor;
+      if (!actor) {
+        // console.log('PPV actor not initialized');
+        updateState({
+          contentExistsOnChain: false,
+          loading: false
+        });
+        return;
+      }
+
+      if (!settings.icHost || !settings.icPPV) {
+        // console.log('Missing IC configuration:', { host: settings.icHost, canister: settings.icPPV });
+        updateState({
+          contentExistsOnChain: false,
+          loading: false
+        });
+        return;
+      }
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+
+      const contentPromise = actor.getContent(video._id);
+      const result = await Promise.race([contentPromise, timeoutPromise]);
+
+      updateState({
+        contentExistsOnChain: Array.isArray(result) && result.length > 0 && !!result[0].price,
+        loading: false
+      });
+    } catch (err) {
+      // console.error('Error checking ICP content:', err);
+      updateState({
+        contentExistsOnChain: false,
+        loading: false,
+        errorMessage: 'Unable to verify crypto payment availability. Please try again later.'
+      });
+    }
   };
 
+
+  const ppvActor = useMemo(() => {
+    const createPPVActor = async () => {
+      try {
+        if (!settings.icHost || !settings.icPPV) {
+          console.error('Missing IC configuration:', { host: settings.icHost, canister: settings.icPPV });
+          return null;
+        }
+
+        // Clean and validate the host URL
+        let cleanHost = settings.icHost.trim();
+        if (!cleanHost.startsWith('http://') && !cleanHost.startsWith('https://')) {
+          cleanHost = `https://${cleanHost}`;
+        }
+
+        const authClient = await AuthClient.create();
+        if (!authClient) {
+          throw new Error('Failed to create auth client');
+        }
+
+        const identity = authClient.getIdentity();
+        if (!identity) {
+          throw new Error('No identity available');
+        }
+
+        const agent = new HttpAgent({
+          identity,
+          host: cleanHost,
+          fetchOptions: {
+            timeout: 30000,
+          }
+        });
+
+        // Only fetch root key for local development
+        if (cleanHost.includes('localhost') || cleanHost.includes('127.0.0.1')) {
+          await agent.fetchRootKey();
+        }
+
+        return Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
+          agent,
+          canisterId: settings.icPPV
+        });
+      } catch (error) {
+        // console.error('Error creating PPV actor:', error);
+        return null;
+      }
+    };
+
+    return createPPVActor();
+  }, [settings.icHost, settings.icNetwork, settings.icPPV]);
+
+
+
+
+
+  const validatePaymentMethod = useCallback(() => {
+    const { selectedCurrency, price } = state;
+    const isCryptoCurrency = SUPPORTED_CURRENCIES.CRYPTO.includes(selectedCurrency);
+    const isFiat = SUPPORTED_CURRENCIES.FIAT.includes(selectedCurrency);
+
+    const result = {
+      canPayCrypto: false,
+      canPayCredit: false,
+      canPayCard: false,
+      errorMessage: ''
+    };
+
+    if(isFiat){
+      if(user?.account?.balance >= price) {
+        result.canPayCredit = true;
+      }
+      if(cards?.length > 0){
+        result.canPayCard = true;
+      }else{
+        result.canPayCard = false;
+        result.errorMessage = 'Please add a valid payment method';
+      }
+    }
+
+
+    if (isCryptoCurrency) {
+      if (!state.contentExistsOnChain) {
+        result.errorMessage = 'Crypto payment only available for ICP content';
+      } else if (!user.account?.wallet_icp) {
+        result.canPayCrypto = false;
+        result.errorMessage = 'Please connect your preferred ICP wallet';
+      } else {
+        console.log("canPayCrypto = true;")
+        result.canPayCrypto = true;
+      }
+    }
+
+    setState(prev => ({ ...prev, ...result }));
+  }, [state.selectedCurrency, state.price, state.contentExistsOnChain, user?.account?.wallet_icp, user?.account?.balance, cards]);
+
+
+  const handlePaymentMethodsAvailable = (methods) => {
+    // methods will be an object like:
+    // {
+    //   applePay: true|false,
+    //   googlePay: true|false,
+    //   link: true|false
+    // }
+    if(methods.applePay || methods.googlePay || methods.link){
+      updateState({showStripe: true})
+    }else{
+      updateState({showStripe: false})
+    }
+    // Update your UI based on available methods
+  };
+
+
+  const beforeUnlockContent = () => {
+    if(state.selectedCurrency === "USD"){
+      if(state.paymentOption === "card"){
+        addFund({amount: state.price});
+      }else if(state.paymentOption === "credit"){
+        onFinish(state.selectedCurrency, state.paymentOption);
+      }
+    }else if(state.selectedCurrency === "TRAX"){
+      onFinish(state.selectedCurrency, state.paymentOption);
+    }
+  }
+
+  const getButtonText = () => {
+    if (state.paymentOption === "noPayment") return "Select payment method";
+    if (state.loading) return "Processing... please wait";
+    return "Unlock";
+  };
+
+  const handleDisabled = () => {
+    return state.paymentOption === "noPayment" ||
+           submiting ||
+           state.loading;
+
+  };
+
+
+
+ const thumbUrl = useMemo(() =>
+    video?.thumbnail?.url ||
+    (video?.teaser?.thumbnails && video?.teaser?.thumbnails[0]) ||
+    (video?.video?.thumbnails && video?.video?.thumbnails[0]) ||
+    '/static/no-image.jpg',
+    [video]
+  );
+
+
+  console.log("canPayCrypto: ", state.canPayCrypto);
   return (
-    <div className={styles.componentsPerformerVerificationFormModule}>
-      <div className='send-tip-container'>
-        <div className='tip-header-wrapper'>
-          <span className='font-heading text-center text-[#F2F2F2] text-2xl uppercase'>Unlock content</span>
+    <div className='send-tip-container p-5 overflow-hidden'>
+      <div className='relative '>
+
+        <div className='w-full m-auto flex justify-start mb-2'>
+          <span className='font-heading text-4xl font-bold uppercase'>Purchase content</span>
         </div>
 
-        <div className='payment-details'>
-        <p className='text-[#FFFFFF] mb-2'>Pay to</p>
-          <div className='payment-recipient-wrapper'>
-            <div className='payment-recipient-avatar-wrapper'>
-              <Avatar src={performer?.avatar || '/static/no-avatar.png'} />
-            </div>
-            <div className='payment-recipient-info'>
-
-              <span>{performer?.name}</span>
-              <p style={{color: '#FFFFFF50', marginTop:'-0.125rem'}}>Verified Artist</p>
-            </div>
-            <a href={`/${performer?.username || performer?._id}`} className='info-icon-wrapper'>
-              <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
-            </a>
-          </div>
-
-          {renderPaymentOptions()}
-        </div>
-
-        {renderCurrencyPicker()}
-
-        <div className='tip-input-number-container'>
-          <span>Total</span>
-          <div className='tip-input-number-wrapper'>
-            {selectedCurrency === 'USD' && <p>$</p>}
-            {selectedCurrency === 'ICP' && <img src='/static/icp-logo.png' width={40} height={40}/>}
-            {selectedCurrency === 'ckBTC' && <img src='/static/ckbtc_nobackground.png' width={40} height={40}/>}
-            {selectedCurrency === 'TRAX' && <img src='/static/trax-token.png' width={40} height={40}/>}
-
-            <InputNumber
-              disabled={true}
-              type="number"
-              stringMode
-              step="0.01"
-              value={price}
-              placeholder="0.00"
-              className='tip-input-number'
-            />
-          </div>
-        </div>
-
-        {errorMessage && <p className="error-message">{errorMessage}</p>}
-
-        <Button
-          className="tip-button"
-          disabled={submiting || !canPay || paymentOption === 'noPayment'}
-          loading={submiting}
-          onClick={() => onFinish(selectedCurrency, paymentOption)}
-        >
-          Unlock
-        </Button>
       </div>
+      {/* {state.paymentOption !== "noPayment" && (
+        <PaymentOptionsSelect
+          mode="ppv"
+          loading={state.loading}
+          canPay={state.canPay}
+          paymentOption={state.paymentOption}
+          selectedCurrency={state.selectedCurrency}
+          user={user}
+          price={state.price}
+          onChangePaymentOption={changePaymentOption}
+        />
+      )} */}
+
+      {state.selectedCurrency === 'USD' && (
+        <div className='flex flex-col gap-4'>
+
+            <div className={state.showStripe ? 'block' : 'hidden'}>
+              <StripeExpressCheckout
+                amount={video.price + stripeFee}
+                onSuccess={() => {
+                  message.success('Payment successful!');
+                  onFinish(state.selectedCurrency, 'card');
+                }}
+                settings={settings}
+                onError={(err) => {
+                  message.error(err.message || 'Payment failed');
+                }}
+                returnUrl={`${process.env.NEXT_PUBLIC_API_ENDPOINT}/${video?.trackType === 'video' ? video?.trackType : 'track'}/?id=${video?.slug}`}
+                onPaymentMethodsAvailable={handlePaymentMethodsAvailable}
+              />
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-0">
+                  <hr className="w-full border-t border-trax-gray-500" />
+                  <span className="text-trax-gray-300 w-full">{`Or pay with ${state.canPayCredit ? "credit" : "card"}`}</span>
+                  <hr className="w-full border-t border-trax-gray-500" />
+                </div>
+              </div>
+            </div>
+
+              {state.canPayCredit ? (
+                <div onClick={() => updateState({paymentOption: "credit"})} className={`cursor-pointer  bg-custom-gray rounded-lg py-2 px-2 flex flex-row items-center gap-4 rounded-lg ${state.paymentOption === "credit" && 'border-custom-green border'}`}>
+                  <div className='rounded-full border border-[#6b6b6b]'>
+                    <img
+                      src={'/static/credit.png'}
+                      className='w-12 h-12'
+                      alt="TRAX logo"
+                    />
+                  </div>
+                  <div className='payment-type-info'>
+                    <span className='currency-name'>Credit</span>
+                    <p className='currency-amount'>{user?.account?.balance.toFixed(2)}</p>
+                  </div>
+                </div>
+              ) : (
+                <AddCard
+                  settings={settings}
+                  user={user}
+                  initialAmount={video.price}
+                  onFinish={(cards: any, selected: boolean) => afterAddCard(cards, selected)}
+                />
+              )}
+        </div>
+      )}
+
+      {(Capacitor.isNativePlatform() && state.selectedCurrency === "TRAX") && (
+        <div>
+          <span>This content is currently unavailable for purchase in the app.</span>
+        </div>
+      )}
+
+      {(state.selectedCurrency === "TRAX" && !state.canPayCrypto && !Capacitor.isNativePlatform()) && (
+        <div className='flex flex-row gap-2 w-full'>
+        <div onClick={() => changePaymentOption("plug")} className={`cursor-pointer  bg-custom-gray rounded-lg py-2 px-2 flex flex-row items-center gap-4 rounded-lg w-1/2 ${state.paymentOption === "plug" ? 'border-custom-green border' : 'border-trax-transparent border'}`}>
+          <div className='rounded-full border border-[#6b6b6b]'>
+            <img src='/static/plug-favicon.png' className='border border-[#6b6b6b] rounded-full w-12 h-12' alt="Plug wallet"/>
+          </div>
+          <div className='flex flex-col p-0 mt-0 w-fit'>
+            <span className='text-sm text-font-light-gray font-medium'>Plug</span>
+            <p className='text-xs text-font-gray font-medium my-0'>{`${user.account?.wallet_icp.slice(0, 6)} **** ${user.account?.wallet_icp.slice(-4)}`}</p>
+          </div>
+        </div>
+        <div onClick={() => changePaymentOption("II")} className={`cursor-pointer  bg-custom-gray rounded-lg py-2 px-2 flex flex-row items-center gap-4 rounded-lg w-1/2 ${state.paymentOption === "II" ? 'border-custom-green border' : 'border-trax-transparent border'}`}>
+          <div className='rounded-full border border-[#6b6b6b]'>
+            <img src='/static/icp-logo.png' className='border border-[#6b6b6b] p-1 rounded-full w-12 h-12' alt="Internet Identity"/>
+          </div>
+          <div className='flex flex-col p-0 mt-0 w-fit'>
+            <span className='text-sm text-font-light-gray font-medium'>Internet Identity</span>
+            <p className='text-xs text-font-gray font-medium my-0'>{`${user.account?.wallet_icp.slice(0, 6)} **** ${user.account?.wallet_icp.slice(-4)}`}</p>
+          </div>
+        </div>
+      </div>
+      )}
+
+      <div className='payment-number-container'>
+        <div className='flex flex-row w-full justify-between'>
+          <span>Total:</span>
+          <div className='payment-number-wrapper'>
+            {state.selectedCurrency === 'USD' && <p>
+              {/* <img src="/static/credit.png" alt={`${state.selectedCurrency} logo`} className="w-12 h-12 rounded-full -mt-[0.1rem] mr-1.5" /> */}
+              $
+            </p>}
+            {state.selectedCurrency === 'TRAX' &&
+              <p>
+                <img src="/static/logo_96x96.png" alt={`${state.selectedCurrency} logo`} className="w-16 h-16 rounded-full -mt-2.5 mr-1.5" />
+              </p>
+            }
+            <p>{state.price.toFixed(2)}</p>
+          </div>
+        </div>
+        {state.selectedCurrency === 'TRAX' && (
+          <div className='w-full justify-end flex '>
+            <div className='text-sm font-light font-body justify-end w-fit px-2 rounded-full text-custom-green tracking-[0.01rem] border border-custom-green/50 bg-custom-green/20 flex flex-row normal-case gap-x-2'>
+              <span className=''>Approximately: </span>
+              <span className=''>${video.price}</span>
+            </div>
+          </div>
+
+        )}
+        {state.selectedCurrency === 'USD' && (
+          <div className='w-full flex flex-row justify-between font-body text-sm normal-case font-light tracking-normal'>
+            <span className=''>Fee </span>
+            <span className=''>${stripeFee.toFixed(2)}</span>
+          </div>
+        )}
+      </div>
+        
+
+        
+      
+
+
+
+
+      {openProgress ? (
+        <div className='flex w-full mx-auto mt-4'>
+          <Progress percent={Math.round(progress)} />
+        </div>
+      ) : null }
+
+
+      <TraxButton
+        htmlType="button"
+        styleType="primary"
+        buttonSize="full"
+        buttonText={getButtonText()}
+        disabled={handleDisabled()}
+        loading={submiting}
+        onClick={() => beforeUnlockContent()}
+      />
     </div>
   );
 };
 
-const mapStates = (state: any) => ({
+const mapStates = (state: { settings: ISettings }) => ({
   settings: { ...state.settings }
 });
 

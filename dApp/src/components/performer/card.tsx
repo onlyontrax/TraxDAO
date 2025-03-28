@@ -80,7 +80,7 @@ class PerformerCard extends PureComponent<IProps> {
         <div
           className="artist-card"
           style={{
-            backgroundImage: `url(${performer?.cover || '/static/banner-image.jpg'})`
+            backgroundImage: `url(${performer?.cover || '/static/placeholder-cover-image.jpg'})`
           }}
         >
           <div className="artist-card-filter">
@@ -94,8 +94,8 @@ class PerformerCard extends PureComponent<IProps> {
                 <Avatar alt="avatar" src={performer?.avatar || '/static/no-avatar.png'} />
               </div>
               <Link
-                href={`/${performer?.username || performer?._id}`}
-                as={`/${performer?.username || performer?._id}`}
+                href={`/artist/profile/?id=${performer?.username || performer?._id}`}
+                as={`/artist/profile/?id=${performer?.username || performer?._id}`}
               >
                 <div className="artist-name">
                   <div className="name">
@@ -104,7 +104,7 @@ class PerformerCard extends PureComponent<IProps> {
                     {' '}
                     {performer?.verifiedAccount && <CheckBadgeIcon className="feed-v-badge" />}
                 &nbsp;
-                    {performer?.wallet_icp && (
+                    {performer.account?.wallet_icp && (
 
                     <Image src="/static/infinity-symbol.png" className="profile-icp-badge-feed" />
                     )}

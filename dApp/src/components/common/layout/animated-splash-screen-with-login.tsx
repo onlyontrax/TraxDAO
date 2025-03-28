@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
+
 const AnimatedSplashScreen = () => {
   const row1Ref = useRef(null);
   const row2Ref = useRef(null);
@@ -41,9 +42,7 @@ const AnimatedSplashScreen = () => {
     'https://info.trax.so/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fimgalienblaze.ef6ada9a.png&w=1200&q=75',
     'https://info.trax.so/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fimgimani.b870ed08.png&w=1200&q=75',
     'https://info.trax.so/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fimgblanco.7ebb82a8.png&w=1200&q=75',
-    '/api/placeholder/100/100',
-    '/api/placeholder/100/100',
-    '/api/placeholder/100/100',
+  
   ];
 
   return (

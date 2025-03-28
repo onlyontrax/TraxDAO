@@ -19,6 +19,14 @@ export class AuthService extends APIRequest {
     return this.post('/auth/google/login', data);
   }
 
+  public async loginApple(data: any) {
+    return this.post('/auth/apple/login', data);
+  }
+
+  public async loginFacebook(data: any) {
+    return this.post('/auth/facebook/login', data);
+  }
+
   public async loginNFID(data: any) {
     return this.post('/auth/nfid/login', data);
   }
@@ -35,6 +43,10 @@ export class AuthService extends APIRequest {
 
   public async verifyReferralCode(data: any) {
     return this.post('/auth/verifyReferralCode', data);
+  }
+
+  public async setActiveSubaccount(data: any) {
+    return this.post('/accounts/setActiveSubaccount', data);
   }
 
   setToken(token: string, remember = true): void {
@@ -73,15 +85,15 @@ export class AuthService extends APIRequest {
   }
 
   register(data: IFanRegister) {
-    return this.post('/auth/users/register', data);
+    return this.post('/auth/accounts/register', data);
   }
 
   registerPerformer(data: any) {
-    return this.post('/auth/performers/register', data);
+    return this.post('/accounts/createArtist', data);
   }
 
   registerCheckField(data: any) {
-    return this.post('/auth/performers/check-field', data);
+    return this.post('/auth/check-field', data);
   }
 
   userSwitchToPerformer(userId: string) {

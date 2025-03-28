@@ -8,6 +8,10 @@ import { getResponseError } from '@lib/utils';
 import { idlFactory as idlFactoryPPV } from '../../smart-contracts/declarations/ppv/ppv.did.js';
 import type { _SERVICE as _SERVICE_PPV } from '../../smart-contracts/declarations/ppv/ppv2.did';
 import styles from './performer.module.scss';
+import TraxButton from '@components/common/TraxButton';
+import TraxToggle from '@components/common/TraxToggleButton';
+import AddCard from './add-card';
+import StripeExpressSubscription from '../user/stripe-express-checkout/express-checkout-subscriptions';
 
 const ConfirmSubscriptionPerformerForm = ({
   performer,
@@ -17,7 +21,6 @@ const ConfirmSubscriptionPerformerForm = ({
   settings,
   user
 }) => {
-  const [stage, setStage] = useState('1');
   const [subscriptionType, setSubscriptionType] = useState('monthly');
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
   const [price, setPrice] = useState('1');
@@ -27,41 +30,45 @@ const ConfirmSubscriptionPerformerForm = ({
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [paymentOption, setPaymentOption] = useState('noPayment');
+  const [showExpress, setShowExpress] = useState(false)
 
   useEffect(() => {
-    const initializeComponent = async () => {
-      await getData();
-      setPrice((performer?.monthlyPrice || 0).toFixed(2));
-      await setupPrices();
-    };
+    getData();
+  }, [user]);
 
-    initializeComponent();
-  }, []);
 
-  const setupPrices = async () => {
-    const authClient = await AuthClient.create();
-    const ppvCanID = settings.icPPV;
-    const host = settings.icHost;
-    const identity = authClient.getIdentity();
-    const agent = new HttpAgent({ identity, host });
-
-    if (settings.icNetwork !== true) {
-      await agent.fetchRootKey();
+  const handlePaymentMethodsAvailable = (methods) => {
+    if(methods.applePay || methods.googlePay || methods.link){
+      setShowExpress(true)
+    }else{
+      setShowExpress(false)
     }
-
-    const ppv = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
-      agent,
-      canisterId: ppvCanID
-    });
-
-    const icp = (await tokenTransctionService.getExchangeRate()).data.rate;
-    const btc = await ppv.getExchangeRate('BTC');
-
-    setIcpPrice(icp);
-    setBtcPrice(btc);
-    setIsPriceLoading(false);
-    showPrice(selectedCurrency, subscriptionType, icp);
   };
+
+  // const setupPrices = async () => {
+  //   const authClient = await AuthClient.create();
+  //   const ppvCanID = settings.icPPV;
+  //   const host = settings.icHost;
+  //   const identity = authClient.getIdentity();
+  //   const agent = new HttpAgent({ identity, host });
+
+  //   if (settings.icNetwork !== true) {
+  //     await agent.fetchRootKey();
+  //   }
+
+  //   const ppv = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
+  //     agent,
+  //     canisterId: ppvCanID
+  //   });
+
+  //   const icp = (await tokenTransctionService.getExchangeRate()).data.rate;
+  //   const btc = await ppv.getExchangeRate('BTC');
+
+  //   setIcpPrice(icp);
+  //   setBtcPrice(btc);
+  //   setIsPriceLoading(false);
+  //   showPrice(selectedCurrency, subscriptionType, icp);
+  // };
 
   const getData = async () => {
     try {
@@ -102,112 +109,133 @@ const ConfirmSubscriptionPerformerForm = ({
     setPrice(newPrice);
   };
 
-  const handleSwitchPeriod = (value) => {
-    setSubscriptionType(value);
-    showPrice(selectedCurrency, value);
+  const handleSwitchPeriod = (period) => {
+    setSubscriptionType(period);
+    showPrice(selectedCurrency, period);
   };
 
-  const renderStage1 = () => (
-    <div className='flex flex-col gap-3 rounded-l-lg w-full h-3/5 sm:w-[55%] sm:h-full p-10'>
-      <div className='flex'>
-        <span className='flex-start flex text-trax-white text-xl font-extrabold'>Join the {performer.name} fan club</span>
-      </div>
-      <div className='flex-start flex text-trax-neutral-300 font-light mb-2'>
-        {performer.subBenefits || 'Subscribe to get access to members only content'}
-      </div>
-      <div className='flex flex-row gap-4'>
-        <Button
-          className="tip-button w-[120px] bg-[#F0F0F0] text-trax-black"
-          onClick={() => onClose(false)}
-        >
-          Maybe later
-        </Button>
-        <Button
-          className="tip-button w-[120px] bg-[#b527d7] text-trax-white"
-          onClick={() => setStage('2')}
-        >
-          Subscribe
-        </Button>
-      </div>
-    </div>
-  );
+  const handleSubscribe = async () => {
+    console.log("in subscribe")
+    if (!user._id) {
+      message.error('Please log in!');
+      return;
+    }
 
-  const renderStage2 = () => (
-    <div className='flex-end rounded-l-lg w-full h-3/4 sm:w-[55%] sm:h-full'>
-      <div className='send-tip-container border-none rounded-none gap-6'>
-        <div className='tip-header-wrapper pt-6'>
-          <span>Subscribe</span>
-        </div>
+    try {
+      await onFinish(selectedCurrency, subscriptionType, false);
+    } catch (err) {
+      message.error(err?.message || 'Subscription failed');
+    }
+  };
 
-        <div className='sub-type-togal-container'>
-          {['monthly', 'yearly'].map((type) => (
-            <div
-              key={type}
-              className='sub-type-togal-wrapper'
-              style={{background: subscriptionType === type ? '#FFFFFF10' : '#0E0E0E25'}}
-              onClick={() => handleSwitchPeriod(type)}
-            >
-              <span>Pay {type}</span>
-            </div>
-          ))}
-        </div>
+  const afterAddCard = (cards: any, selected: boolean) => {
+    setCards(cards);
+    setPaymentOption(!selected ? 'noPayment' : 'card');
+  }
 
-              <div className='sub-preview-container'>
-                <div className='sub-preview-wrapper'>
-                  <span className='sub-price-preview'>
-                    ${subscriptionType === 'monthly' ? Number(performer.monthlyPrice).toFixed(2) : Number(performer.yearlyPrice).toFixed(2)}
-                  </span>
-                  <span className='sub-per-type'>{subscriptionType === 'monthly' ? 'per month': 'per year'}</span>
-                </div>
-                <span className='sub-cancel-note'>Cancel at any time</span>
-              </div>
+  const getButtonText = () => {
+    if (paymentOption === "noPayment") return "Select payment method";
+    if (submitting) return "Processing... please wait";
+    return "Subscribe";
+  };
 
-              <div className='tip-input-number-container'>
-                <span className='content-center text-lg'>Total:</span>
-                <div className='tip-input-number-wrapper'>
-                  {selectedCurrency === 'USD' && (
-                    <p>$</p>
-                  )}
+  console.log(paymentOption)
 
-                  <InputNumber
-                    disabled={true}
-                    value={subscriptionType === 'monthly' ? performer.monthlyPrice : performer.yearlyPrice}
-                    stringMode
-                    step="0.01"
-                    placeholder="0.00"
-                    className='tip-input-number'
-                  />
-                </div>
-              </div>
-
-              {paymentOption === "noPayment" && (
-                <div className='bg-custom-gray text-trax-white rounded-md p-2'>
-                  <span>You must add your card before you can subscribe to this artist. Click
-                    <a href="/user/account/?tab=subscription"> here</a> to add your card.</span>
-                </div>
-              )}
-
-              <Button
-                  className="tip-button"
-                  disabled={submitting || paymentOption === "noPayment"}
-                  loading={submitting}
-                  onClick={() => onFinish(selectedCurrency, subscriptionType)}
-                >
-                  Subscribe
-                </Button>
-            </div>
+  const stripeFeeMonthly = (performer.monthlyPrice * (parseFloat(settings.stripeFeesPercentageAmount) / 100)) + parseFloat(settings.stripeFeesFixedAmount);
+  const stripeFeeYearly = (performer.yearlyPrice * (parseFloat(settings.stripeFeesPercentageAmount) / 100)) + parseFloat(settings.stripeFeesFixedAmount);
+  const openModal = () => (
+    <div className='flex-end rounded-l-lg w-full h-3/4 sm:h-full'>
+        <div className='send-tip-container border-none rounded-none gap-8'>
+          <div className='tip-header-wrapper pt-4 text-start'>
+            <span className='text-trax-white uppercase font-bold font-heading text-4xl'>Subscribe</span>
           </div>
+          <TraxToggle
+            buttonSize="full"
+            leftText="Pay monthly"
+            rightText="Pay yearly"
+            defaultValue={subscriptionType === 'yearly'}
+            onChange={(value) => handleSwitchPeriod(value ? 'yearly' : 'monthly')}
+          />
+           <div className='sub-preview-container'>
+            <div className='sub-preview-wrapper'>
+              <span className='sub-price-preview text-font-light-gray font-heading font-bold text-5xl'>
+              {selectedCurrency === 'USD' && (
+                <span>$</span>
+                )}
+                {subscriptionType === 'monthly'
+                  ? Number(performer.monthlyPrice + stripeFeeMonthly).toFixed(2)
+                  : Number(performer.yearlyPrice + stripeFeeYearly).toFixed(2)}
+              </span>
+              <span className='text-font-light-gray font-heading font-bold text-3xl uppercase align-bottom'>
+                /{subscriptionType === 'monthly' ? 'per month': 'per year'}
+              </span>
+            </div>
+            <span className='text-font-gray font-light text-sm mt-1'>
+              Fees: ${subscriptionType === 'monthly' ? (stripeFeeMonthly).toFixed(2) : (stripeFeeYearly).toFixed(2)}
+            </span>
+            {/* <span className='text-font-gray font-light text-sm mt-1'>Cancel at any time</span> */}
+          </div>
+          {/* {paymentOption === "noPayment" && (
+            <div className='text-font-gray text-center font-light text-sm px-8'>
+              <span>You must add your card before you can subscribe to this artist. Click
+                <a href="/user/account/?tab=subscription"> here</a> to add your card.</span>
+            </div>
+          )} */}
+
+
+            <div className={showExpress ? 'block' : 'hidden'}>
+              <StripeExpressSubscription
+                monthlyPrice={performer.monthlyPrice}
+                yearlyPrice={performer.yearlyPrice}
+                selectedInterval={subscriptionType}
+                settings={settings}
+                performerId={performer._id}
+                returnUrl={window.location.href}
+                onPaymentMethodsAvailable={handlePaymentMethodsAvailable}
+                onSuccess={() => {
+                  message.success('Payment successful!');
+                  onFinish(selectedCurrency, subscriptionType, true);
+                }}
+                onError={(err) => {
+                  message.error(err.message || 'Payment failed');
+                }}
+              />
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-0">
+                  <hr className="w-full border-t border-trax-gray-500" />
+                  <span className="text-trax-gray-300 w-full">{`Or pay with card`}</span>
+                  <hr className="w-full border-t border-trax-gray-500" />
+                </div>
+              </div>
+            </div>
+
+          <AddCard
+            settings={settings}
+            paymentOption={paymentOption}
+            user={user}
+            onFinish={(cards: any, selected: boolean) => afterAddCard(cards, selected)}
+          />
+
+
+
+
+          <TraxButton
+            htmlType="button"
+            styleType="primary"
+            buttonSize="full"
+            buttonText={getButtonText()}
+            disabled={submitting || paymentOption === "noPayment"}
+            loading={submitting}
+            onClick={handleSubscribe}
+          />
+        </div>
+
+      </div>
     );
     return (
       <div className={styles.componentsPerformerVerificationFormModule}>
-        <div className='flex flex-col sm:flex-row gap-0 min-h-[500px]'>
-          <div className='flex flex-start rounded-l-lg w-full h-[200px] sm:h-full sm:w-[45%]' >
-            <div
-              style={{backgroundImage: `url("${performer.avatar}")`}}
-              className='bg-center inset-0 absolute w-full h-[200px] sm:h-full sm:w-[45%] bg-no-repeat bg-cover'
-            />
-          </div>
-          {stage === '1' ? renderStage1() : renderStage2()}
+        <div className='flex min-h-[500px] w-full md:w-[500px]'>
+          {openModal()}
         </div>
       </div>
     );

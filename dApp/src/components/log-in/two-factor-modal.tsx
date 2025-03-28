@@ -1,5 +1,7 @@
-import { Modal, Input, Form, Button } from 'antd';
+import { Modal, Input, Form } from 'antd';
 import { Sheet } from 'react-modal-sheet';
+import TraxButton from '@components/common/TraxButton';
+import SlideUpModal from '@components/common/layout/slide-up-modal';
 
 interface TwoFactorModalProps {
   visible: boolean;
@@ -45,29 +47,42 @@ const TwoFactorModal: React.FC<TwoFactorModalProps> = ({
         />
       </Form.Item>
       <div className="modal-buttons">
-        <Button onClick={onOk} type="primary" className="modal-button">Submit</Button>
-        <Button onClick={onCancel} className="modal-button">Cancel</Button>
-        {showSms2faButton && <Button onClick={onShowSms2faButtonPress} className="modal-button">Switch to SMS Auth</Button>}
+        <TraxButton
+          htmlType="button"
+          styleType="primary"
+          buttonSize="medium"
+          buttonText="Submit"
+          onClick={onOk}
+        />
+        <TraxButton
+          htmlType="button"
+          styleType="secondary"
+          buttonSize="medium"
+          buttonText="Cancel"
+          onClick={onCancel}
+        />
+        {showSms2faButton && (
+          <TraxButton
+            htmlType="button"
+            styleType="secondary"
+            buttonSize="medium"
+            buttonText="Switch to SMS Auth"
+            onClick={onShowSms2faButtonPress}
+          />
+        )}
       </div>
     </>
   );
 
   if (isMobile) {
     return (
-      <Sheet
+      <SlideUpModal
         isOpen={visible}
         onClose={onCancel}
-        detent="content-height"
+        className="two-factor-modal auth-modal-sheet"
       >
-        <Sheet.Container>
-          <Sheet.Header>
-          </Sheet.Header>
-          <Sheet.Content className="two-factor-modal auth-modal-sheet">
-            {content}
-          </Sheet.Content>
-        </Sheet.Container>
-        <Sheet.Backdrop onTap={onCancel} />
-      </Sheet>
+        {content}
+      </SlideUpModal>
     );
   }
 

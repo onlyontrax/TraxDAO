@@ -8,7 +8,7 @@ import { loginNfid, loginSuccess } from '@redux/auth/actions';
 import { updateSettings } from '@redux/settings/actions';
 import { updateLiveStreamSettings } from '@redux/streaming/actions';
 import { updateUIValue } from '@redux/ui/actions';
-import { updateCurrentUser } from '@redux/user/actions';
+import { setAccount } from '@redux/user/actions';
 import withReduxSaga from '@redux/withReduxSaga';
 import { authService, settingService, userService, cryptoService, routerService } from '@services/index';
 import nextCookie from 'next-cookies';
@@ -29,6 +29,11 @@ import '../styles/antd.css';
 import '../styles/index.scss';
 // import { GoogleMap, useLoadScript, Marker } from "@react-google-maps/api";
 import CookiesBanner from '@components/common/layout/CookiesBanner';
+import { EmailVerificationBanner } from '@components/common/email-verification-banner';
+import { App as CapacitorApp } from '@capacitor/app';
+import { useRouter } from 'next/router';
+import { IAccount } from '@interfaces/account';
+import { Capacitor } from '@capacitor/core';
 
 interface CustomNextPageContext extends NextPageContext {
   store: Store;
@@ -45,7 +50,7 @@ declare global {
 function redirectLogin(ctx: any) {
   if (process.browser) {
     authService.removeToken();
-    Router.push('/login');
+    //Router.push('/login');
     return;
   }
 
@@ -65,6 +70,7 @@ async function auth(ctx: CustomNextPageContext, noredirect: boolean, onlyPerform
     const { store } = ctx;
     const state = store.getState();
     const { token } = nextCookie(ctx);
+
     if (state.auth && state.auth.loggedIn) {
       return;
     }
@@ -77,12 +83,12 @@ async function auth(ctx: CustomNextPageContext, noredirect: boolean, onlyPerform
         !noredirect && redirectLogin(ctx);
         return;
       }
-      if (!user.data.isPerformer && onlyPerformer) {
+      if (!user.data.performerId && onlyPerformer) {
         !noredirect && redirectLogin(ctx);
         return;
       }
-      store.dispatch(loginSuccess());
-      store.dispatch(updateCurrentUser(user.data));
+      await store.dispatch(setAccount(user.data));
+      await store.dispatch(loginSuccess());
       return;
     }
     !noredirect && redirectLogin(ctx);
@@ -132,6 +138,8 @@ async function updateSettingsStore(ctx: CustomNextPageContext, settings) {
         SETTING_KEYS.GOOGLE_RECAPTCHA_SITE_KEY,
         SETTING_KEYS.ENABLE_GOOGLE_RECAPTCHA,
         SETTING_KEYS.GOOGLE_CLIENT_ID,
+        SETTING_KEYS.APPLE_CLIENT_ID,
+        SETTING_KEYS.FACEBOOK_CLIENT_ID,
         SETTING_KEYS.TWITTER_CLIENT_ID,
         SETTING_KEYS.PAYMENT_GATEWAY,
         SETTING_KEYS.META_KEYWORDS,
@@ -162,6 +170,8 @@ async function updateSettingsStore(ctx: CustomNextPageContext, settings) {
         SETTING_KEYS.IC_CANISTERS_NFT_TICKET,
         SETTING_KEYS.WALLET_CONNECT_PROJECT_ID,
         SETTING_KEYS.IC_CANISTERS_NFT_SONG,
+        SETTING_KEYS.STRIPE_FEES_PERCENTAGE_AMOUNT,
+        SETTING_KEYS.STRIPE_FEES_FIXED_AMOUNT,
       ])
     )
   );
@@ -178,6 +188,7 @@ interface IApp {
   settings: any;
   config: any;
   loginNfid: Function;
+  account: IAccount;
 }
 
 const publicConfig = {} as any;
@@ -256,16 +267,34 @@ class Application extends App<IApp> {
   }
 
   async componentDidMount() {
-    await routerService.checkRedirectUrl();
-    //plugWalletMobileConnection();
-    const { settings } = this.state;
-    if (settings === null) {
-      const data = await this.getData();
-
-      this.setState({ settings: data.settings }, async () => this.updateDataDependencies());
-    } else {
-      await this.updateDataDependencies();
+    const { mobileToken } = this.props.router.query;
+    if (mobileToken) {
+      authService.setToken(mobileToken.toString());
     }
+
+    const redirecting = await routerService.checkRedirectUrl();
+
+    CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) {
+        window.history.back();
+      } else {
+        window.location.replace('/');
+        window.location.reload();
+        //CapacitorApp.exitApp();
+      }
+    });
+
+    //if (!redirecting) {
+      //plugWalletMobileConnection();
+      const { settings } = this.state;
+      if (settings === null) {
+        const data = await this.getData();
+
+        this.setState({ settings: data.settings }, async () => this.updateDataDependencies());
+      } else {
+        await this.updateDataDependencies();
+      }
+    //}
   }
 
   async authAfterLoad() {
@@ -280,16 +309,26 @@ class Application extends App<IApp> {
         const user = await userService.me({
           Authorization: token
         });
-        if (!user.data || !user.data._id) {
+        if (!user?.data || !user?.data?._id) {
+          authService.setToken('');
+          authService.removeToken();
           return;
         }
-        store.dispatch(loginSuccess());
-        store.dispatch(updateCurrentUser(user.data));
+        await store.dispatch(setAccount(user.data));
+        await store.dispatch(loginSuccess());
         this.setState({ authFix: true });
 
         return;
       }
     } catch (e) {
+      if (e?.message === "Forbidden resource") {
+        const token = authService.getToken();
+        if (token) {
+          authService.setToken('');
+          authService.removeToken();
+          //window.location.reload();
+        }
+      }
     }
   }
 
@@ -318,11 +357,12 @@ class Application extends App<IApp> {
     } = this.state;
 
     if (settings === null) {
-      return <div style={{ margin: 30, textAlign: 'center' }}><Spin /></div>;
+      return <div style={{ margin: 30, textAlign: 'center' }}><img src="/static/trax_loading_optimize.gif" alt="Loading..." className='w-40 m-auto'/></div>;
     }
 
     const { layout } = Component;
     const state = store.getState();
+    const isEmailVerified = !state?.user?.account?._id || state?.user?.account?.verifiedEmail ? true : false;
 
     return (
       <ConfigProvider
@@ -337,6 +377,7 @@ class Application extends App<IApp> {
           <Head>
             <title>{settings?.siteName}</title>
             <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+
           </Head>
 
           <Socket>
@@ -346,27 +387,34 @@ class Application extends App<IApp> {
                   state.auth.loggedIn ? () => {} : this.onNFIDLogin.bind(this)
                 )}
               >
+
                 <Component {...pageProps} />
               </InternetIdentityProvider>
             </BaseLayout>
           </Socket>
 
-          <CookiesBanner />
+          {(!Capacitor.isNativePlatform() && Capacitor.getPlatform() !== 'ios') && (
+            <CookiesBanner />
+          )}
 
           {settings && settings.afterBodyScript && (
             // eslint-disable-next-line react/no-danger
             <div dangerouslySetInnerHTML={{ __html: settings.afterBodyScript }} />
           )}
-          <Script async src="https://www.googletagmanager.com/gtag/js?id=G-T4CK76XJ4R" />
-          <Script id="layer">
-            {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
+          {(!Capacitor.isNativePlatform() && Capacitor.getPlatform() !== 'ios') && (
+            <>
+              <Script async src="https://www.googletagmanager.com/gtag/js?id=G-T4CK76XJ4R" />
+              <Script id="layer">
+                {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
 
-            gtag('config', 'G-T4CK76XJ4R');
-            `}
-          </Script>
+                gtag('config', 'G-T4CK76XJ4R');
+                `}
+              </Script>
+            </>
+          )}
         </Provider>
       </ParallaxProvider>
       </ConfigProvider>

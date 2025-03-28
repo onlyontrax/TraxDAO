@@ -7,6 +7,9 @@ import { ITransaction, IUIConfig } from 'src/interfaces';
 import { tokenTransctionService, paymentService, earningService } from 'src/services';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import { formatDate } from '@lib/date';
+
 
 interface IProps {
   ui: IUIConfig;
@@ -131,7 +134,7 @@ class ActivityHistoryPage extends PureComponent<IProps, IStates> {
         <Head>
           <title>{`${ui?.siteName} | Activity History`}</title>
         </Head>
-        <div className="lg:w-5/6 md:pl-6 pl-4">
+        <div className="">
           <InfiniteScroll
             dataLength={paymentList.length + referralList.length}
             next={() => {
@@ -141,37 +144,51 @@ class ActivityHistoryPage extends PureComponent<IProps, IStates> {
             hasMore={hasMorePayment || hasMoreReferral}
             loader={<div>Loading...</div>}
           >
-            <div>
-              {paymentList.map((transaction) => (
-                <div key={transaction._id} style={{maxWidth: '50rem'}} className="flex justify-between items-center p-2 text-sm">
+            <div className='flex flex-col gap-2'>
+              {paymentList.map((transaction, index) => (
+                <motion.div
+                key={transaction._id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.3,
+                  delay: index * 0.06,
+                  ease: "easeOut"
+                }} className="flex justify-between items-center py-2 px-4 text-sm bg-[#1F1F1FB2] rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <Link href={`/${transaction.performerInfo?.username}`}>
+                    <Link href={`/artist/profile/?id=${transaction.performerInfo?.username}`}>
                       <img
-                        className="w-9 h-9 rounded-full"
+                        className="w-12 h-12 rounded-full"
                         src={transaction.performerInfo?.avatar || '/static/no-avatar.png'}
                         alt="avatar"
                       />
                     </Link>
                     <div>
-                      <Link href={`/${transaction.performerInfo?.username}`}>
+                      <Link href={`/artist/profile/?id=${transaction.performerInfo?.username}`}>
                         <span className='text-trax-white hover:text-trax-lime-500'>
                           {transaction.performerInfo?.name || transaction.performerInfo?.username || 'N/A'}
                         </span>
                       </Link>
-                      <div>{paymentType(transaction.type)}</div>
+                      <div className='text-trax-gray-500'>{paymentType(transaction.type)}</div>
                     </div>
                   </div>
-                  <div className="text-trax-white">
-                    - {transaction.isCrypto ? `${transaction.tokenSymbol} ` : '$'}
-                    {transaction.originalPrice.toFixed(2)}
+                  <div className='flex flex-col justify-end'>
+
+                    <div className="flex justify-end text-custom-green">
+                      - {transaction.isCrypto ? `${transaction.tokenSymbol} ` : '$'}
+                      {transaction.originalPrice.toFixed(2)}
+                    </div>
+                    <div className='flex text-trax-gray-500'>
+                      {formatDate(transaction.createdAt)}
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
 
               {referralList.map((earning) => (
                 <div key={earning._id} style={{maxWidth: '50rem'}} className="flex justify-between items-center p-2 text-sm">
                   <div className="flex items-center space-x-3">
-                    <Link href={`/${earning.performerInfo?.username}`}>
+                    <Link href={`/artist/profile/?id=${earning.performerInfo?.username}`}>
                       <img
                         className="w-9 h-9 rounded-full"
                         src={earning.performerInfo?.avatar || '/static/no-avatar.png'}
@@ -179,7 +196,7 @@ class ActivityHistoryPage extends PureComponent<IProps, IStates> {
                       />
                     </Link>
                     <div>
-                      <Link href={`/${earning.performerInfo?.username}`}>
+                      <Link href={`/artist/profile/?id=${earning.performerInfo?.username}`}>
                         <span className="text-trax-white cursor-pointer hover:text-trax-lime-500">
                           {earning.performerInfo?.name || earning.performerInfo?.username || 'N/A'}
                         </span>

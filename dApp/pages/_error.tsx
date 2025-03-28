@@ -19,7 +19,7 @@ function Error({ statusCode, message }: IProps) {
             <HomeOutlined />
             BACK HOME
           </Button>,
-          <Button key="buy" className="primary" onClick={() => Router.push('/contact')}>
+          <Button key="buy" className="primary" onClick={() => window.open('https://info.trax.so/contact', '_blank')}>
             <ContactsOutlined />
             CONTACT US
           </Button>

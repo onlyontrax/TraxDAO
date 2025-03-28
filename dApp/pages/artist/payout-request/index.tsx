@@ -7,6 +7,8 @@ import { connect } from 'react-redux';
 import { formatDateNoTime } from 'src/lib';
 import { IUIConfig } from 'src/interfaces';
 import InfiniteScroll from 'react-infinite-scroll-component';
+import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface IProps {
   ui: IUIConfig;
@@ -16,6 +18,8 @@ interface IPayoutRequest {
   _id: string;
   updatedAt: Date;
   amount: number;
+  requestTokens: number;
+  status: string;
 }
 
 interface IState {
@@ -66,32 +70,42 @@ class PayoutRequest extends PureComponent<IProps, IState> {
         <Head>
           <title>Payout Requests</title>
         </Head>
-        <div className="lg:w-5/6 md:pl-6 pl-4">
+        <div className="">
           <InfiniteScroll
-          
+
             dataLength={items.length}
             next={() => this.getData()}
             hasMore={hasMore}
             loader={<div>Loading...</div>}
           >
             <div>
-              {items.map((item) => (
-                <div key={item._id} className="flex justify-between items-center p-2 text-sm">
+              {items.map((item, index) => (
+                <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.3,
+                  delay: index * 0.06,
+                  ease: "easeOut"
+                }} key={item._id} className="flex justify-between items-center py-2 px-4 text-sm bg-[#1F1F1FB2] rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <div>
-                      <span className='text-trax-white'>
+                    <div className='flex flex-col'>
+                      <span className='text-trax-white font-heading font-bold text-lg'>
                         {formatDateNoTime(item.updatedAt)}
+                      </span>
+                      <span className='text-trax-gray-500 '>
+                      {item?.status}
                       </span>
                     </div>
                   </div>
-                  <div className="text-trax-white">
-                    - ${item?.amount?.toFixed(2) || 0}
+                  <div className="text-custom-green">
+                    - ${item?.amount?.toFixed(2) || (item?.requestTokens ? item?.requestTokens?.toFixed(2) : 0) || 0}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </InfiniteScroll>
-          
+
         </div>
       </>
     );

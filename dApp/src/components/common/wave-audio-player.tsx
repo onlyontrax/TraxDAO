@@ -46,11 +46,11 @@ export default function WavePlayer() {
   };
 
   return (
-    <div>
+    <div className='fixed bottom-0 left-0 w-screen  overflow-hidden rounded-full p-4'>
       <div id="waveform" className="waveform-wrapper" ref={waveformRef} />
       <div onClick={handlePlayPause}>{!playing ? 'Play' : 'Pause'}</div>
       <div className="controls">
-        <div className="volume">
+        {/* <div className="volume">
           <img
             id="volumeIcon"
             className="volume-icon"
@@ -66,7 +66,7 @@ export default function WavePlayer() {
             max="100"
             value="50"
           />
-        </div>
+        </div> */}
         <div className="timecode">
           <span id="currentTime">00:00:00</span>
           <span>/</span>

@@ -5,27 +5,17 @@ import { faInstagram, faSoundcloud, faXTwitter, faSpotify } from '@fortawesome/f
 import { faCheck } from '@fortawesome/free-solid-svg-icons';
 import { Avatar, Spin } from "antd";
 import { LoadingOutlined } from '@ant-design/icons';
-import { CheckBadgeIcon } from "@heroicons/react/24/solid";
+import { CheckBadgeIcon, XCircleIcon } from "@heroicons/react/24/solid";
 import { MultiStepLoader as Loader } from "@components/ui/multi-step-loader";
 import { IconSquareRoundedX } from "@tabler/icons-react";
 
 
+
 const loadingStates = [
-  {
-    text: "Connecting wallet",
-  },
-  {
-    text: "Processing request",
-  },
-  {
-    text: "Initiating transfer",
-  },
-  {
-    text: "Processing transfer",
-  },
-  {
-    text: "Transfer complete",
-  }
+  { text: "Initiating transaction" },
+  { text: "Approving transaction" },
+  { text: "Processing transfer" },
+  { text: "Transfer complete" }
 ];
 
 const PaymentProgress = ({stage, confetti}): JSX.Element => {
@@ -40,10 +30,10 @@ const PaymentProgress = ({stage, confetti}): JSX.Element => {
 
       {loading && (
         <button
-          className="fixed top-20 right-4 text-trax-white z-[120]"
+          className="fixed top-20 right-4 text-[#eaeaea] z-[120]"
           onClick={() => setLoading(false)}
         >
-          <IconSquareRoundedX className="h-10 w-10" />
+          <XCircleIcon className="h-10 w-10" />
         </button>
       )}
     </div>

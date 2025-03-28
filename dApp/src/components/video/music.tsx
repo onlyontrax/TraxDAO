@@ -1,617 +1,443 @@
-/* eslint-disable no-nested-ternary */
-/* eslint-disable react/jsx-no-useless-fragment */
-/* eslint-disable no-prototype-builtins */
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
+import { message, Spin } from 'antd';
+import Error from 'next/error';
+import { FireOutlined, FireFilled, PlusOutlined } from '@ant-design/icons';
+import { BsCheckCircleFill } from 'react-icons/bs';
+import { LockClosedIcon } from '@heroicons/react/24/solid';
+import { AudioPlayer_ } from '@components/common/audio-player';
+import RelatedList from './related-list';
+import ContentData from './contentData';
 import {
-    Layout, Tabs, message, Button, Spin, Tooltip, Avatar, Modal, Progress, Image
-  } from 'antd';
-  import { BsCheckCircleFill } from 'react-icons/bs';
-  import {
-    PlusOutlined, FireOutlined, FireFilled, CommentOutlined, LoadingOutlined
-  } from '@ant-design/icons';
-  import { CheckBadgeIcon, LockClosedIcon } from '@heroicons/react/24/solid';
+    useVideoData,
+    useVideoStats,
+    useUserReactions,
+    usePriceConversion,
+    handleReaction,
+    usePurchaseHandling,
+  } from './hooks';
+  import { reactionService } from '@services/index';
+import { IVideo, IUser, IUIConfig, ISettings, IAccount } from 'src/interfaces';
+import TraxButton from '@components/common/TraxButton';
+import { convertToReadableDate, useLiveCountdown } from '@components/common/date-convert';
+import { AnimatePresence, motion } from "framer-motion";
+import ShareButton from '@components/common/share-button';
+import CollaboratorList from './collaborator-list';
 
-  import { PureComponent } from 'react';
-  import { connect } from 'react-redux';
-  import {
-    getComments, moreComment, createComment, deleteComment
-  } from 'src/redux/comment/actions';
-  import { updateBalance } from '@redux/user/actions';
-  import { getRelated } from 'src/redux/video/actions';
-  import Head from 'next/head';
-  import { motion } from 'framer-motion';
-  import {
-    authService, videoService, reactionService, tokenTransctionService, paymentService
-  } from '@services/index';
-  import { cryptoService } from '@services/crypto.service';
-  import { RelatedList } from '@components/video';
-  import { VideoPlayer } from '@components/common/video-player';
-  import { AudioPlayer_ } from '@components/common/audio-player';
+interface MusicPageProps {
+  user: IUser;
+  error: any;
+  account: IAccount;
+  artistsContent: any,
+  featuredContent: any,
+  ui: IUIConfig;
+  video: IVideo;
+  settings: ISettings;
+  contentUnlocked: boolean;
+  openLogIn: (isOpen: boolean, logIn: boolean) => void;
+  openSubModal: (open: boolean) => void;
+  openPurchaseModal: (open: boolean) => void;
+}
 
-  import { ListComments, CommentForm } from '@components/comment';
-  import ConfirmSubscriptionPerformerForm from '@components/performer/confirm-subscription';
-  import { PPVPurchaseModal } from '@components/performer';
-  import { shortenLargeNumber, formatDate } from '@lib/index';
-  import {
-    IVideo, IUser, IUIConfig, IPerformer, ISettings
-  } from 'src/interfaces';
-
-  // import { ppv } from "../../src/smart-contracts/ppv";
-  // import { idlFactorySUB } from "../../src/smart-contracts/declarations/subscriptions";
-  import { Principal } from '@dfinity/principal';
-  import { AccountIdentifier } from '@dfinity/nns';
-  import { Actor, HttpAgent } from '@dfinity/agent';
-  import { AuthClient } from '@dfinity/auth-client';
-  import Link from 'next/link';
-  import Router, { useRouter } from 'next/router';
-  import Error from 'next/error';
-  /*import { subscriptions } from '../../src/smart-contracts/declarations/subscriptions';
-  import { SubType } from '../../src/smart-contracts/declarations/subscriptions/subscriptions.did';*/
-
-  import { idlFactory as idlFactoryPPV } from '../../smart-contracts/declarations/ppv/ppv.did.js';
-  import type { _SERVICE as _SERVICE_PPV, Content } from '../../smart-contracts/declarations/ppv/ppv2.did.js';
-
-  import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-  import { faEllipsis } from '@fortawesome/free-solid-svg-icons'
-
-  import { idlFactory as idlFactoryLedger } from '../../smart-contracts/declarations/ledger/ledger.did.js';
-  import type { _SERVICE as _SERVICE_LEDGER } from '../../smart-contracts/declarations/ledger/ledger2.did.js';
-  import {
-    TransferArgs, Tokens, TimeStamp, AccountBalanceArgs
-  } from '../../smart-contracts/declarations/ledger/ledger2.did.js';
-  import { IcrcLedgerCanister, TransferParams } from "@dfinity/ledger";
-  import { faInstagram, faSoundcloud, faXTwitter, faSpotify } from '@fortawesome/free-brands-svg-icons'
-  import { faCheck } from '@fortawesome/free-solid-svg-icons'
-  import PaymentProgress from '../user/payment-progress.js';
-  import { debounce } from 'lodash';
-  import LogInModal from 'src/components/log-in/log-in-modal';
-  import SignUpModal from '@components/sign-up/sign-up-modal';
-  import { Description } from '@headlessui/react/dist/components/description/description.js';
-  import { ChevronDownIcon, ChevronLeftIcon } from '@heroicons/react/24/solid';
-  import ContentData from './contentData'
-
-  const { TabPane } = Tabs;
-
-  interface IProps {
-    user: IUser;
-    error: any
-    relatedVideos: any;
-    ui: IUIConfig;
-    video: IVideo;
-    settings: ISettings;
-    contentUnlocked: boolean;
-    openLogIn(isOpen: boolean, logIn: boolean): Function;
-    openSubModal(open: boolean): Function;
-    openPurchaseModal(open: boolean): Function;
-  }
+interface IVideoStats {
+  likes: number;
+  views: number;
+  comments: number;
+  bookmarks: number;
+}
 
 
-  export class MusicPage extends PureComponent<IProps> {
-    static authenticate = true;
 
-    static noredirect = true;
+const initial_1 = { opacity: 0, y: 0 };
+const animate_1 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 1.3,
+    delay: 0.3,
+    ease: "easeOut",
+    once: true,
+  },
+}
+const initial_2 = { opacity: 0, y: 20 };
+const animate_2 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 0.5,
+    delay: 0.4,
+    ease: "easeOut",
+    once: true,
+  },
+}
 
-    async getData() {
-      if (this.props.video && this.props.video._id) {
-        return { video: this.props.video };
+const animate_3 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 0.5,
+    delay: 0.6,
+    ease: "easeOut",
+    once: true,
+  },
+}
+
+const animate_4 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 0.5,
+    delay: 0.9,
+    ease: "easeOut",
+    once: true,
+  },
+}
+
+
+export const MusicPage: React.FC<MusicPageProps> = ({
+  user,
+  error,
+  artistsContent,
+  featuredContent,
+  account,
+  ui,
+  video: initialVideo,
+  settings,
+  contentUnlocked,
+  openLogIn,
+  openSubModal,
+  openPurchaseModal
+}) => {
+  const router = useRouter();
+  const { id } = router.query;
+  const { video, loading } = useVideoData(id as string, initialVideo);
+  const { amountICPToDisplay, amountCKBTCToDisplay, amountTRAXToDisplay, isPriceICPLoading } = usePriceConversion(video?.price);
+
+  const [isMobile, setIsMobile] = useState(false);
+  const [videoStats, setVideoStats] = useState<IVideoStats>(video.stats);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const { handlePostPurchase } = usePurchaseHandling(video);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    handleResize();
+
+    setIsLiked(video?.isLiked);
+    setIsBookmarked(video?.isBookmarked);
+    setVideoStats(video.stats)
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const onReaction = async (action) => {
+    try {
+      // Check if user is logged in
+      if (!user._id) {
+        openLogIn(false, true);
+        message.info('Please log in to react to music track');
+        return;
       }
-
-      const url = new URL(window.location.href);
-      const id = url.searchParams.get('id');
-      try {
-        const video = await (
-          await videoService.findOne(id as string, {
-            Authorization: authService.getToken() || ''
-          })
-        ).data;
-        return { video };
-      } catch (e) {
-        return { video: [] };
-      }
-    }
-
-    state = {
-      videoStats: {
-        likes: 0, comments: 0, views: 0, bookmarks: 0
-      },
-      openPPVModal: false,
-      isLiked: false,
-      isBookmarked: false,
-      itemPerPage: 24,
-      commentPage: 0,
-      isFirstLoadComment: true,
-      isBought: false,
-      isSubscribed: false,
-      totalComment: 0,
-      submiting: false,
-      requesting: false,
-      activeTab: 'description',
-      openSubscriptionModal: false,
-      subscriptionType: 'monthly',
-      priceICP: 0,
-      amountICPToDisplay: '',
-      amountICP: '',
-      amountCKBTCToDisplay: '',
-      amountCKBTC: '',
-      amountTRAXToDisplay: '',
-      amountTRAX: '',
-      openPPVProgressModal: false,
-      ppvProgress: 0,
-      isPriceICPLoading: true,
-      video: null,
-      openInfoModal: false,
-      isPlaying: false,
-      openTeaserModal: false,
-      stopTeaser: false,
-      isSignedIn: true,
-      openLogInModal: false,
-      openSignUpModal: false,
-      showComments: true,
-      showCollabs: true,
-      showDescription: true,
-      isSoldOut: true,
-      userBookmarks: [],
-      userLikes: [],
-    };
-
-    async componentDidMount() {
-      const { video } = this.state;
-      if (video === null) {
-        const data = await this.getData();
-        this.promptSignIn()
-
-        this.setState({ video: data.video }, () => {
-          this.updateDataDependencies();
-          this.fetchUserBookmarks();
-          this.fetchUserLikes();
-        });
-      } else {
-        await this.updateDataDependencies();
-      }
-
-      Router.events.on('routeChangeComplete', this.onRouteChangeComplete);
-    }
-
-    async fetchUserBookmarks() {
-      const { user } = this.props;
-      if (user && user._id) {
-        try {
-          const response = await videoService.getBookmarks({ userId: user._id });
-          const bookmarks = response.data?.data || [];
-          this.setState({ userBookmarks: bookmarks }, () => {
-          this.updateBookmarkStatus();
-        });
-        } catch (error) {
-          console.error('Error fetching user bookmarks:', error);
-        }
-      }
-    }
-
-    async fetchUserLikes() {
-      const { user } = this.props;
-      if (user && user._id) {
-        try {
-          const response = await videoService.getLikes({ userId: user._id });
-          const likes = response.data?.data || [];
-          this.setState({ userLikes: likes }, () => {
-            this.updateLikeStatus();
+      if (action === 'like') {
+        if (!isLiked) {
+          await reactionService.create({
+            objectId: video._id,
+            action,
+            objectType: 'video'
           });
-        } catch (error) {
-          console.error('Error fetching user likes:', error);
+        } else {
+          await reactionService.delete({
+            objectId: video._id,
+            action,
+            objectType: 'video'
+          });
+        }
+        setIsLiked(!isLiked);
+        setVideoStats(prevStats => ({
+          ...prevStats,
+          likes: prevStats.likes + (isLiked ? -1 : 1)
+        }));
+        message.success(!isLiked ? 'Liked' : 'Unliked');
+      }
+
+      if (action === 'book_mark') {
+        if (!isBookmarked) {
+          await reactionService.create({
+            objectId: video._id,
+            action,
+            objectType: 'video'
+          });
+        } else {
+          await reactionService.delete({
+            objectId: video._id,
+            action,
+            objectType: 'video'
+          });
+        }
+        message.success(!isBookmarked ? 'Added to Saved' : 'Removed from Saved');
+        setIsBookmarked(!isBookmarked);
+        setVideoStats(prevStats => ({
+          ...prevStats,
+          bookmarks: prevStats.bookmarks + (isBookmarked ? -1 : 1)
+        }));
+      }
+    } catch (e) {
+      const error = await e;
+      message.error(error.message || 'Error occurred, please try again later');
+    }
+  };
+
+  const handlePlay = useCallback(() => {
+    if (!user._id) {
+      openLogIn(false, true);
+    }
+  }, [user, openLogIn]);
+
+  const handlePurchaseClick = useCallback(() => {
+    if (user._id) {
+      window.localStorage.setItem('pendingPurchaseId', video._id);
+      openPurchaseModal(true);
+    } else {
+      openLogIn(false, true);
+    }
+  }, [user, openPurchaseModal, openLogIn, video._id]);
+
+  useEffect(() => {
+    const checkAndHandlePostPurchase = async () => {
+      const pendingId = window.localStorage.getItem('pendingPurchaseId');
+      if (contentUnlocked && video.isBought && pendingId === video._id) {
+        const success = await handlePostPurchase();
+        if (success) {
+          setIsBookmarked(true);
+        }
+        window.localStorage.removeItem('pendingPurchaseId');
+      }
+    };
+
+    checkAndHandlePostPurchase();
+  }, [contentUnlocked, video.isBought, video._id, handlePostPurchase]);
+
+  const handleSubClick = useCallback(() => {
+    if (user._id) {
+      openSubModal(true);
+    } else {
+      openLogIn(false, true);
+    }
+  }, [user, openSubModal, openLogIn]);
+
+  if (error) {
+    return <Error statusCode={error?.statusCode || 404} title={error?.message || 'Audio was not found'} />;
+  }
+
+  if (loading || !video) {
+    return <div style={{ margin: 30, textAlign: 'center' }}><img src="/static/trax_loading_optimize.gif" alt="Loading..." className='w-28 m-auto'/></div>;
+  }
+
+
+  const getButtonText = () => {
+    if(video.isSchedule){
+      return `Scheduled for ${video.scheduledAt}`
+    }else{
+      if(video.isSale === 'subscription' && !video.isSubscribed){
+        return "Subscribe to unlock"
+      }else if(video.isSale === 'pay' && !video.isBought && !video.isSchedule){
+        if(!video.limitSupply || (video.limitSupply && video.supply > 0)){
+          return `Unlock for $${video.price}`
+        }
+        if(video.limitSupply && video.supply === 0){
+          return 'Sold out'
         }
       }
     }
-
-    updateBookmarkStatus() {
-      const { video, userBookmarks } = this.state;
-      if (video && Array.isArray(userBookmarks)) {
-        const isBookmarked = userBookmarks.some(bookmark => bookmark.objectId === video._id);
-        this.setState({ isBookmarked });
-      } else {
-        this.setState({ isBookmarked: false });
-      }
-    }
-
-    updateLikeStatus() {
-      const { video, userLikes } = this.state;
-      if (video && Array.isArray(userLikes)) {
-        const isLiked = userLikes.some(like => like.objectId === video._id);
-        this.setState({ isLiked });
-      } else {
-        this.setState({ isLiked: false });
-      }
-    }
-
-    componentWillUnmount() {
-      Router.events.off('routeChangeComplete', this.onRouteChangeComplete);
-    }
-
-    promptSignIn = debounce(async () => {
-      const { user } = this.props;
-      this.setState({isSignedIn: user._id ? true : false})
-    })
-
-    onRouteChangeComplete = async (url) => {
-      const data = await this.getData();
-
-      this.setState({ video: data.video }, () => this.updateDataDependencies());
-    };
-
-    async updateDataDependencies() {
-      const { settings } = this.props;
-      // let identity;
-      // const authClient = await AuthClient.create();
-      // const host = settings.icHost;
-      // let agent;
-
-      // if (settings.icNetwork !== true) {
-      //   identity = authClient.getIdentity();
-
-      //   agent = new HttpAgent({
-      //     identity,
-      //     host
-      //   });
-
-      //   await agent.fetchRootKey();
-      // } else {
-      //   identity = await authClient.getIdentity();
-      //   agent = new HttpAgent({
-      //     identity,
-      //     host
-      //   });
-      // }
-
-      const { video, activeTab } = this.state;
-
-      if (video === null) {
-        return;
-      }
-
-      const icp = (await tokenTransctionService.getExchangeRate()).data.rate;
-      const ckbtc = (await tokenTransctionService.getExchangeRateBTC()).data.rate;
-      const trax = (await tokenTransctionService.getExchangeRateTRAX()).data.rate;
-
-      // const icp   = '14.50';
-      // const ckbtc = '70000';
-      // const trax  = '0.0285';
-
-      const amountToSendICP = video.price / parseFloat(icp);
-      const amountToSendCKBTC = video.price / parseFloat(ckbtc);
-      const amountToSendTRAX = video.price / parseFloat(trax);
-
-      this.setState({
-        priceICP: icp,
-        amountICPToDisplay: amountToSendICP.toFixed(4).toString(),
-        amountCKBTCToDisplay: amountToSendCKBTC.toFixed(8).toString(),
-        amountTRAXToDisplay: amountToSendTRAX.toFixed(3).toString(),
-        amountICP: amountToSendICP,
-        amountCKBTC: amountToSendCKBTC,
-        isPriceICPLoading: false
-      });
-      this.onShallowRouteChange();
-
-      // await tokenTransctionService.sendCryptoPpv(video?.performer?._id, { performerId: video?.performer?._id, price: Number(amountToSendICP), tokenSymbol: 'ICP' }).then(() => {
-      // });
-    }
-
-    componentDidUpdate(prevProps, prevState) {
-
-      const { video } = this.state;
-      if (video === null) return;
-
-
-      if (prevState.video && prevState.video._id !== video._id) {
-        this.onShallowRouteChange();
-      }
-    }
-
-    onShallowRouteChange() {
-      const { video, userBookmarks, userLikes } = this.state;
-      if (video === null) return;
-
-      const isBookmarked = Array.isArray(userBookmarks) && userBookmarks.some(bookmark => bookmark.objectId === video._id);
-      const isLiked = Array.isArray(userLikes) && userLikes.some(like => like.objectId === video._id);
-
-      this.setState({
-        videoStats: video.stats,
-        isLiked,
-        isBookmarked,
-        isBought: video.isBought,
-        isCryptoPayment: video.isCryptoPayment,
-        recipient: video.performerWalletAddress,
-        isSubscribed: video.isSubscribed,
-        isSoldOut: (video.limitSupply && video.supply === 0),
-        subscriptionType: video?.performer?.isFreeSubscription ? 'free' : 'monthly'
-      });
-    }
-
-
-
-    async onReaction(action: string) {
-      const { videoStats, isLiked, isBookmarked, video, isSignedIn } = this.state;
-      const { openLogIn: openModal } = this.props;
-
-      if (!isSignedIn) {
-        openModal(false, true);
-        return;
-      }
-
-      try {
-        const isActionLike = action === 'like';
-        const currentState = isActionLike ? isLiked : isBookmarked;
-        const stateKey = isActionLike ? 'isLiked' : 'isBookmarked';
-        const userArrayKey = isActionLike ? 'userLikes' : 'userBookmarks';
-        const statsKey = isActionLike ? 'likes' : 'bookmarks';
-
-        const reactionData = {
-          objectId: video._id,
-          action: isActionLike ? 'like' : 'book_mark',
-          objectType: 'video'
-        };
-
-        await reactionService[currentState ? 'delete' : 'create'](reactionData);
-
-        this.setState(prevState => ({
-          [stateKey]: !currentState,
-          [userArrayKey]: currentState
-            ? prevState[userArrayKey].filter(item => item.objectId !== video._id)
-            : [...prevState[userArrayKey], { objectId: video._id }],
-          videoStats: {
-            ...videoStats,
-            [statsKey]: videoStats[statsKey] + (currentState ? -1 : 1)
-          }
-        }));
-
-        message.success(
-          isActionLike
-            ? (currentState ? 'Unliked' : 'Liked')
-            : (currentState ? 'Removed from Saved' : 'Added to Saved')
-        );
-      } catch (e) {
-        const error = await e;
-        message.error(error.message || 'Error occurred, please try again later');
-      }
-    }
-
-    handleFileChange(val){
-      this.setState({isPlaying: val})
-    }
-
-    handlePurchaseBtnClick(){
-      const { isSignedIn } = this.state;
-      const { openLogIn: openModal, openPurchaseModal: openPurchase } = this.props;
-      if(isSignedIn){
-        openPurchase(true)
-      }else{
-        openModal(false, true)
-      }
-    }
-
-    handleSubBtnClick(){
-      const { isSignedIn } = this.state;
-      const { openLogIn: openModal, openSubModal: openSub  } = this.props;
-      if(isSignedIn){
-        openSub(true)
-      }else{
-        openModal(false, true)
-
-      }
-    }
-
-    handlePlay(){
-      const { isSignedIn } = this.state;
-      const { openLogIn: openModal, user } = this.props;
-
-      if(!isSignedIn){
-
-        openModal(false, true);
-      }
-    }
-
-    render() {
-      const {
-        user,
-        error,
-        ui,
-        settings,
-        contentUnlocked,
-        relatedVideos = {
-          requesting: false,
-          error: null,
-          success: false,
-          items: []
-        },
-
-      } = this.props;
-      const { video, openTeaserModal, stopTeaser } = this.state;
-      if (error) {
-        return <Error statusCode={error?.statusCode || 404} title={error?.message || 'Video was not found'} />;
-      }
-      if (video === null || !settings) {
-        return <div style={{ margin: 30, textAlign: 'center' }}><Spin /></div>;
-      }
-
-
-      const {
-        videoStats, showComments, isSoldOut, showCollabs, showDescription, isLiked, isBookmarked, isSubscribed, openSignUpModal, openLogInModal, isBought, submiting, requesting, activeTab, isFirstLoadComment, isSignedIn,
-        openSubscriptionModal, subscriptionType, openPPVModal, openPPVProgressModal, ppvProgress, isPriceICPLoading, amountICPToDisplay, amountTRAXToDisplay, amountCKBTCToDisplay, openInfoModal, isPlaying
-      } = this.state;
-      const thumbUrl = video?.thumbnail?.url || (video?.teaser?.thumbnails && video?.teaser?.thumbnails[0]) || (video?.video?.thumbnails && video?.video?.thumbnails[0]) || '/static/no-image.jpg';
-
-      const videoJsOptions = {
-        key: video._id,
-        autoplay: true,
-        controls: true,
-        playsinline: true,
-        poster: thumbUrl,
-        sources: [
-          {
-            src: video?.video?.url,
-            type: video?.trackType === 'audio' ? 'audio/mp3' : 'video/mp4',
-            uploadedToIC: video?.video?.uploadedToIC
-          }
-        ],
-        source: video?.video?.url
-      };
-      const videoJsOptionsAudio = {
-        key: video._id,
-        source: video?.video?.url,
-        stop: false,
-        relatedVideos,
-        showPrevious: true,
-        showNext: true,
-      };
-
-      return (
-        <div>
-          <div className="tick-img-background-audio" style={{backgroundImage: thumbUrl ? `url('${thumbUrl}')`: '/static/empty_product.svg'}}>
-            <div className='tick-img-blur-background'>
-              </div>
-            </div>
-          <div className="main-container" style={{position: 'relative', maxWidth: '350px', marginTop: '4rem' }}>
-            <div className={contentUnlocked ? 'vid-player-locked' : 'vid-player'}>
-
-              {(contentUnlocked && !video.isSchedule) && (
-              <>
-                {video.processing ? (
-                  <div className="vid-processing">
-                    <div className="text-center">
-                      <Spin />
-                      <br />
-                      Track file is currently processing
-                    </div>
-                  </div>
-                ) : (
-                    <div className="audio-track-wrapper">
-                      <div className="audio-thumbs">
-                        <img alt="thumbnail" src={thumbUrl} />
-                      </div>
-                      <div className='vid-heading-wrapper' >
-                        <div className="vid-heading" style={{justifyContent: 'flex-start', width: '100%'}}>
-                          <span className="vid-heading-span" >{video.title || 'Untitled'}</span>
-                        </div>
-                        <Link
-                          href={`/${video?.performer?.username || video?.performer?._id}`}
-                          as={`/${video?.performer?.username || video?.performer?._id}`}
-                          style={{justifyContent: 'flex-start', width: '100%'}}
-                          className="vid-artist-wrapper"
-                          >
-                          <span className="vid-artist">{video?.performer?.name || 'N/A'}</span>
-                        </Link>
-                      </div>
-                      <AudioPlayer_ hasSignedIn={isSignedIn} onPressPlay={() => this.handlePlay()} {...videoJsOptionsAudio} />
-                    </div>
-                )}
-              </>
-              )}
-
-              {!contentUnlocked && (
-                <div className='relative'>
-                  <div className='track-thumbnail' style={{ backgroundImage: `url(${thumbUrl})` }}>
-
-                  {video.isSale === 'subscription' && !isSubscribed && (
-                    <div onClick={() => this.handleSubBtnClick()} className='cursor-pointer w-full flex relative justify-center items-center h-full inset-0'>
-                      <div className='absolute m-auto flex justify-center items-center bg-trax-black rounded-full flex flex-row py-2 px-3 gap-1'>
-                        <LockClosedIcon className='text-trax-white text-sm' width={18} height={18}/>
-                        <span className='text-trax-white '>Members only</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {video.isSale === 'pay' && !isBought && !video.isSchedule  && (
-                    <>
-                      {(!video.limitSupply || video.limitSupply && video.supply > 0)  && (
-                        <div onClick={() => this.handlePurchaseBtnClick()} className='cursor-pointer w-full flex relative justify-center items-center h-full inset-0'>
-                          <div className='absolute m-auto flex justify-center items-center bg-trax-black rounded-full flex flex-row py-2 px-3 gap-1'>
-                            <LockClosedIcon className='text-trax-white text-sm' width={18} height={18}/>
-                            <span className='text-trax-white '>Unlock for ${video.price}</span>
-                          </div>
-                        </div>
-                      )}
-                      {(video.limitSupply && video.supply === 0)  && (
-                        <div  className=' w-full flex relative justify-center items-center h-full inset-0'>
-                          <div className='absolute m-auto flex justify-center items-center bg-trax-black rounded-full flex flex-row py-2 px-3 gap-1'>
-                            <span className='text-trax-red-500 '>Sold out</span>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-              {(video?.limitSupply && !contentUnlocked) && (
-                <div className='limited-release-label-page'>
-                  Limited release
-                </div>
-              )}
-
-                </div>
-
-                <div className='vid-heading-wrapper'>
-                  <div className="vid-heading">
-                    <span className="vid-heading-span">{video.title || 'Untitled'}</span>
-                  </div>
-                  <Link
-                    href={`/${video?.performer?.username || video?.performer?._id}`}
-                    as={`/${video?.performer?.username || video?.performer?._id}`}
-                    className="vid-artist-wrapper"
-                  >
-                    <span className="vid-artist">{video?.performer?.name || 'N/A'}</span>
-                  </Link>
-                  </div>
-                  {(video?.limitSupply && video?.supply > 0 && !contentUnlocked) && (
-                  <div className='m-auto flex justify-center w-full'>
-                    <span className='text-[#ff6767] text-sm'>{video?.supply} {video?.supply === 1 ? "copy" : "copies"} left.</span>
-                  </div>
-                )}
-                </div>
-              )}
-            </div>
-          </div>
-
-
-
-          <div className="secondary-container">
-            <div className='vid-more-info-btn-wrapper'>
-
-
-              {(contentUnlocked && !video.isSchedule) && (
-                <>
-                  <div className="like-act-btns">
-                    <button onClick={this.onReaction.bind(this, 'like')} className={isLiked ? 'react-btn-lg active' : 'react-btn-lg'}>
-                      {isLiked ? <FireFilled /> : <FireOutlined />}
-                    </button>
-                  </div>
-                  <button onClick={this.onReaction.bind(this, 'book_mark')} className={isBookmarked ? 'react-btn-lg active' : 'react-btn-lg'}>
-                    {isBookmarked ? (
-                      <BsCheckCircleFill style={{ color: '#c7ff02' }} />
-                    ) : (
-                      <PlusOutlined />
-                    )}
-                  </button>
-              </>
-              )}
-
-            </div>
-            <div>
-
-            <ContentData contentUnlocked={contentUnlocked} video={video} settings={settings} ui={ui} user={user}/>
-
-            </div>
-            {relatedVideos.length > 0 && (
-                  <div className="related-items mt-1">
-                    {/* {relatedVideos.requesting && <div className="text-center"><Spin /></div>} */}
-                    {relatedVideos.length > 0 && !relatedVideos.requesting && (
-                      <>
-
-                        <RelatedList videos={relatedVideos} />
-
-                      </>
-                    )}
-                  </div>
-                )}
-          </div>
-
-        </div>
-      );
+  }
+
+  const beforeUnlock = () => {
+
+      if(video.isSale === 'subscription' && !video.isSubscribed){
+        handleSubClick()
+      }else if(video.isSale === 'pay' && !video.isBought && !video.isSchedule){
+        if(!video.limitSupply || (video.limitSupply && video.supply > 0)){
+          handlePurchaseClick()
+        }
     }
   }
+
+  const thumbUrl = isMobile ? 
+    (video?.thumbnailMobile?.url ||
+     (video?.thumbnailMobile?.thumbnails && video?.thumbnailMobile?.thumbnails[0]) ||
+     video?.thumbnail?.url ||
+     (video?.teaser?.thumbnails && video?.teaser?.thumbnails[0]) ||
+     (video?.video?.thumbnails && video?.video?.thumbnails[0]) ||
+     '/static/no-image.jpg') :
+    (video?.thumbnail?.url ||
+     (video?.teaser?.thumbnails && video?.teaser?.thumbnails[0]) ||
+     (video?.video?.thumbnails && video?.video?.thumbnails[0]) ||
+     '/static/no-image.jpg');
+
+  const audioJsOptions = {
+    key: video._id,
+    source: video?.video?.url,
+    stop: false,
+    artistsContent,
+    featuredContent,
+    showPrevious: true,
+    showNext: true,
+  };
+
+
+  console.log(video)
+  // console.log(video)
+
+
+  return (
+    <div className='mt-[-80px]'>
+      <motion.div
+        initial={initial_1}
+        animate={animate_1}
+        className="tick-img-background-audio"
+        style={{backgroundImage: `url('${thumbUrl}')`}}
+      >
+        <div className='tick-img-blur-background' />
+        
+      </motion.div>
+      <div className={`main-container ${contentUnlocked && !video.isSchedule ? 'max-w-[408px] sm:max-w-[710px]' : 'max-w-[100vw]'} relative  mt-16 `}>
+        <div className={!contentUnlocked ? 'vid-player-locked-audio' : 'vid-player-audio'}>
+          {(contentUnlocked && !video.isSchedule) ? (
+            video.processing ? (
+              <div className="vid-processing">
+                <div className="text-center">
+                  <img src="/static/trax_loading_optimize.gif" alt="Loading..." className='w-28 m-auto'/>
+                  <br />
+                  Track file is currently processing
+                </div>
+              </div>
+            ) : (
+              <div className="audio-track-wrapper">
+                <div className='vid-heading-wrapper-unlocked'>
+                    <div className='flex flex-col w-full justify-start'>
+                      <motion.div initial={initial_2} animate={animate_2} className="vid-heading w-full justify-start mb-1" >
+                        <span className="vid-heading-span" >{video.title || 'Untitled'}</span>
+                      </motion.div>
+                      
+                    </div>
+                    <motion.div initial={initial_2} animate={animate_2} className='flex flex-row  w-full justify-end'>
+                      <div className='vid-more-info-btn-wrapper w-full'>
+
+                        <motion.div initial={initial_2} animate={animate_2}>
+                          
+                            {/* <span className="vid-artist">{video?.performer?.name || 'N/A'}</span> */}
+                            <CollaboratorList isFromRelatedList={false} video={video} />
+                            
+                          
+                        </motion.div>
+
+                        {(contentUnlocked && !video.isSchedule) && (
+                          <div className='flex flex-row justify-end'>
+                            <ShareButton url={window.location.href} title={"Check this out!"}/>
+                            <div className="like-act-btns">
+                              <button onClick={() => onReaction('like')} className={`${isLiked ? 'react-btn-lg active' : 'react-btn-lg '} backdrop-blur`}>
+                                {isLiked ? <FireFilled /> : <FireOutlined />}
+                              </button>
+                            </div>
+                            <button onClick={() => onReaction('book_mark')} className={`${isBookmarked ? 'react-btn-lg active' : 'react-btn-lg '} backdrop-blur`}>
+                              {isBookmarked ? <BsCheckCircleFill style={{ color: '#c7ff02' }} /> : <PlusOutlined />}
+                            </button>
+                          </div>
+                        )}
+
+                      </div>
+                    </motion.div>
+                </div>
+                <motion.div initial={initial_2} animate={animate_3}>
+                  <AudioPlayer_ relatedVideos={featuredContent} hasSignedIn={!!user._id} onPressPlay={handlePlay} {...audioJsOptions} />
+                </motion.div>
+              </div>
+            )
+          ) : (
+            <div className='relative flex flex-col sm:flex-row gap-4 sm:gap-0 w-full justify-between px-4 sm:px-8'>
+              <div className='relative flex flex-col flex-start'>
+                <motion.div initial={initial_2} animate={animate_2} className="vid-heading gap-y-1">
+                  {(video?.limitSupply && video?.supply > 0) && (
+                    <div style={{textShadow: '#c8ff00 1.5px 0.5px 12px'}} className="w-fit mb-2 uppercase rounded font-heading text-[16px] bg-[#7E2CDD] px-[6px] py-[2px] text-[#FFF]  ">
+                      Limited release
+                    </div>
+                  )}
+                  <span className="vid-heading-span">{video.title || 'Untitled'}</span>
+                  <motion.div initial={initial_2} animate={animate_2}>
+                  <CollaboratorList isFromRelatedList={false} video={video} />
+                  </motion.div>
+                </motion.div>
+              </div>
+
+              <motion.div initial={initial_2} animate={animate_2} className='relative flex flex-end flex-col justify-center'>
+                <div className={`${(video?.limitSupply && video?.supply > 0 && !contentUnlocked) ? 'bg-[#414141B2] p-4' : 'bg-transparent'} mt-4 sm:-mt-10 rounded-lg flex flex-col gap-2 `}>
+                  {(video?.limitSupply && video?.supply > 0 && !contentUnlocked) && (
+                    <div className=''>
+                    <span className='flex flex-col text-[#EA0000] uppercase font-heading text-3xl leading-[1.6rem] font-bold'>
+                      <span>{video?.supply}</span>
+                      <span>{video?.supply === 1 ? "copy" : "copies"}</span>
+                      <span>left!</span>
+                      </span>
+                  </div>
+                  )}
+                  {video.isSchedule ? (
+                    <div className='flex rounded-lg bg-[#414141B2] p-4 w-full justify-center sm:w-fit backdrop-blur'>
+                      <div className='flex flex-col justify-center font-heading'>
+                        <span className='flex justify-center text-custom-green text-3xl uppercase'>Scheduled for: </span>
+                        {/* <span className='flex text-custom-green text-xl'>{convertToReadableDate(video.scheduledAt)}</span> */}
+                        <span className='flex text-[#EA0000] text-4xl justify-center'>{useLiveCountdown(video.scheduledAt)}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className='w-full flex'>
+
+                    
+                    <TraxButton
+                      htmlType="button"
+                      disabled={video.limitSupply && video.supply === 0}
+                      styleType="primary"
+                      buttonSize={!isMobile ? 'medium' : 'full'}
+                      buttonText={getButtonText()}
+                      loading={false}
+                      onClick={beforeUnlock}
+                    />
+                    </div>
+                  )}
+                </div>
+                  </motion.div>
+                </div>
+          )}
+        </div>
+      </div>
+      <motion.div initial={initial_2} animate={animate_4} className='flex flex-col md:flex-row mt-20 pl-4 pr-4 sm:pl-8 sm:pr-0 gap-8'>
+        <ContentData 
+          isMobile={isMobile} 
+          contentUnlocked={contentUnlocked} 
+          video={video} 
+          settings={settings} 
+          ui={ui} 
+          user={user} 
+          account={account}
+        />
+        <div className='vid-right-wrapper'>
+        {artistsContent.length > 0 && (
+            <div className="related-items">
+              {artistsContent.length > 0 && !artistsContent.requesting && (
+                <RelatedList videos={artistsContent} total={artistsContent.length} title={"More from this artist"}/>
+              )}
+            </div>
+          )}
+          {featuredContent.length > 0 && (
+            <div className="related-items">
+              {featuredContent.length > 0 && !featuredContent.requesting && (
+                <RelatedList videos={featuredContent} total={featuredContent.length} title={"Featured content"}/>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+};

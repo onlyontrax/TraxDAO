@@ -12,19 +12,22 @@
 
 }
 
-.log-in-container {
-  display: flex;
-  background: black;
-  min-height: 100vh;
-  background: black;
 
-  @media screen and (max-width: $mobile-screen) {
-    margin-top: -7rem;
-    min-height: auto;
-  }
 
-  &.log-in-section {
-    @apply lg:flex-row flex-col md:-mb-7 overflow-hidden flex-grow;
+
+// .log-in-container {
+//   display: flex;
+//   background: black;
+//   min-height: 90vh;
+//   background: black;
+
+//   @media screen and (max-width: $mobile-screen) {
+//     margin-top: -7rem;
+//     height:max-content;
+//   }
+
+  .log-in-section {
+    @apply lg:flex-row flex-col md:-mb-7 overflow-hidden flex-grow rounded-xl;
   }
 
   .sign-up-section {
@@ -81,12 +84,12 @@
     }
 
     .auth-content {
-      @apply pt-0 px-6 lg:pt-0 w-full  max-w-[35rem] flex flex-col place-self-center;
+      @apply pt-0 px-10 sm:px-24 lg:pt-0 w-full  max-w-[35rem] flex flex-col place-self-start;
 
       .log-in-header {
 
 
-        @apply mt-0 md:mt-10 mb-6 text-left w-full;
+        @apply mt-0 md:mt-10 text-left w-full;
 
         .main-title {
           /* background: linear-gradient(90deg, #FFF 0%, #ECFF9C 104.87%);
@@ -97,7 +100,7 @@
         }
 
         .main-subtitle {
-          @apply text-[#b3b3b3] text-lg font-light tracking-[0px];
+          @apply text-[#b3b3b3] text-lg font-light tracking-[0.5px];
           font-family: NeueMontreal;
         }
 
@@ -178,65 +181,9 @@
 
       .email-wrapper {
 
-        .pulse-border {
-          border-radius: 10px;
-          transition: box-shadow 0.5s ease-in-out;
-          animation: pulse 2s infinite alternate;
-        }
 
-        @keyframes pulse {
-          0% {
-            box-shadow: 0 0 5px 0 rgba(78, 197, 42, 0.6);
-          }
-          100% {
-            box-shadow: 0 0 15px 5px rgba(78, 197, 42, 0);
-          }
-        }
 
-        .ant-form-item-control-input-content {
-          &:focus {
-            @apply border;
-          }
 
-          .ant-input {
-            @apply pl-4 pt-4 p-0 h-[3.22rem];
-
-          }
-        }
-
-        .ant-form-item-explain-error {
-          @apply text-left pl-2 pb-2;
-        }
-
-        .ant-form-item .ant-input-password {
-          padding: 0 0 !important;
-          border-radius: 10px !important;
-          background-color: #1A1A1A !important;
-          border: none !important;
-
-        }
-
-        .ant-input-suffix {
-          margin-right: 1rem;
-        }
-
-        .anticon {
-          display: inline;
-        }
-
-        .anticon-eye-invisible {
-          opacity: 0.5;
-        }
-
-        .ant-input-password-icon {
-          color: #FFF;
-
-          &:hover {
-            color: #FFF;
-            opacity: 0.8;
-          }
-
-        }
 
         .field-subheading {
           // for sing-up and email-sing-up
@@ -259,36 +206,7 @@
         }
 
         input {
-          background: #1A1A1A !important;
-          color: white;
-          padding: 1rem;
-          border-radius: 10px !important;
-          // border: 1px solid #4c4c4c;
-          // border: 1px solid #E0E2D9;
-          font-family: NeueMontreal;
-          font-weight: 500;
-          letter-spacing: -0.14px;
-          border: none !important;
-          // border: 0.1rem solid rgba(255, 255, 255, 0.062745098) !important;
-
-          @apply shadow-none text-sm;
-
-
-
-          &::placeholder {
-            /* Firefox */
-            opacity: 0.9;
-          }
-
-          &:-ms-input-placeholder {
-            /* Internet Explorer 10-11 */
-            opacity: 0.5;
-          }
-
-          &::-ms-input-placeholder {
-            /* Microsoft Edge */
-            opacity: 0.5;
-          }
+          @apply rounded-lg border-none shadow-none bg-trax-transparent;
 
         }
 
@@ -300,18 +218,23 @@
           padding-top: 0.5rem;
 
           .forgot-password {
-            float: left;
-            text-decoration-line: underline;
+            margin: auto;
             margin-top: 0.5rem;
             margin-bottom: 1rem;
             font-family: NeueMontreal;
-            font-weight: 400;
+            font-weight: 500;
             letter-spacing: -0.14px;
-            @apply text-custom-lime-green text-sm;
+            @apply text-[#ffffff99] text-xs tracking-[0.025rem];
+
+
+            &:hover {
+              @apply opacity-80;
+            }
 
             @media screen and (max-width: $mobile-screen) {
               letter-spacing: -0.28px;
             }
+
           }
 
           .forgot-password-dot {
@@ -324,7 +247,6 @@
     .auth-section {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
       justify-content: space-evenly;
 
       .no-auth-button {
@@ -346,13 +268,13 @@
         display: flex;
         flex-direction: row;
         cursor: pointer;
-        border: 1px solid #666666 !important;
+        border: 1px solid #111111 !important;
         height: 3.3rem;
         width: 100%;
         justify-content: center;
         align-items: center;
         transition: ease-in-out 0.2s;
-        font-family: NeueMontreal;
+        font-family: body;
         font-size: 1rem;
         font-style: normal;
         font-weight: 400 !important;
@@ -415,7 +337,7 @@
       cursor: pointer;
       transition: ease-in-out 0.2s;
       text-decoration-line: underline;
-      @apply text-custom-lime-green text-sm;
+      @apply text-custom-green text-sm;
 
       &:hover {
         transform: scale(1.03);
@@ -431,15 +353,15 @@
       @apply absolute inset-0 w-full h-full object-cover;
     }
   }
-}
+// }
 
 .ant-modal-close-x {
   .anticon-close {
     @apply text-trax-gray-600;
 
-    @media screen and (max-width: $mobile-screen) {
-      margin-top: -6.5rem;
-    }
+    // @media screen and (max-width: $mobile-screen) {
+    //   margin-top: -6.5rem;
+    // }
   }
 }
 
@@ -470,7 +392,7 @@
   }
 
   .modal-buttons {
-    @apply flex justify-between mt-4 h-10;
+    @apply flex justify-center my-4 gap-10;
 
     .modal-button {
       @apply flex-1 mx-1 rounded-lg h-full w-full;

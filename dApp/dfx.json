@@ -7,6 +7,10 @@
     "production": {
       "type": "assets",
       "source": ["out"]
+    },
+    "dev": {
+      "type": "assets",
+      "source": ["out"]
     }
   },
   "networks": {

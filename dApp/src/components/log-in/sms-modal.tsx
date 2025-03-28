@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Input, Form, Button } from 'antd';
-import { Sheet } from 'react-modal-sheet';
+import { Modal, Input, Form } from 'antd';
+//import { Sheet } from 'react-modal-sheet';
 import { InputRef } from 'antd/lib/input';
+import TraxButton from '@components/common/TraxButton';
+import SlideUpModal from '@components/common/layout/slide-up-modal';
 
 interface SmsModalProps {
   visible: boolean;
@@ -92,28 +94,42 @@ const SmsModal: React.FC<SmsModalProps> = ({
         </div>
       </Form.Item>
       <div className="modal-buttons">
-        <Button onClick={handleSubmit} type="primary" className="modal-button">Submit</Button>
-        <Button onClick={onCancel} className="modal-button">Cancel</Button>
-        {showSms2faButton && <Button onClick={onShowSms2faButtonPress} className="modal-button">Switch to 2FA</Button>}
+        <TraxButton
+          htmlType="button"
+          styleType="primary"
+          buttonSize="medium"
+          buttonText="Submit"
+          onClick={handleSubmit}
+        />
+        <TraxButton
+          htmlType="button"
+          styleType="secondary"
+          buttonSize="medium"
+          buttonText="Cancel"
+          onClick={onCancel}
+        />
+        {showSms2faButton && (
+          <TraxButton
+            htmlType="button"
+            styleType="secondary"
+            buttonSize="medium"
+            buttonText="Switch to 2FA"
+            onClick={onShowSms2faButtonPress}
+          />
+        )}
       </div>
     </>
   );
 
   if (isMobile) {
     return (
-      <Sheet
+      <SlideUpModal
         isOpen={visible}
         onClose={onCancel}
-        detent="content-height"
+        className="two-factor-modal auth-modal-sheet"
       >
-        <Sheet.Container>
-          <Sheet.Header />
-          <Sheet.Content className="two-factor-modal auth-modal-sheet">
-            {content}
-          </Sheet.Content>
-        </Sheet.Container>
-        <Sheet.Backdrop onTap={onCancel} />
-      </Sheet>
+        {content}
+      </SlideUpModal>
     );
   }
 

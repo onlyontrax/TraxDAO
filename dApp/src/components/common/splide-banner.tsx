@@ -8,37 +8,75 @@ import '@splidejs/react-splide/css';
 import { PlayIcon } from "@heroicons/react/20/solid";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { AnimatePresence, motion } from "framer-motion";
+import TraxButton from "./TraxButton";
+
 interface IProps {
   banners?: any;
+
 }
 
-const initial = { opacity: 0, y: 20 };
-const animate1 = {opacity: 1, y: 0,
+
+const initial2 = { opacity: 0, y: 20 };
+
+
+const first = {
+    initial: {
+      opacity: 0,
+      y: 0
+    },
+    animate: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 1.3,
+        delay: 0.3,
+        ease: "easeOut"
+      }
+    },
+    exit: {
+      opacity: 0,
+      x: -100,
+      transition: {
+        duration: 0.3,
+        ease: 'easeOut',
+      },
+    },
+}
+
+const second = {
+  initial: {
+    opacity: 0,
+    y: 20
+  },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      delay: 0.4,
+      ease: "easeOut"
+    }
+  },
+  exit: {
+    opacity: 0,
+    x: -100,
+    transition: {
+      duration: 0.5,
+      ease: 'easeOut',
+    },
+  },
+}
+
+const animate3 = {opacity: 1, y: 0,
   transition: {
     duration: 0.5,
-    delay: 0.2,
+    delay: 1,
     ease: "easeOut",
     once: true,
   },
 }
-const animate2 = {opacity: 1, y: 0,
-  transition: {
-    duration: 0.5,
-    delay: 0.4,
-    ease: "easeOut",
-    once: true,
-  },
-}
 
-// const options = {
-//     autoWidth: true,
-//     type: "loop",
-//     perPage: 1,
-//     focus: "center",
-//     height: 300,
-//     gap: 10,
-//     lazyLoad: "nearby"
-//   };
+
 
 export class SplideBanner extends PureComponent<IProps> {
   static defaultProps: Partial<IProps>;
@@ -65,14 +103,32 @@ export class SplideBanner extends PureComponent<IProps> {
     this.setState({ isTablet: window.innerWidth < 800 && window.innerWidth > 500 });
   };
 
+  transformMobileLinks(rawLink: string){
+    const baseUrls = [
+      "https://trax.so",
+      "https://stagingapp.trax.so"
+    ];
 
+    if (rawLink) {
+      for (const baseUrl of baseUrls) {
+        if (rawLink.startsWith(baseUrl)) {
+          return rawLink.replace(baseUrl, '');
+        }
+      }
+    }
+
+    return rawLink;
+  }
 
   render() {
     const { banners } = this.props;
     const { isMobile, isTablet } = this.state;
-    console.log("banners", banners);
+
+    const sortedBanners = banners
+        ? [...banners].sort((a, b) => (a.index || 0) - (b.index || 0))
+        : [];
     return (
-      <div className={isMobile ? 'explore-banner-div hero-banner' :  'explore-banner-div-desktop hero-banner'}>
+      <div className={isMobile ? 'explore-banner-div-desktop hero-banner' :  'explore-banner-div-desktop hero-banner -mt-[80px]'}>
 
         <Splide options={{
             autoWidth: true,
@@ -81,7 +137,8 @@ export class SplideBanner extends PureComponent<IProps> {
             // perPage: 3,
             start: 1,
             autoplay: true,
-            interval: 10000,
+            // interval: 8000,
+            interval: 8000,
             easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
             speed: 1500,
             perPage: 1,
@@ -89,17 +146,17 @@ export class SplideBanner extends PureComponent<IProps> {
             focus: 'center',
             trimSpace: false,
             pauseOnHover: true,
-            height: isMobile ? "135vw" : isTablet ? "70vw" : "51.25vw",
+            height: isMobile ? "80vh" : isTablet ? "50vh" : "45vw",
             rewind: true,
             // updateOnMove: true,
             lazyLoad: false,
             gap: 5
         }}>
-            {banners.map((item, index) => (
-              <SplideSlide key={`image-${index}`} style={{width: "100%", height: isMobile ? "135vw" : isTablet ? "70vw" : "51.25vw", position: 'relative'}}>
-                <div key={index} style={{
+            {sortedBanners && sortedBanners?.map((item, index) => (
+              <SplideSlide key={`image-${index}`} style={{width: "100%", height: isMobile ? "80vh" : isTablet ? "50vh" : "45vw", position: 'relative'}}>
+                <motion.div initial="initial" animate="animate" exit="exit" variants={first} key={index} style={{
                   width: "100%",
-                  height: isMobile ? "135vw" : isTablet ? "70vw" : "51.25vw",
+                  height: isMobile ? "80vh" : isTablet ? "50vh" : "45vw",
                   position: 'relative',
                   zIndex: '5',
                   backgroundImage: isMobile ? `url(${item?.additionalImage1?.url})` : `url(${item?.photo?.url})`,
@@ -107,45 +164,74 @@ export class SplideBanner extends PureComponent<IProps> {
                   backgroundPosition: 'center',
                   backgroundSize: 'cover'
                 }}>
-                </div>
-                {!isMobile && (
+                </motion.div>
+                {/* {!isMobile && ( */}
                   <div
-                  // href={item?.btnLinkOne || '/'}
                     className="w-full absolute h-full top-0 z-5"
                     style={{backgroundImage: "linear-gradient(180deg, #47474700 70%, #0e0e0e 100%)", zIndex: '5'}}
                   />
-                )}
-                <div className="flex absolute left-1/2 transform -translate-x-1/2 w-11/12 items-center sm:transform-none sm:items-start z-10 px-3 sm:left-0 sm:pl-12 sm:top-[60%] top-[67.5%] flex-col gap-2 sm:gap-12">
-                    <div className="flex flex-col gap-3 text-trax-white mb-0 text-center sm:text-start">
-                      {item?.additionalImage2?.url ? (
-                        <img
-                          className="w-full relative h-full -top-[10px] mx-auto z-5"
-                          src={item.additionalImage2.url}
-                        />
-                      ):(
+                {/* )} */}
+                <div className="relative w-full">
+                  <div className="flex absolute left-1/2 transform -translate-x-1/2 w-full sm:transform-none z-10 sm:pl-10 bottom-10 sm:bottom-6 sm:left-0">
+                    <div className="w-full flex flex-col md:flex-col gap-4 sm:gap-4">
+                      <div className="flex flex-col gap-2 sm:gap-3 w-full">
+                        <div className="flex flex-col items-center sm:items-start">
+                          <motion.span
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            variants={second}
+                            style={{
+                              textShadow: 'black 1.5px 0.5px 20px',
+                              lineHeight: '100%',
+                              fontFamily: 'HeadingPro'
+                            }}
+                            className="flex uppercase tracking-tighter text-6xl sm:text-7xl lg:text-8xl text-trax-white font-black"
+                          >
+                            {item.title}
+                          </motion.span>
+                         {/*  <motion.div><Image height={10} width={10} src={item.performer.avatar}/></motion.div>   */}
+                          <motion.span
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            variants={second}
+                            style={{textShadow: 'black 1.5px 0.5px 3px'}}
+                            className="flex text-2xl text-trax-white font-body sm:text-2xl lg:text-2xl font-light pl-1"
+                          >
+                            {item.description}
+                          </motion.span>
+                        </div>
+                      </div>
 
-                        <motion.span
-                          initial={initial}
-                          animate={animate1}
-                          style={{textShadow: 'black 1.5px 0.5px 20px', lineHeight: '100%', fontFamily: 'HeadingPro'}}
-                          className=" text-[60px] uppercase tracking-tighter sm:text-[140px] text-[#F2F2F2] font-black "
-                        >
-                          {item.title}
-                        </motion.span>
+                      {/* Buttons container fixed at bottom */}
+                      <div className="flex flex-col gap-2 md:w-full w-full justify-between md:justify-start items-center sm:items-start">
 
-                      )}
-
-                      <motion.span initial={initial} animate={animate1} style={{textShadow: 'black 1.5px 0.5px 3px'}} className="text-xl text-[#F2F2F2] font-heading uppercase tracking-looser sm:text-3xl font-light -mt-2 mb-2 sm:-mb-6">{item.description}</motion.span>
-                    </div>
-                    <div className="flex flex-row gap-4 sm:w-full">
-                      <motion.a initial={initial} animate={animate2} href={item?.btnLinkOne || '/'} style={{whiteSpace:'nowrap'}}  className=" cursor-pointer max-w-44 min-w-40  flex text-center  rounded-md bg-[#A8FF00] font-semibold py-2.5 px-4 sm:py-2 flex ">
-                        <span className="text-md font-heading sm:text-xl bg-[#A8FF00] uppercase text-trax-black flex justify-center w-full"><PlayIcon className="h-7 w-7 pr-2 flex"/><span className="mt-[3px] sm:mt-0 ">{item.btnTextOne}</span></span>
-                      </motion.a>
-                      <motion.a initial={initial} animate={animate2} href={item.btnLinkTwo || '/'} style={{whiteSpace:'nowrap'}}  className=" cursor-pointer max-w-44 min-w-40 flex text-center rounded-md bg-trax-black/50 py-2.5 px-4 sm:py-2 flex ">
-                        <span className="text-md font-heading sm:text-xl text-trax-white uppercase flex justify-center w-full"><InfoCircleOutlined className="h-7 w-7 pr-2 flex"/><span className="mt-[3px] sm:mt-0">{item.btnTextTwo}</span></span>
-                      </motion.a>
+                        {/* <motion.a initial={initial2} animate={animate3}>
+                          <Link href={item?.btnLinkOne || '/'}>
+                            <TraxButton
+                              htmlType="button"
+                              styleType="play"
+                              buttonText={item.buttonText}
+                              icon={<PlayIcon className="h-8 w-8 mx-auto"/>}
+                            />
+                          </Link>
+                        </motion.a> */}
+                        <motion.a initial={initial2} animate={animate3}>
+                          <Link href={this.transformMobileLinks(item?.btnLinkTwo || '/')}>
+                            <TraxButton
+                              htmlType="button"
+                              styleType="white"
+                              buttonSize="full"
+                              buttonText={item.btnTextOne}
+                              icon={<PlayIcon className="h-8 w-8 pr-2 mt-[-2px] flex text-center"/>}
+                            />
+                          </Link>
+                        </motion.a>
+                      </div>
                     </div>
                   </div>
+                </div>
               </SplideSlide>
             ))}
     </Splide>

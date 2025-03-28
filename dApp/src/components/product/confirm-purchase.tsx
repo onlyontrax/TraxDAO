@@ -63,7 +63,7 @@ export function PurchaseProductForm({
   const changeShipping = async (val: any) => {
     let fee = product.shippingFees.find((fee) => fee.type === val)?.fee;
     setShippingFee(fee);
-    
+
     setShippingOption(val)
     if(selectedCurrency === 'USD'){
       setPrice((product.price * quantity) + fee);
@@ -74,7 +74,7 @@ export function PurchaseProductForm({
     }else if(selectedCurrency === 'TRAX'){
       setPrice(((product.price * quantity) + fee) / priceTRAX);
     }else{
-      
+
     }
     // setPriceICP((fee / parseFloat(icp)) +  priceICP);
     // setPriceCKBTC((fee / parseFloat(ckbtc)) +  priceCKBTC);
@@ -175,11 +175,11 @@ export function PurchaseProductForm({
     try {
       setSubmiting(true);
       const resp = await paymentService.getStripeCards();
-  
+
       if(resp.data.data.length > 0){
         setPaymentOption('card');
         setSelectedCurrency('USD')
-      }else if(user?.wallet_icp){
+      }else if(user.account?.wallet_icp){
         setPaymentOption('plug');
         setSelectedCurrency('ICP')
       }else{
@@ -263,14 +263,14 @@ export function PurchaseProductForm({
       </div>
     </div>
       )}
-    
+
     <div className='send-tip-container'>
       {!isNewAddress && (
         <div className='tip-header-wrapper'>
           <span>Purchase: {product?.name}</span>
         </div>
       )}
-          
+
       {!isNewAddress && (
       <Form
         ref={formRef}
@@ -333,13 +333,13 @@ export function PurchaseProductForm({
                   </Select.Option>
                 ))}
               </Select>
-              {addresses.length < 10 && 
+              {addresses.length < 10 &&
               <Tooltip>
                 <Button onClick={() => setNewAddress(true)} className="primary add-address-btn">
                   <PlusOutlined />
                 </Button>
               </Tooltip>}
-              
+
             </Button.Group>
         </div>
 
@@ -370,7 +370,7 @@ export function PurchaseProductForm({
 
       <div className={`${stage === 2 ? 'display-contents' : 'no-display'}`}>
         <div className='payment-details'>
-          
+
           <div className='payment-recipient-wrapper'>
               <div className='payment-recipient-avatar-wrapper'>
                 <Avatar src={performer?.avatar || '/static/no-avatar.png'} />
@@ -380,7 +380,7 @@ export function PurchaseProductForm({
                 <span>{performer?.name}</span>
                   <p style={{color: '#FFFFF50', marginTop:'-0.125rem'}}>Verified Artist</p>
               </div>
-              <a href={`/${performer?.username || performer?._id}`} className='info-icon-wrapper'>
+              <a href={`/artist/profile/?id=${performer?.username || performer?._id}`} className='info-icon-wrapper'>
                 <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
               </a>
             </div>
@@ -400,7 +400,7 @@ export function PurchaseProductForm({
                   </div>
               </Option>
             ))}
-            {user.wallet_icp && (
+            {user.account?.wallet_icp && (
               <>
                 <Option value="plug" key="plug" className="payment-type-option-content">
                   <div className='payment-type-img-wrapper'>
@@ -408,19 +408,19 @@ export function PurchaseProductForm({
                   </div>
                   <div className='payment-type-info'>
                     <span>Plug wallet</span>
-                      <p>{`${user.wallet_icp.slice(0, 6)} **** ${user.wallet_icp.slice(-4)}`}</p>
+                      <p>{`${user.account?.wallet_icp.slice(0, 6)} **** ${user.account?.wallet_icp.slice(-4)}`}</p>
                       <p>Internet Computer</p>
                   </div>
                 </Option>
-              
-              
+
+
                 <Option value="II" key="II" className="payment-type-option-content">
                   <div className='payment-type-img-wrapper'>
                     <img src='/static/icp-logo.png' width={40} height={40}/>
                   </div>
                   <div className='payment-type-info'>
                     <span>Internet Identity</span>
-                      <p>{`${user.wallet_icp.slice(0, 6)} **** ${user.wallet_icp.slice(-4)}`}</p>
+                      <p>{`${user.account?.wallet_icp.slice(0, 6)} **** ${user.account?.wallet_icp.slice(-4)}`}</p>
                       <p>Internet Computer</p>
                   </div>
                 </Option>
@@ -434,7 +434,7 @@ export function PurchaseProductForm({
                   </div>
                   <div className='payment-type-info'>
                     <span>NFID</span>
-                      <p>{`${user.wallet_icp.slice(0, 6)} **** ${user.wallet_icp.slice(-4)}`}</p>
+                      <p>{`${user.account?.wallet_icp.slice(0, 6)} **** ${user.account?.wallet_icp.slice(-4)}`}</p>
                       <p>Internet Computer</p>
                   </div>
                 </Option>
@@ -455,14 +455,14 @@ export function PurchaseProductForm({
           </Select>
           </div>
           <div className='currency-picker-btns-container'>
-            
+
             <div className='currency-picker-btns-wrapper'>
               {cards.length > 0 && (
               <div className='currency-picker-btn-wrapper' onClick={(v)=> changeTicker('USD')}>
                 <img src='/static/usd-logo.png' width={40} height={40} style={{border: selectedCurrency === 'USD' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
               </div>
               )}
-              {user.wallet_icp && (
+              {user.account?.wallet_icp && (
                 <>
               <div className='currency-picker-btn-wrapper' onClick={(v)=> changeTicker('ICP')}>
                 <img src='/static/icp-logo.png' width={40} height={40} style={{border: selectedCurrency === 'ICP' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
@@ -477,7 +477,7 @@ export function PurchaseProductForm({
               )}
             </div>
           </div>
-        
+
 
           <div className='tip-input-number-container'>
             <span>Total</span>
@@ -495,7 +495,7 @@ export function PurchaseProductForm({
                 <img src='/static/trax-token.png' width={40} height={40}/>
               )}
               <InputNumber
-                disabled={true} 
+                disabled={true}
                 type="number"
                 value={price}
                 placeholder="0.00"
@@ -525,7 +525,7 @@ export function PurchaseProductForm({
               onClick={()=> setStage(2)}
             >
               <span>Continue</span>
-              
+
             </Button>
           </div>
 
@@ -559,7 +559,7 @@ export function PurchaseProductForm({
             </Button>
             </div>
           </div>
-          
+
         </div>
       </Form>
       )}

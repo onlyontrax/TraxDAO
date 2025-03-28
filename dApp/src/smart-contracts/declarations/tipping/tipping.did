@@ -1,17 +1,10 @@
-type Tokens__1 = record {e8s: nat64;};
 type Tokens = record {e8s: nat64;};
 type TippingParticipants = vec Participants;
 type Tipping = 
  service {
-   accountIdentifierToBlob: (AccountIdentifier__1) ->
-    (AccountIdentifierToBlobResult);
-   addToReferralMap: (ArtistID__1, ArtistID__1) -> ();
-   canisterAccount: () -> (AccountIdentifier);
-   changePlatformFee: (float64) -> ();
-   ckbtcBalance: (principal) -> (nat);
+   approveSpending: (nat64, Ticker, opt nat64) -> (Result_1);
    ckbtcBalanceOfCanister: () -> (nat);
-   cyclesBalance: () -> (nat) query;
-   drainCanisterBalance: (nat64, principal, Ticker) -> (bool);
+   getAllEvents: () -> (vec Event) query;
    getAllTippingTransactions: () ->
     (vec record {
            ArtistID__1;
@@ -20,13 +13,11 @@ type Tipping =
            nat;
            Ticker;
          }) query;
+   getMyBalance: (Ticker) -> (Result_1);
    getStatus: (opt StatusRequest) -> (opt StatusResponse);
-   icpBalance: (principal) -> (Tokens);
-   icpBalanceOfCanister: () -> (Tokens);
-   myAccountId: (principal) -> (AccountIdentifier);
-   sendTip: (nat64, TippingParticipants, nat64, Ticker) -> ();
-   traxBalance: (principal) -> (nat);
+   sendTip: (TippingParticipants, nat64, Ticker) -> (Result);
    traxBalanceOfCanister: () -> (nat);
+   updatePlatformFee: (float64) -> ();
  };
 type Timestamp = int;
 type Ticker = text;
@@ -35,7 +26,7 @@ type StatusResponse =
    ckbtc_balance: opt nat;
    cycles: opt nat;
    heap_memory_size: opt nat;
-   icp_balance: opt Tokens__1;
+   icp_balance: opt Tokens;
    memory_size: opt nat;
    trax_balance: opt nat;
    version: opt nat;
@@ -50,6 +41,16 @@ type StatusRequest =
    trax_balance: opt bool;
    version: opt bool;
  };
+type Result_1 = 
+ variant {
+   err: text;
+   ok: nat;
+ };
+type Result = 
+ variant {
+   err: text;
+   ok: vec nat;
+ };
 type Percentage = float64;
 type Participants = 
  record {
@@ -57,27 +58,27 @@ type Participants =
    participantPercentage: Percentage;
  };
 type FanID = principal;
+type EventKind = 
+ variant {
+   AdminAction;
+   AllowanceUpdated;
+   Error;
+   TipSent;
+ };
+type Event = 
+ record {
+   caller: principal;
+   details:
+    opt
+     record {
+       amount: opt nat;
+       error: opt text;
+       participants: opt vec principal;
+     };
+   kind: EventKind;
+   message: text;
+   timestamp: int;
+ };
 type ArtistID__1 = principal;
 type ArtistID = principal;
-type AccountIdentifier__1 = 
- variant {
-   "blob": blob;
-   "principal": principal;
-   "text": text;
- };
-type AccountIdentifierToBlobSuccess = blob;
-type AccountIdentifierToBlobResult = 
- variant {
-   err: AccountIdentifierToBlobErr;
-   ok: AccountIdentifierToBlobSuccess;
- };
-type AccountIdentifierToBlobErr = 
- record {
-   kind: variant {
-           InvalidAccountIdentifier;
-           Other;
-         };
-   message: opt text;
- };
-type AccountIdentifier = blob;
 service : () -> Tipping

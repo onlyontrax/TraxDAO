@@ -57,7 +57,7 @@ export class SelectUserDropdown extends PureComponent<IProps> {
       >
         {data && data.length > 0 && data.map((u) => (
           <Select.Option value={u._id} key={u._id} style={{ textTransform: 'capitalize' }}>
-            <Avatar src={u?.avatar || '/static/no-avatar.png'} size={28} />
+            <Avatar src={u?.avatar || '/static/no-avatar-dark-mode.png'} size={28} />
             {' '}
             {`${u?.name || u?.username || 'N/A'}`}
           </Select.Option>

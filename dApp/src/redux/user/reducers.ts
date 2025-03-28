@@ -2,7 +2,11 @@ import { merge } from 'lodash';
 import { createReducers } from '@lib/redux';
 import { IReduxAction, IUser } from 'src/interfaces';
 import { logout } from '@redux/auth/actions';
+import { authService } from 'src/services';
 import {
+  setAccount,
+  updateAccountSuccess,
+  updateAccountFail,
   updateCurrentUser,
   updateUserSuccess,
   setUpdating,
@@ -13,14 +17,19 @@ import {
   updateCurrentUserCover,
   updateBalance
 } from './actions';
+import { LetterTextIcon } from 'lucide-react';
 
 const initialState = {
+  account:{
+    _id: null,
+    email: ''
+  },
   current: {
     _id: null,
     avatar: '/static/no-avatar.png',
     cover: null,
     name: '',
-    email: ''
+    account: null,
   },
   error: null,
   updateSuccess: false,
@@ -29,11 +38,52 @@ const initialState = {
 
 const userReducers = [
   {
+    on: setAccount,
+    reducer(state: any, data: any) {
+      const activeSubaccount = data.payload.activeSubaccount || 'user';
+      const current = activeSubaccount === 'user' ? data.payload.userInfo : data.payload.performerInfo;
+
+      return {
+        ...state,
+        account: data.payload,
+        current: {
+          ...current,
+          account: data.payload
+        }
+      };
+    }
+  },
+  {
+    on: updateAccountSuccess,
+    reducer(state: any, data: IReduxAction<any>) {
+      return {
+        ...state,
+        account: data.payload,
+        updateSuccess: true,
+        error: null
+      };
+    }
+  },
+  {
+    on: updateAccountFail,
+    reducer(state: any, data: IReduxAction<any>) {
+      return {
+        ...state,
+        updateUser: null,
+        updateSuccess: false,
+        error: data.payload
+      };
+    }
+  },
+  {
     on: updateCurrentUser,
     reducer(state: any, data: any) {
       return {
         ...state,
-        current: data.payload
+        current: {
+          ...state.current,
+          ...data.payload
+        }
       };
     }
   },
@@ -66,7 +116,10 @@ const userReducers = [
     reducer(state: any, data: IReduxAction<IUser>) {
       return {
         ...state,
-        current: data.payload,
+        current: {
+          ...state.current,
+          ...data.payload
+        },
         updateSuccess: true,
         error: null
       };
@@ -117,11 +170,23 @@ const userReducers = [
   {
     on: updateBalance,
     reducer(state: any, data: any) {
-      const nextState = { ...state };
       const { token } = data.payload;
-      nextState.current.balance += token;
+      //nextState.current.balance += token;
+      const balance = (state.account.balance || 0) + token;
+
       return {
-        ...nextState
+        ...state,
+        account: {
+          ...state.account,
+          balance: balance
+        },
+        current: {
+          ...state.current,
+          account: {
+            ...state.account,
+            balance: balance
+          }
+        }
       };
     }
   },

@@ -25,7 +25,7 @@ class Footer extends PureComponent<IProps> {
       <div className="main-footer" id={customId || 'main-footer'}>
         <div className="main-container">
           <ul>
-            {!currentUser._id ? (
+            {!currentUser?._id ? (
               <>
                 <div className="footer-text-wrapper">
                   <h1>

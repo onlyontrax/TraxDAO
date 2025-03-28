@@ -1,5 +1,8 @@
+import { IAccount } from './account';
+
 export interface IPerformer {
   _id: string;
+  account: IAccount;
   performerId: string;
   performerWalletAddress: string;
   name: string;
@@ -91,7 +94,6 @@ export interface IPerformer {
   };
   isPerformer: boolean;
   isFollowed: boolean;
-  wallet_icp: string;
   userReferral: string;
   referredBy?: string;
   identityVerificationStatus?: {
@@ -102,6 +104,10 @@ export interface IPerformer {
   };
   enabled2fa: boolean;
   enabledSms: boolean;
+  unsubscribed: boolean;
+  themeColor?: string;
+  backgroundColor?: string;
+  tipThankYouMessage?: string;
 }
 
 export interface IBanking {

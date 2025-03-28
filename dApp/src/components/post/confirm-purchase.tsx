@@ -141,7 +141,7 @@ class PurchaseFeedForm extends PureComponent<IProps> {
       val === 1 && this.setState({price: (1 / icpPrice).toFixed(3) });
       val === 3 && this.setState({price: (3 / icpPrice).toFixed(3) });
       val === 5 && this.setState({price: (5 / icpPrice).toFixed(3) });
-    } 
+    }
     if(selectedCurrency === 'ckBTC'){
       val === 1 && this.setState({price: (1 / ckbtcPrice).toFixed(9) });
       val === 3 && this.setState({price: (3 / ckbtcPrice).toFixed(9) });
@@ -160,9 +160,9 @@ class PurchaseFeedForm extends PureComponent<IProps> {
           <div className='tip-header-wrapper'>
             <span>Unlock content</span>
           </div>
-          
+
           <div className='payment-details'>
-          
+
           <div className='payment-recipient-wrapper'>
               <div className='payment-recipient-avatar-wrapper'>
                 <Avatar src={feed?.performer?.avatar || '/static/no-avatar.png'} />
@@ -172,7 +172,7 @@ class PurchaseFeedForm extends PureComponent<IProps> {
                 <span>{feed?.performer?.name}</span>
                   <p style={{color: '#c8ff02'}}>Verified Artist</p>
               </div>
-              <a href={`/${feed?.performer?.username || feed?.performer?._id}`} className='info-icon-wrapper'>
+              <a href={`/artist/profile/?id=${feed?.performer?.username || feed?.performer?._id}`} className='info-icon-wrapper'>
                 <FontAwesomeIcon style={{color: 'white'}} icon={faCircleInfo} />
               </a>
             </div>
@@ -184,7 +184,7 @@ class PurchaseFeedForm extends PureComponent<IProps> {
                 {card.brand === 'Mastercard' && ( <img src='/static/mastercard_logo.png' width={50} height={50}/>)}
                 {card.brand === 'AmericanExpress' && ( <img src='/static/amex_logo.png' width={50} height={50}/>)}
                 {card.brand === 'Maestro' && ( <img src='/static/maestro_logo.png' width={50} height={50}/>)}
-                  
+
                 </div>
                 <div className='payment-type-info'>
                   <span>{card.brand}</span>
@@ -193,7 +193,7 @@ class PurchaseFeedForm extends PureComponent<IProps> {
                 </div>
             </Option>
             ))}
-            
+
             {/* <Option disabled={true} value="plug" key="plug" className="payment-type-option-content">
               <div className='payment-type-img-wrapper'>
                 <img src='/static/plug-favicon.png' width={40} height={40}/>
@@ -238,11 +238,11 @@ class PurchaseFeedForm extends PureComponent<IProps> {
               </Option>
             )}
           </Select>
-            
-            
+
+
           </div>
           <div className='currency-picker-btns-container'>
-            
+
             <div className='currency-picker-btns-wrapper'>
             {cards.length > 0 && (
               <div className='currency-picker-btn-wrapper' onClick={()=> this.changeTicker('USD')}>
@@ -274,7 +274,7 @@ class PurchaseFeedForm extends PureComponent<IProps> {
                 <img src='/static/ckbtc_nobackground.png' width={40} height={40}/>
               )}
               <InputNumber
-                disabled={true} 
+                disabled={true}
                 type="number"
                 stringMode
                 step="0.01"

@@ -9,8 +9,8 @@ export default function MappedElement (event) {
   const [hover, setHover] = useState(false)
   return (
     <div key={event.event.id} className="new-track-wrapper">
-      <Link href={`/event-store?id=${event.event.slug}`} 
-          className="new-track-link" 
+      <Link href={`/event-store?id=${event.event.slug}`}
+          className="new-track-link"
           onPointerOver={() => setHover(true)}
           onPointerOut={() => setHover(false)}>
 
@@ -18,7 +18,7 @@ export default function MappedElement (event) {
           <div className="new-track-bg" style={{ backgroundImage: `url(${event.event?.image?.url})` }}>
             {hover && (
               <div className='gig-btn-wrapper'>
-            
+
                 <FontAwesomeIcon className='gig-btn-nr' icon={faTicket} />
               </div>
             )}
@@ -26,9 +26,9 @@ export default function MappedElement (event) {
         </div>
         <div className="track-info-wrapper">
           <p className="track-title">{ event.event.name }</p>
-          <Link 
-              href={`/${event.event?.performer?.username || event.event?.performer?._id}`}
-              as={`/${event.event?.performer?.username || event.event?.performer?._id}`} 
+          <Link
+              href={`/artist/profile/?id=${event.event?.performer?.username || event.event?.performer?._id}`}
+              as={`/artist/profile/?id=${event.event?.performer?.username || event.event?.performer?._id}`}
               className="track-artist"
           >
             { event.event.performer.name }

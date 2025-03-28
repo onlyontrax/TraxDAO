@@ -45,4 +45,8 @@ export interface ISettings {
   icTraxAccountPercentage: string;
   icNFTTicket: string;
   icNFTSong: string;
+  stripeFeesPercentageAmount: string;
+  stripeFeesFixedAmount: string;
+  appleClientId: string;
+  facebooklientId: string;
 }

@@ -38,21 +38,22 @@ export class PerformerInfo extends PureComponent<IProps> {
 
         <div className="about-header-stats">
           <div className="about-stats">
-            <span>{performer.score}</span>
-            <h3>Artist score</h3>
+            
+            <h3 style={{ color: performer?.themeColor || '#A8FF00' }}>Artist score</h3>
+            <span style={{ color: performer?.themeColor || '#A8FF00' }}>{performer.score}</span>
           </div>
         </div>
         <div className="artist-info-links">
 
-          <div className="location">
-            <div className="location-wrapper-1">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" style={{ width: '16px' }}>
+          <div className="location flex flex-row mt-6 mb-2">
+            <div className="location-wrapper-1 flex">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="white" style={{ width: '24px' }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
               </svg>
             </div>
-            <div className="location-wrapper-2">
-              <p style={{ display: 'inline-flex' }}>
+            <div className="location-wrapper-2 flex">
+              <p style={{ display: 'inline-flex', color:'#F2F2F2' }}>
                 &nbsp;
                 {country?.name}
               </p>
@@ -60,50 +61,50 @@ export class PerformerInfo extends PureComponent<IProps> {
           </div>
           <div />
 
-          <div className="social-links-wrapper">
-            <div className="social-links">
+          <div className="flex text-white">
+            <div className="social-links flex flex-col gap-y-4 mt-2 text-white">
               {performer.spotify && performer.spotify.length > 10 && (
-              <a target="_blank" href={performer.spotify}>
+              <a className='flex items-center gap-3 text-white flex-row' target="_blank" href={performer.spotify}>
 
-                <GrSpotify />
+                <GrSpotify className='fill-[#F2F2F2] h-6 w-6'/>
                 {' '}
-                <span className="socials-label">{isDesktop ? 'Spotify' : ''}</span>
+                <span className="socials-label text-[#B3B3B3]">Spotify</span>
 
               </a>
               )}
               {performer.appleMusic && performer.appleMusic.length > 10 && (
-              <a target="_blank" href={performer.appleMusic}>
+              <a className="flex items-center gap-3 text-white flex-row" target="_blank" href={performer.appleMusic}>
 
-                <SiApplemusic />
+                <SiApplemusic className='fill-[#F2F2F2] h-6 w-6'/>
                 {' '}
-                <span className="socials-label">{isDesktop ? 'Apple Music' : ''}</span>
+                <span className="socials-label text-[#B3B3B3]">Apple Music</span>
 
               </a>
               )}
               {performer.soundcloud && performer.soundcloud.length > 10 && (
-              <a target="_blank" href={performer.soundcloud}>
+              <a className="flex items-center gap-3 text-white flex-row" target="_blank" href={performer.soundcloud}>
 
-              <FontAwesomeIcon icon={faSoundcloud} />
+              <FontAwesomeIcon icon={faSoundcloud} className='text-[#F2F2F2] h-6 w-6'/>
                 {' '}
-                <span className="socials-label">{isDesktop ? 'Soundcloud' : ''}</span>
+                <span className="socials-label text-[#B3B3B3]">Soundcloud</span>
 
               </a>
               )}
               {performer.instagram && performer.instagram.length > 10 && (
-              <a target="_blank" href={performer.instagram}>
+              <a className="flex flex-row items-center gap-3 text-white" target="_blank" href={performer.instagram}>
 
-                <InstagramOutlined />
+                <InstagramOutlined className='text-[#F2F2F2] text-2xl' />
                 {' '}
-                <span className="socials-label">{isDesktop ? 'Instagram' : ''}</span>
+                <span className="socials-label text-[#B3B3B3]">Instagram</span>
 
               </a>
               )}
               {performer.twitter && performer.twitter.length > 10 && (
-              <a target="_blank" href={performer.twitter}>
+              <a className="flex flex-row items-center gap-3 text-white" target="_blank" href={performer.twitter}>
 
-                <TwitterOutlined />
+                <TwitterOutlined className='text-[#F2F2F2] text-2xl'/>
                 {' '}
-                <span className="socials-label">{isDesktop ? 'Twitter' : ''}</span>
+                <span className="socials-label text-[#B3B3B3]">Twitter</span>
 
               </a>
               )}

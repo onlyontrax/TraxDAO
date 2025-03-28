@@ -64,6 +64,23 @@ class CustomDocument extends Document {
           <meta httpEquiv="X-UA-Compatible" content="IE=edge,chrome=1" />
           <meta charSet="utf-8" />
 
+
+          {/* Open Graph / Social Media Meta Tags */}
+          <meta property="og:type" content="website" />
+          <meta property="og:site_name" content={settings?.siteName || 'TRAX'} />
+          <meta property="og:title" content={settings?.siteName || 'TRAX'} />
+          <meta property="og:description" content={settings?.metaDescription || 'Made for artists. Built for fans.'} />
+          <meta property="og:image" content={settings?.logoUrl || '/static/logo_512x512.png'} />
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
+
+          {/* Twitter Card Meta Tags */}
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content={settings?.siteName || 'TRAX'} />
+          <meta name="twitter:description" content={settings?.metaDescription || 'Made for artists. Built for fans.'} />
+          <meta name="twitter:image" content={settings?.logoUrl || '/static/logo_512x512.png'} />
+
+
           {/* Preload critical fonts */}
           <link
             rel="preload"

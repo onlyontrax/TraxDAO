@@ -21,6 +21,10 @@ export interface IVideo {
     url: string;
     thumbnails: any[]
   };
+  thumbnailMobile: {
+    url: string;
+    thumbnails: any[]
+  };
   teaser: {
     url: string;
     thumbnails: any[];
@@ -30,6 +34,7 @@ export interface IVideo {
   teaserProcessing: boolean;
   tags: string[];
   participantIds: string[];
+  royaltyCut: any;
   participants: any[];
   video: {
     url: string;
@@ -58,5 +63,6 @@ export interface IVideo {
   teaserId: string;
   fileId: string;
   thumbnailId: string;
+  thumbnailMobileId: string;
   selectedCurrency: string;
 }

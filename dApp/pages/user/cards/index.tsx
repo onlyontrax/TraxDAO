@@ -105,7 +105,7 @@ class CardsPage extends PureComponent<IProps> {
                 </div>
               </div>
             ))}
-            {loading && <div className="text-center"><Spin /></div>}
+            {loading && <div className="text-center"><img src="/static/trax_loading_optimize.gif" alt="Loading..." className='w-28 m-auto'/></div>}
           </div>
         </div>
       </Layout>

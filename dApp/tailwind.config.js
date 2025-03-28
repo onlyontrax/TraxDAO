@@ -14,13 +14,36 @@ module.exports = {
         'heading': ['HeadingPro', 'sans-serif'],
         'body': ['NeueMontreal', 'sans-serif'],
       },
+      fontSize: {
+        'xxs': '10px',
+      },
       colors: {
         'custom-gray': '#1e1e1e',
         'lighter-gray': '#303030',
+        'border-gray': '#454545',
+        'font-disabled': '#414141',
         'font-gray': '#B3B3B3',
+        'font-light-gray': '#F2F2F2',
         'custom-green': '#A8FF00',
-        'custom-lime-green': '#c8ff00'
+        'custom-yellow': '#EDFF00',
+        'custom-purple': '#7E2CDD',
+        'alert-red': '#EA0000',
+        'slaps-gray': '#1F1F1F',
+        'custom-black': '#161616',
+        'darker-green': '#3d5c00'
+        
       },
+      width: {
+        'modal-mobile': '360px',
+        'modal-desktop': '480px',
+      },
+      height: {
+        'modal-mobile': '515px',
+        'modal-desktop': '530px',
+      },
+      scale: {
+        '1025': '1.025'
+      }
     },
     colors: {
       trax: colors,

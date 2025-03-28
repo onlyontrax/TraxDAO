@@ -7,7 +7,7 @@ import { AuthClient } from '@dfinity/auth-client';
 import { videoService } from '@services/video.service';
 import { cryptoService } from '@services/crypto.service';
 import {
-  Button, Col, Layout, Row, message
+  Col, Layout, Row, message
 } from 'antd';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -15,6 +15,13 @@ import { PureComponent } from 'react';
 import { IUIConfig, IVideo, ISettings } from 'src/interfaces';
 import { idlFactory as idlFactoryPPV } from '../../../src/smart-contracts/declarations/ppv/ppv.did.js';
 import type { _SERVICE as _SERVICE_PPV } from '../../../src/smart-contracts/declarations/ppv/ppv2.did';
+import {
+  removeContent
+} from "../../../src/crypto/transactions/plug-ppv";
+import TraxButton from '@components/common/TraxButton';
+import { Button } from '@components/common/catalyst/button'
+import { Input, InputGroup } from '@components/common/catalyst/input'
+import { MagnifyingGlassIcon } from '@heroicons/react/16/solid'
 
 interface IProps {
   ui: IUIConfig;
@@ -33,7 +40,8 @@ class Videos extends PureComponent<IProps> {
     limit: 10,
     filter: {} as any,
     sortBy: 'updatedAt',
-    sort: 'desc'
+    sort: 'desc',
+    searchQuery: ''
   };
 
   componentDidMount() {
@@ -51,6 +59,13 @@ class Videos extends PureComponent<IProps> {
       sort: sorter.order ? (sorter.order === 'descend' ? 'desc' : 'asc') : ''
     });
     this.search(pager.current);
+  };
+
+  handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const searchQuery = e.target.value;
+    this.setState({ searchQuery }, () => {
+      this.handleFilter({ q: searchQuery });
+    });
   };
 
   async handleFilter(values) {
@@ -82,13 +97,8 @@ class Videos extends PureComponent<IProps> {
       } = this.state;
       await this.setState({ searching: true });
 
-      let values = {searchValue: "video", q: "video"}
-
-
-      let f = { ...filter, ...values };
-
       const resp = await videoService.search({
-        ...f,
+        ...filter,
         limit,
         offset: (page - 1) * limit,
         sort,
@@ -114,55 +124,14 @@ class Videos extends PureComponent<IProps> {
     const { settings } = this.props;
     const res = await videoService.findById(id);
 
-    const vidData: IVideo = res.data;
+    const data: IVideo = res.data;
     // eslint-disable-next-line no-alert
     if (!window.confirm('Are you sure you want to delete this video?')) {
       return false;
     }
     try {
-      if (vidData.isCrypto) {
-        let identity;
-        let ppvActor;
-        let agent;
-        const host = settings.icHost;
-        const authClient = await AuthClient.create();
-
-        if (settings.icNetwork !== true) {
-          await authClient.login({
-            identityProvider: cryptoService.getIdentityProviderLink(),
-            onSuccess: async () => {
-              if (await authClient.isAuthenticated()) {
-                identity = authClient.getIdentity();
-
-                agent = new HttpAgent({
-                  identity,
-                  host
-                });
-
-                agent.fetchRootKey();
-                ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
-                  agent,
-                  canisterId: settings.icPPV
-                });
-              }
-
-              await this.handleRemovePPVContent(id, ppvActor);
-            }
-          });
-        } else {
-          await authClient.login({
-            onSuccess: async () => {
-              identity = authClient.getIdentity();
-              agent = new HttpAgent({ identity, host });
-              ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
-                agent,
-                canisterId: settings.icPPV
-              });
-
-              await this.handleRemovePPVContent(id, ppvActor);
-            }
-          });
-        }
+      if (data.isCrypto) {
+        await removeContent(data._id, settings);
       } else {
         const { pagination } = this.state;
         await videoService.delete(id);
@@ -177,7 +146,7 @@ class Videos extends PureComponent<IProps> {
   }
 
   render() {
-    const { list, searching, pagination } = this.state;
+    const { list, searching, pagination, searchQuery } = this.state;
     const { ui } = this.props;
     const statuses = [
       {
@@ -195,21 +164,30 @@ class Videos extends PureComponent<IProps> {
     ];
 
     return (
-      <Layout>
+      <Layout className='dark:bg-trax-zinc-900'>
         <Head>
           <title>{`${ui?.siteName} | Tracks`}</title>
         </Head>
-        <div className="main-container">
+        <div className="">
           {/* <PageHeading title="Tracks" /> */}
-          <div>
-            <Row className='w-full justify-end'>
-              {/* <Col lg={16} xs={24}>
-                <SearchFilter searchWithKeyword statuses={statuses} onSubmit={this.handleFilter.bind(this)} />
-              </Col> */}
-
-            </Row>
+          <div className="flex items-center justify-between gap-4 py-4">
+            <div className="flex-1 max-w-xl">
+              <InputGroup>
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search content..."
+                  value={searchQuery}
+                  onChange={this.handleSearch}
+                  className="w-full"
+                />
+              </InputGroup>
+            </div>
+            <Link href="/artist/my-video/upload">
+              <Button className='cursor-pointer'>Upload content</Button>
+            </Link>
           </div>
-          <div className="table-responsive">
+          <div>
             <TableListVideo
               contentType="video"
               dataSource={list}

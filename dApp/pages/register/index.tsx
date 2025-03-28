@@ -2,7 +2,7 @@
 import React from 'react';
 import Loader from '@components/common/base/loader';
 import { login, loginSocial, loginSuccess } from '@redux/auth/actions';
-import { updateCurrentUser } from '@redux/user/actions';
+import { setAccount } from '@redux/user/actions';
 import { authService, userService } from '@services/index';
 import {
   Button, Col, Divider, Form, Image, Input, Layout, Row, message

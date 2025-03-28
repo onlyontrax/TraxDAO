@@ -1,0 +1,175 @@
+.trax-input-container {
+  @apply relative flex flex-col gap-0.5;
+}
+
+.trax-input-wrapper {
+  @apply relative flex items-center bg-custom-gray border border-border-gray rounded-lg
+    transition-all duration-200 h-14;
+
+  &:hover:not(.disabled) {
+    @apply border-custom-green;
+
+    .input-icon,
+    .password-toggle,
+    .select-icon {
+      @apply text-custom-green;
+    }
+  }
+
+  &.dirty {
+    .input-label {
+      @apply transform -translate-y-4 px-1 bg-trax-transparent;
+
+      .badge-optional {
+        @apply transform translate-y-0; // ensure badge moves with label
+      }
+    }
+  }
+
+  &.active {
+    @apply border-custom-green bg-custom-gray;
+  }
+
+  &.filled {
+    @apply bg-slaps-gray border-darker-green;
+
+    &:hover:not(.disabled) {
+      @apply border-custom-green;
+    }
+  }
+
+  &.error {
+    @apply border-alert-red;
+
+    &:hover {
+      @apply border-alert-red;
+
+      .password-toggle {
+        @apply text-alert-red;
+      }
+    }
+
+    .input-label {
+      @apply text-alert-red;
+    }
+
+    .input-icon,
+    .password-toggle,
+    .select-icon {
+      @apply text-alert-red;
+    }
+
+    .error-icon {
+      @apply absolute right-3 text-alert-red;
+    }
+
+    .password-toggle {
+      @apply right-10;
+    }
+  }
+
+  &.disabled {
+    @apply bg-font-gray border-font-gray cursor-not-allowed;
+
+    .input-label,
+    .input-icon,
+    .password-toggle,
+    .select-icon {
+      @apply text-font-disabled cursor-not-allowed;
+    }
+  }
+
+  &:has(textarea) {
+    @apply items-start min-h-32;
+
+    &.dirty {
+      .input-label {
+        @apply hidden;
+      }
+    }
+  }
+
+  .input-icon {
+    @apply absolute left-3 text-border-gray transition-colors duration-200;
+  }
+
+  .password-toggle {
+    @apply absolute right-3 text-border-gray hover:text-custom-green
+      focus:outline-none transition-colors duration-200
+      disabled:text-font-disabled disabled:cursor-not-allowed;
+  }
+
+  &.ant-picker.ant-picker-outlined {
+    @apply focus:shadow-none focus-within:shadow-none text-font-light-gray border-border-gray hover:bg-custom-gray hover:border-custom-green focus:bg-custom-gray focus-within:bg-custom-gray;
+  }
+  &.ant-picker.ant-picker-outlined.ant-picker-focused {
+    @apply border-custom-green focus-within:shadow-none text-font-light-gray hover:bg-custom-gray focus:bg-custom-gray;
+  }
+}
+
+.trax-input-field {
+  @apply w-full text-font-light-gray px-4 h-full outline-none text-sm;
+  &::placeholder {
+    @apply text-border-gray;
+  }
+
+  &[type="number"] {
+    @apply appearance-none;
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      @apply appearance-none;
+    }
+  }
+
+  &[rows] {
+    @apply py-3 resize-y min-h-32 h-auto;
+  }
+}
+
+.input-label {
+  @apply absolute left-3 text-[#656565] pointer-events-none transition-all duration-200
+    origin-[0] text-sm leading-none;
+  top: 20px;
+  font-size: 13px !important;
+
+  .badge-optional {
+    @apply inline text-custom-purple bg-trax-transparent px-1 py-0 rounded-full text-xxs ml-1 border  border-custom-purple;
+  }
+}
+
+.required-mark {
+  @apply text-alert-red ml-0.5;
+}
+
+.error-message {
+  @apply text-sm text-alert-red mt-1;
+}
+
+.select-wrapper {
+  @apply relative w-full;
+
+  .select-icon {
+    @apply absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-border-gray
+      pointer-events-none transition-colors duration-200;
+  }
+}
+
+select.trax-input-field {
+  @apply appearance-none cursor-pointer pr-10;
+
+  &:disabled {
+    @apply cursor-not-allowed;
+  }
+}
+
+.trax-input-field {
+  @apply bg-trax-transparent text-font-light-gray;
+  background-clip: text !important;
+  -webkit-background-clip: text !important;
+}
+
+.trax-input-wrapper input[type="password"],
+.trax-input-wrapper input[type="text"] {
+  @apply text-font-light-gray;
+    -webkit-text-fill-color: var(--font-light-gray) !important;
+}

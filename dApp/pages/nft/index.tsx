@@ -152,7 +152,7 @@ class NftViewPage extends PureComponent<IProps, IStates> {
     if (nft === null) return;
     if (user?.isPerformer) return;
     const fee = payload.shippingFee ? payload.shippingFee : 0;
-    if (user.balance < Number(nft.price) + fee) {
+    if (user?.account?.balance < Number(nft.price) + fee) {
       message.error('You have an insufficient token balance. Please top up.');
       return;
     }
@@ -220,9 +220,9 @@ class NftViewPage extends PureComponent<IProps, IStates> {
 
     const recipientAccountIdBlob = this.getRecipientAccountIdentity(nft?.owner)
     const platformAccountIdBlob = this.getPlatformAccountIdentity(Principal.fromText(settings.icTraxAccountPercentage))
-    
+
     const fanAI = AccountIdentifier.fromPrincipal({
-      principal: Principal.fromText(user.wallet_icp)
+      principal: Principal.fromText(user.account?.wallet_icp)
     });
     // @ts-ignore
     const fanBytes = fanAI.bytes;
@@ -317,9 +317,9 @@ class NftViewPage extends PureComponent<IProps, IStates> {
             });
 
             let balICRC1 = await ledgerActor.balance({
-              owner: Principal.fromText(user?.wallet_icp),
+              owner: Principal.fromText(user.account?.wallet_icp),
               certified: false,
-            });     
+            });
             if(Number(balICRC1) < Number(amountToSend + amountToSendPlatform) + 20){
               this.setState({
                 submiting: false,
@@ -399,7 +399,7 @@ class NftViewPage extends PureComponent<IProps, IStates> {
               canisterId: ckBTCLedgerCanID
             });
             let balICRC1 = await ledgerActor.balance({
-              owner: Principal.fromText(user?.wallet_icp),
+              owner: Principal.fromText(user.account?.wallet_icp),
               certified: false,
             });
             if(Number(balICRC1) < Number(amountToSend) + 20){

@@ -28,7 +28,7 @@ import { TransferArgs, Tokens, TimeStamp } from "src/smart-contracts/declaration
 
 export const sendTipCrypto = async(amount: number, ticker: string, performer: any, settings: any) => {
     if (performer === null) return;
-    if (!performer?.wallet_icp) {
+    if (!performer.account?.wallet_icp) {
     //   this.setState({
     //     requesting: false,
     //     submiting: false,
@@ -223,7 +223,7 @@ const handleSendTipCrypto = async (
     const participants = [];
 
     const obj2: Participants = {
-      participantID: Principal.fromText(performer?.wallet_icp),
+      participantID: performer && Principal.fromText(performer.account?.wallet_icp),
       participantPercentage: 1,
     };
     participants.push(obj2);
