@@ -8,6 +8,8 @@ const initialState = {
   googleReCaptchaSiteKey: '',
   enableGoogleReCaptcha: false,
   googleClientId: '',
+  appleClientId: '',
+  facebookClientId: '',
   tokenConversionRate: 1,
   stripePublishableKey: '',
   paymentGateway: 'stripe',
@@ -34,7 +36,9 @@ const initialState = {
   icTraxToken: '',
   icTraxAccountPercentage: '',
   icNFTTicket: '',
-  icNFTSong: ''
+  icNFTSong: '',
+  stripeFeesPercentageAmount: '',
+  stripeFeesFixedAmount: ''
 };
 
 const settingReducers = [

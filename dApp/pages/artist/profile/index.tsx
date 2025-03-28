@@ -13,7 +13,7 @@ import { connect } from "react-redux";
 import { cryptoService } from '@services/crypto.service';
 import { debounce } from 'lodash';
 import Head from "next/head";
-
+import { ChevronRightIcon } from "@heroicons/react/20/solid";
 import {
   authService,
   feedService,
@@ -23,12 +23,13 @@ import {
   performerService,
   tokenTransctionService,
   utilsService,
+  subscriptionService,
   routerService,
 } from "src/services";
 import { DollarOutlined } from "@ant-design/icons";
 
 import { ConfirmSubscriptionPerformerForm } from "@components/performer";
-import TipPerformerForm from "@components/performer/tip-form";
+import TipPerformerForm from "@components/performer/TipPerformerForm";
 import { PerformerInfo } from "@components/performer/table-info";
 
 import { ScrollListVideo } from "@components/video/scroll-list-item";
@@ -39,7 +40,7 @@ import Link from "next/link";
 import Router from "next/router";
 import { Parallax, ParallaxBanner } from "react-scroll-parallax";
 
-import { ICountry, IFeed, IPerformer, ISettings, IUIConfig, IUser } from "src/interfaces";
+import { ICountry, IFeed, IPerformer, ISettings, IUIConfig, IUser, IAccount } from "src/interfaces";
 
 import { FastAverageColor } from "fast-average-color";
 import { Principal } from "@dfinity/principal";
@@ -64,19 +65,23 @@ import PaymentProgress from '../../../src/components/user/payment-progress';
 
 import {
   requestConnectPlug,
-  transferPlug,
-
-  sendTipPlug,
-
-  requestPlugBalance
+  tipCrypto,
 } from "../../../src/crypto/transactions/plug-tip";
 import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider, getPrincipalId, createPlugwalletActor } from '../../../src/crypto/mobilePlugWallet';
 
+import TraxButton from "@components/common/TraxButton";
+import FollowNotification from "@components/common/layout/FollowNotification";
+import { AnimatePresence, motion } from "framer-motion";
+import { Sheet } from 'react-modal-sheet';
+import Confetti from "react-dom-confetti";
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 interface IProps {
   ui: IUIConfig;
   error: any;
   user: IUser;
+  account: IAccount;
   performer: IPerformer;
   listProducts: Function;
   listTickets: Function;
@@ -100,11 +105,59 @@ interface IProps {
 }
 
 const { TabPane } = Tabs;
+
+
 const initialFilter = {
   q: "",
   fromDate: "",
   toDate: "",
 };
+
+
+const initial_1 = { opacity: 0, y: 0 };
+const animate_1 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 1.3,
+    delay: 0.3,
+    ease: "easeOut",
+    once: true,
+  },
+}
+const initial_2 = { opacity: 0, y: 20 };
+const animate_2 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 0.5,
+    delay: 0.4,
+    ease: "easeOut",
+    once: true,
+  },
+}
+
+const animate_3 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 0.5,
+    delay: 0.6,
+    ease: "easeOut",
+    once: true,
+  },
+}
+
+const animate_4 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 0.5,
+    delay: 0.9,
+    ease: "easeOut",
+    once: true,
+  },
+}
 
 class PerformerProfile extends PureComponent<IProps> {
   static authenticate = true;
@@ -125,6 +178,7 @@ class PerformerProfile extends PureComponent<IProps> {
     requesting: false,
     openSubscriptionModal: false,
     tab: "video",
+    activeTab: "music",
     filter: initialFilter,
     isGrid: false,
     subscriptionType: 'monthly',
@@ -142,13 +196,30 @@ class PerformerProfile extends PureComponent<IProps> {
     isOpenSubscribersModal: false,
     _videos: [],
     music: [],
-    confetti: false
+    isMobile: false,
+    confetti: false,
+    showFollowNotification: false,
+    showFollowModal: false,
+    openCancelSubscriptionModal: false,
+    rootUrl: '',
+    applePaymentUrl: ''
   };
 
   async getData() {
     try {
       const url = new URL(window.location.href);
-      const id = url.searchParams.get("id");
+
+      // First try to get ID from search params
+      let id = url.searchParams.get("id");
+
+      // If ID is not in search params, try to extract from pathname
+      if (!id) {
+        // Extract the last part of the pathname (after the last slash)
+        const pathParts = url.pathname.split('/').filter(part => part);
+        if (pathParts.length > 0) {
+          id = pathParts[pathParts.length - 1];
+        }
+      }
 
       const [performer, countries] = await Promise.all([
         performerService.findOne(id as string, {
@@ -165,8 +236,6 @@ class PerformerProfile extends PureComponent<IProps> {
       if (e.message === 'Entity is not found') {
         message.error("Artist not found.");
       }
-      console.log("performer fetch error", e);
-      console.log("performer fetch error2", await e);
       return {
         performer: null,
         countries: null,
@@ -174,49 +243,66 @@ class PerformerProfile extends PureComponent<IProps> {
     }
   }
 
-
-  getMusic = debounce(async () => {
-    const { videoState, getVideos: handleGetVids, performer } = this.props;
-    const { filter} = this.state;
-    let vids = videoState.item
-    if(vids){
-      let videosArr = []
-      let audioArr = []
-      vids.map((vid)=>{
-        if(vid.trackType === 'video'){
-          videosArr.push(vid)
-        }else{
-          audioArr.push(vid)
-        }
-      });
-
-      const query = {
-        limit: 10,
-        offset: 0,
-        performerId: performer?._id,
-        q: filter.q || "",
-        fromDate: filter.fromDate || "",
-        toDate: filter.toDate || ""
-      };
-
-      // this.setState({_videos: videosArr, music: audioArr});
-      handleGetVids({
-        ...query,
-      })
+  getRootUrl = () => {
+    if (typeof window !== 'undefined') {
+      const protocol = window.location.protocol;
+      const host = window.location.host;
+      return `${protocol}//${host}`;
     }
-  });
+    return process.env.USER_URL || '';
+  };
 
   async componentDidMount() {
     const { performer } = this.state;
+    const rootUrl = this.getRootUrl();
+    console.log('Profile page rootUrl:', rootUrl);
+    const token = authService.getToken();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentUrl = window.location.href;
+    const newUrl = `${currentUrl}${currentUrl.includes('?') ? '&' : '?'}mobileToken=${token}&openPaymentModal=true`;
+
+    const openPaymentModal = urlParams.get('openPaymentModal') === 'true';
+
+    this.setState({ rootUrl, applePaymentUrl: newUrl, openTipModal: openPaymentModal });
 
     if (performer === null) {
       const data = await this.getData();
-      routerService.changeUrlPath();
-      this.getMusic();
-      this.setState({ performer: data.performer, countries: data.countries, dataLoaded: true }, () => this.updateDataDependencies());
+      await routerService.changeUrlPath();
+      this.setState({
+        performer: data.performer,
+        countries: data.countries,
+        dataLoaded: true
+      }, () => {
+        this.updateDataDependencies();
+        // Force a re-render of meta tags
+        if (typeof window !== 'undefined') {
+          console.log('Removing existing meta tags...');
+          const head = document.getElementsByTagName('head')[0];
+          const metaTags = head.getElementsByTagName('meta');
+          let removedCount = 0;
+          for (let i = 0; i < metaTags.length; i++) {
+            if (metaTags[i].getAttribute('property')?.startsWith('og:') ||
+                metaTags[i].getAttribute('name')?.startsWith('twitter:')) {
+              console.log('Removing meta tag:', metaTags[i].getAttribute('property') || metaTags[i].getAttribute('name'));
+              metaTags[i].remove();
+              removedCount++;
+            }
+          }
+          console.log(`Removed ${removedCount} meta tags`);
+        }
+      });
     } else {
       this.updateDataDependencies();
       routerService.changeUrlPath();
+    }
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (!prevState.openTipModal && this.state.openTipModal) {
+      if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") {
+        this.openPaymentPage();
+      }
     }
   }
 
@@ -231,25 +317,6 @@ class PerformerProfile extends PureComponent<IProps> {
       e.target.classList.remove('animate');
     }, 700);
   };
-
-  // const bubblyButtons = document.getElementsByClassName("bubbly-button");
-
-  // for (let i = 0; i < bubblyButtons.length; i++) {
-  //   bubblyButtons[i].addEventListener('click', animateButton, false);
-  // }
-
-
-  // componentWillUnmount() {
-  //   const bubblyButtons = document.getElementsByClassName("bubbly-button");
-
-  //   for (let i = 0; i < bubblyButtons.length; i++) {
-  //     bubblyButtons[i].removeEventListener('click', this.animateButton, false);
-  //   }
-  // }
-
-
-
-
 
   async updateDataDependencies() {
     const { performer } = this.state;
@@ -271,17 +338,19 @@ class PerformerProfile extends PureComponent<IProps> {
         this.getColorImage();
       }
     );
-    // const nfts = await nftService.getArtistNfts(performer?.wallet_icp);
+    // const nfts = await nftService.getArtistNfts(performer.account?.wallet_icp);
     // this.setState({ nfts, loadNft: false });
   }
 
   checkWindowInnerWidth = () => {
     this.setState({ isDesktop: window.innerWidth > 500 });
+    this.setState({ isMobile: window.innerWidth < 640});
     window.addEventListener("resize", this.updateMedia);
     return () => window.removeEventListener("resize", this.updateMedia);
   };
 
   updateMedia = () => {
+    this.setState({ isMobile: window.innerWidth < 640});
     this.setState({ isDesktop: window.innerWidth > 500 });
   };
 
@@ -316,20 +385,31 @@ class PerformerProfile extends PureComponent<IProps> {
     try {
       this.setState({ requesting: true });
       if (!isFollowed) {
+        this.setState({ showFollowModal: false })
         await followService.create(performer?._id);
         this.setState({ isFollowed: true, requesting: false });
+        // this.openFollowNotification();
       } else {
         await followService.delete(performer?._id);
         this.setState({ isFollowed: false, requesting: false });
+        // this.closeFollowNotification()
       }
       if (tab === "post") {
         this.loadItems();
       }
     } catch (e) {
       const error = await e;
-      message.error(error.message || "Error occured, please try again later");
+      message.error(error.message || "An error occured, please try again later");
       this.setState({ requesting: false });
     }
+  };
+
+  openFollowNotification = () => {
+    this.setState({ showFollowNotification: true });
+  };
+
+  closeFollowNotification = () => {
+    this.setState({ showFollowNotification: false });
   };
 
   async handleFilterSearch(values) {
@@ -419,11 +499,19 @@ class PerformerProfile extends PureComponent<IProps> {
     }
   }
 
-  async subscribe(currency: string, subType: string) {
-    currency === "USD" ? await this.subscribeFiat(subType) : await this.subscribeFiat(subType); //await this.subscribeCrypto(currency, subType);
+  async subscribe(currency: string, subType: string, express: boolean) {
+
+    console.log("in subscribe from profile page", subType, express)
+    try {
+      await this.subscribeFiat(subType, express);
+
+    } catch (error) {
+      message.error(error?.message || 'Subscription failed');
+    }
   }
 
-  async subscribeFiat(subType: string) {
+  async subscribeFiat(subType: string, express: boolean) {
+    console.log("in subscribeFiat from profile page", subType, express)
     const { user, settings } = this.props;
     const { performer } = this.state;
     if (performer === null) return;
@@ -432,38 +520,42 @@ class PerformerProfile extends PureComponent<IProps> {
       Router.push("/login");
       return;
     }
-    if (settings.paymentGateway === "stripe" && !user.stripeCardIds.length) {
-      message.error("Please add a payment card");
-      Router.push("/user/account");
-      return;
-    }
-    try {
-      this.setState({ submiting: true });
-      const resp = await paymentService.subscribePerformer({
-        type: subType,
-        performerId: performer._id,
-        paymentGateway: settings.paymentGateway,
-      });
-      if (resp?.data?.stripeConfirmUrl) {
-        window.location.href = resp?.data?.stripeConfirmUrl;
+    if(!express){
+
+      if (settings.paymentGateway === "stripe" && !user.stripeCardIds.length) {
+        message.error("Please add a payment card");
+        Router.push("/user/account");
         return;
       }
-      if (settings.paymentGateway === "-ccbill") {
-        window.location.href = resp?.data?.paymentUrl;
-        return;
+      try {
+        this.setState({ submiting: true });
+        const resp = await paymentService.subscribePerformer({
+          type: subType,
+          performerId: performer._id,
+          paymentGateway: settings.paymentGateway,
+        });
+        if (resp?.data?.stripeConfirmUrl) {
+          window.location.href = resp?.data?.stripeConfirmUrl;
+          return;
+        }
+        if (settings.paymentGateway === "-ccbill") {
+          window.location.href = resp?.data?.paymentUrl;
+          return;
+        }
+
+        this.setState({ openSubscriptionModal: false });
+
+        window.location.reload();
+        message.success(`Subscription successfull! You are now a member of ${performer?.name}'s channel`);
+
+      } catch (e) {
+        const err = await e;
+        message.error(err.message || "error occured, please try again later");
+        this.setState({ openSubscriptionModal: false, submiting: false });
+      } finally {
+        this.setState({ submiting: false });
       }
-
-      this.setState({ openSubscriptionModal: false });
-
-      window.location.reload();
-      //message.success(`Payment successfull! You are now a subscriber to ${performer?.name}`);
-    } catch (e) {
-      const err = await e;
-      message.error(err.message || "error occured, please try again later");
-      this.setState({ openSubscriptionModal: false, submiting: false });
-    } finally {
-      this.setState({ submiting: false });
-    }
+  }
   }
 
   /*async subscribeCrypto(currency: string, subType: string) {
@@ -494,8 +586,8 @@ class PerformerProfile extends PureComponent<IProps> {
       this.setState({ submiting: true });
       // artist: ArtistID, fan: FanID, priceOfSub: Float, ticker: Ticker, period: SubType, freeTrial: Bool
       await subscriptions.subscribe(
-        Principal.fromText(performer?.wallet_icp),
-        Principal.fromText(user.wallet_icp),
+        Principal.fromText(performer.account?.wallet_icp),
+        Principal.fromText(user.account?.wallet_icp),
         amount,
         currency,
         type
@@ -516,11 +608,7 @@ class PerformerProfile extends PureComponent<IProps> {
     if (ticker === "USD") {
       await this.sendTipFiat(price);
     } else {
-      if (paymentOption === "plug") {
-        await this.beforeSendTipPlug(price, ticker);
-      } else {
-        await this.sendTipCrypto(price, ticker);
-      }
+      await this.beforeSendTipPlug(price, ticker);
     }
   }
 
@@ -528,15 +616,15 @@ class PerformerProfile extends PureComponent<IProps> {
     const { user, updateBalance: handleUpdateBalance } = this.props;
     const { performer } = this.state;
     if (performer === null) return;
-    if (user.balance < price) {
-      message.error("You have an insufficient wallet balance. Please top up.");
-      Router.push("/user/wallet/");
-      return;
-    }
+    // if (user.balance < price) {
+    //   message.error("You have an insufficient wallet balance. Please top up.");
+    //   Router.push("/user/wallet/");
+    //   return;
+    // }
     try {
       this.setState({ requesting: true });
       await tokenTransctionService.sendTip(performer?._id, { performerId: performer?._id, price });
-      message.success("Thank you for the tip");
+      message.success(`Thank you for supporting ${performer.name}! Your tip has been sent successfully`, 5);
       handleUpdateBalance({ token: -price });
     } catch (e) {
       const err = await e;
@@ -546,373 +634,50 @@ class PerformerProfile extends PureComponent<IProps> {
     }
   }
 
-  async handleSendTipCrypto(
-    tippingCanID: Principal,
-    fanID: Principal,
-    amountToSend: bigint,
-    ledgerActor: any,
-    tippingActor: any,
-    ticker: string
-  ) {
-    const { performer } = this.state;
-    if (performer === null) return;
-
-    this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 1 });
-
-    const tippingCanisterAI = AccountIdentifier.fromPrincipal({
-      principal: tippingCanID,
-    });
-
-    // @ts-ignore
-    const { bytes } = tippingCanisterAI;
-    const accountIdBlob = Object.keys(bytes).map(m => bytes[m]);
-
-    const fanAI = AccountIdentifier.fromPrincipal({
-      principal: fanID,
-    });
-
-    // @ts-ignore
-    const fanBytes = fanAI.bytes;
-
-    const txTime: TimeStamp = {
-      timestamp_nanos: BigInt(Date.now() * 1000000),
-    };
-    const balArgs: AccountBalanceArgs = {
-      account: fanBytes,
-    };
-
-    const uuid = BigInt(Math.floor(Math.random() * 1000));
-    let transferArgs: TransferArgs;
-    let transferParams: TransferParams;
-    if (ticker === "ICP") {
-      transferArgs = {
-        memo: uuid,
-        amount: { e8s: amountToSend },
-        fee: { e8s: BigInt(10000) },
-        from_subaccount: [],
-        to: accountIdBlob,
-        created_at_time: [txTime],
-      };
-
-      let balICP = await ledgerActor.account_balance(balArgs);
-
-      if (Number(balICP.e8s) < Number(amountToSend) + 10000) {
-        this.setState({
-          requesting: false,
-          submiting: false,
-          openTipProgressModal: false,
-          tipProgress: 0,
-        });
-        message.error("Insufficient balance, please top up your wallet with ICP and try again.");
-      }
-    } else if (ticker === "ckBTC") {
-      transferParams = {
-        amount: amountToSend,
-        fee: BigInt(10),
-        from_subaccount: null,
-        to: {
-          owner: tippingCanID,
-          subaccount: [],
-        },
-        created_at_time: BigInt(Date.now() * 1000000),
-      };
-
-      let balICRC1 = await ledgerActor.balance({
-        owner: fanID,
-        certified: false,
-      });
-
-      if (Number(balICRC1) < Number(amountToSend) + 10) {
-        this.setState({
-          requesting: false,
-          submiting: false,
-          openTipProgressModal: false,
-          tipProgress: 0,
-        });
-        message.error("Insufficient balance, please top up your wallet with ckBTC and try again.");
-      }
-    }else if (ticker === "TRAX"){
-      transferParams = {
-        amount: amountToSend,
-        fee: BigInt(100000),
-        from_subaccount: null,
-        to: {
-          owner: tippingCanID,
-          subaccount: [],
-        },
-        created_at_time: BigInt(Date.now() * 1000000),
-      };
-
-      let balICRC1 = await ledgerActor.balance({
-        owner: fanID,
-        certified: false,
-      });
-
-      if (Number(balICRC1) < Number(amountToSend) + 100000) {
-        this.setState({
-          requesting: false,
-          submiting: false,
-          openTipProgressModal: false,
-          tipProgress: 0,
-        });
-        message.error("Insufficient balance, please top up your wallet with TRAX and try again.");
-      }
-    }else {
-      this.setState({
-        requesting: false,
-        submiting: false,
-        openTipProgressModal: false,
-        tipProgress: 0,
-      });
-      message.error("Invalid ticker, please select a different token!");
-    }
-
-    const participants = [];
-
-    const obj2: Participants = {
-      participantID: Principal.fromText(performer?.wallet_icp),
-      participantPercentage: 1,
-    };
-    participants.push(obj2);
-
-    const participantArgs: TippingParticipants = participants;
-    this.setState({ tipProgress: 2 });
-    await ledgerActor
-      .transfer(ticker === "ICP" ? transferArgs : transferParams)
-      .then(async res => {
-        this.setState({ tipProgress: 3 });
-
-        await tippingActor
-          .sendTip(ticker === "ICP" ? res.Ok : res, participantArgs, amountToSend, ticker)
-          .then(() => {
-            this.setState({ tipProgress: 4 });
-            tokenTransctionService
-              .sendCryptoTip(performer?._id, {
-                performerId: performer?._id,
-                price: Number(amountToSend),
-                tokenSymbol: ticker,
-              })
-              .then(() => {});
-            setTimeout(
-              () =>
-                this.setState({
-                  requesting: false,
-                  submiting: false
-                }),
-              1000
-            );
-
-            message.success(`Payment successful! ${performer?.name} has recieved your tip`);
-            this.setState({ requesting: false, submiting: false });
-          })
-          .catch(error => {
-            this.setState({
-              requesting: false,
-              submiting: false,
-              openTipProgressModal: false,
-              tipProgress: 0,
-            });
-            message.error(error.message || "error occured, please try again later");
-            return error;
-          });
-        // }
-      })
-      .catch(error => {
-        this.setState({
-          requesting: false,
-          submiting: false,
-          openTipProgressModal: false,
-          tipProgress: 0,
-        });
-        message.error(error.message || "error occured, please try again later");
-        return error;
-      });
-  }
-
-
 
   async beforeSendTipPlug(amount: number, ticker: string) {
-    const { performer } = this.state;
     const { settings } = this.props;
-
-    this.setState({requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0});
-    let currentCanId, transfer;
-    let amountToSend = BigInt(Math.trunc(Number(amount) * 100000000));
-    const tippingCanID = settings.icTipping;
-    const whitelist = [tippingCanID];
-
-    try{
-      ticker === "ICP" && (currentCanId = null)
-      ticker === "ckBTC" && (currentCanId = settings.icCKBTCMinter)
-      ticker === "TRAX" && (currentCanId = settings.icTraxToken)
-
-      const mobileProvider = await getPlugWalletProvider();
-      const agent = await getPlugWalletAgent("icTipping");
-      const delegatedIdentity = await mobileProvider?.delegatedIdentity;
-
-      if (agent) {
-        let connected = await getPlugWalletIsConnected();
-        if (connected) {
-          let tippingActor:any = createPlugwalletActor(idlFactoryTipping, tippingCanID, settings.icHost, delegatedIdentity, agent);
-
-          /*let tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
-            agent: (window as any).ic.plug.agent,
-            canisterId: tippingCanID,
-          });*/
-
-          this.setState({ openTipProgressModal: true, openTipModal: false, tipProgress: 1 });
-
-            transfer = await transferPlug(tippingCanID, amount.toString(), Number(amountToSend), ticker, currentCanId);
-            this.setState({ tipProgress: 2 });
-            if(!transfer){
-              message.error(`Transaction failed, please try again.`);
-              this.setState({ requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0 });
-            }
-
-
-          if (transfer) {
-            this.setState({ tipProgress: 3 });
-
-            await sendTipPlug(Principal.fromText(performer?.wallet_icp), tippingActor, transfer, amountToSend, ticker, performer?._id).then(()=>{
-              this.setState({confetti: true})
-            message.success(`Payment successful! ${performer.name} has recieved your tip`);
-              this.setState({ tipProgress: 5, requesting: false, submiting: false});
-            })
-
-          } else {
-            message.error("Transaction failed. Please try again later.");
-          }
-        }
-      }
-    }catch(error){
-      console.log(error)
-      message.error("Transaction failed. Please try again later.");
-      this.setState({ requesting: false, submiting: false, openTipProgressModal: false, tipProgress: 0});
-    }
-  }
-
-  async sendTipCrypto(amount: number, ticker: string) {
     const { performer } = this.state;
-    const { settings } = this.props;
-    if (performer === null) return;
-    if (!performer?.wallet_icp) {
-      this.setState({
-        requesting: false,
-        submiting: false,
-        openTipProgressModal: false,
-        tipProgress: 0,
-      });
-      message.info("This artist is not a web3 user and therefore cannot recieve tips in crypto at this time.");
-      return;
-    }
-
-    let amountToSend = BigInt(Math.trunc(Number(amount) * 100000000));
 
     try {
-      this.setState({ requesting: true, submiting: true });
+      this.setState({
+        tipProgress: 0,
+        openTipModal: true,
+        tipStatus: '',
+        requesting: true,
+        submiting: true,
+        openTipProgressModal: true
+      });
 
-      let identity;
-      let ledgerActor;
-      const authClient = await AuthClient.create();
-      let sender;
-      let tippingActor;
-      let agent;
+      const participant: any = [{
+        participantID: Principal.fromText(performer.account?.wallet_icp),
+        participantPercentage: 1.0
+      }];
 
-      const tippingCanID = Principal.fromText(settings.icTipping);
-      const ledgerCanID = settings.icLedger;
-      const ckBTCLedgerCanID = Principal.fromText(settings.icCKBTCMinter);
-      const TRAXLedgerCanID = Principal.fromText(settings.icTraxToken);
-
-      if (settings.icNetwork !== true) {
-        await authClient.login({
-          identityProvider: cryptoService.getIdentityProviderLink(),
-          onSuccess: async () => {
-            identity = authClient.getIdentity();
-
-            const host = settings.icHost;
-
-            agent = new HttpAgent({ identity, host });
-
-            agent.fetchRootKey();
-            sender = await agent.getPrincipal();
-            if (ticker == "ICP") {
-              ledgerActor = Actor.createActor<_SERVICE_LEDGER>(idlFactoryLedger, {
-                agent,
-                canisterId: ledgerCanID,
+      const res = await tipCrypto(
+          participant,
+          amount,
+          ticker,
+          settings,
+          performer,
+          (update) => {
+            console.log(update)
+              this.setState({
+                  tipProgress: update.progress,
               });
-            } else if (ticker === "ckBTC") {
-              ledgerActor = IcrcLedgerCanister.create({
-                agent,
-                canisterId: ckBTCLedgerCanID,
-              });
-            }else if ( ticker === "TRAX") {
-              ledgerActor = IcrcLedgerCanister.create({
-                agent,
-                canisterId: TRAXLedgerCanID,
-              });
-            } else {
-              message.error("Invalid ticker, please select a different token!");
-            }
-            tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
-              agent,
-              canisterId: tippingCanID,
-            });
-            await this.handleSendTipCrypto(
-              tippingCanID,
-              sender,
-              amountToSend,
-              ledgerActor,
-              tippingActor,
-              ticker
-            );
-          },
-        });
-      } else {
-        const host = settings.icHost;
+          }
+      );
 
-        await authClient.login({
-          onSuccess: async () => {
-            identity = await authClient.getIdentity();
-            agent = new HttpAgent({ identity, host });
-            sender = await agent.getPrincipal();
-            if (ticker === "ICP") {
-              ledgerActor = Actor.createActor<_SERVICE_LEDGER>(idlFactoryLedger, {
-                agent,
-                canisterId: ledgerCanID,
-              });
-            } else if (ticker == "ckBTC") {
-              ledgerActor = IcrcLedgerCanister.create({
-                agent,
-                canisterId: ckBTCLedgerCanID,
-              });
-            } else if ( ticker === "TRAX") {
-              ledgerActor = IcrcLedgerCanister.create({
-                agent,
-                canisterId: TRAXLedgerCanID,
-              });
-            } else {
-              message.error("Invalid ticker, please select a different token!");
-            }
-            tippingActor = Actor.createActor<_SERVICE_TIPPING>(idlFactoryTipping, {
-              agent,
-              canisterId: tippingCanID,
-            });
-
-            await this.handleSendTipCrypto(
-              tippingCanID,
-              sender,
-              amountToSend,
-              ledgerActor,
-              tippingActor,
-              ticker
-            );
-          },
-        });
+      if (res) {
+          this.setState({requesting: false, submiting: false, confetti: true });
+          this.setState({openTipModal: false});
+          message.success('Tip sent successfully!');
       }
-    } catch (e) {
-      const err = await e;
-      message.error(err.message || "error occured, please try again later");
+    } catch (error) {
+      this.setState({openTipModal: false, requesting: false, submiting: false });
+      message.error(error.message);
     }
+
   }
 
   async loadMoreItem() {
@@ -1020,20 +785,90 @@ class PerformerProfile extends PureComponent<IProps> {
     this.setState({openSubscriptionModal: val})
   }
 
+  handleSubscriptionBtn = () => {
+    this.state.performer?.isSubscribed
+    ? this.setState({openCancelSubscriptionModal: true})
+    : this.setState({ openSubscriptionModal: true, subscriptionType: "monthly" })
+  }
+
+
+  async cancelSubscription(){
+    const {user} = this.props;
+    const {performer} = this.state;
+    // if (!window.confirm('Are you sure you want to cancel this subscription!')) return;
+    const subInfo = await subscriptionService.userSearch({
+      userId: user._id,
+      performerId: performer._id
+    });
+
+    try {
+      await subscriptionService.cancelSubscription(subInfo.data.data._id, subInfo.data.data.paymentGateway);
+      message.success('Subscription cancelled successfully');
+    } catch (e) {
+      message.error(e?.message || 'Error occurred, please try again later');
+    }
+  };
+
+  async openPaymentPage() {
+    let { applePaymentUrl } = this.state;
+    if (!applePaymentUrl) return;
+
+    applePaymentUrl = applePaymentUrl.replace(/^capacitor:\/\/localhost/, '').replace(/^\/+/, '');
+
+    const baseDomain = "https://trax.so";
+
+    if (!applePaymentUrl.startsWith("http://") && !applePaymentUrl.startsWith("https://")) {
+        applePaymentUrl = `${baseDomain}/${applePaymentUrl}`;
+    }
+
+    try {
+      //await Browser.open({ url: applePaymentUrl });
+      window.open(applePaymentUrl, '_blank');
+    } catch (error) {
+      console.error("Failed to open browser:", error);
+    }
+  }
+
   render() {
-    const { error, ui, user, feedState, videoState, productState, settings, ticketState } = this.props;
-    const { performer, countries, dataLoaded } = this.state;
+    const { error, ui, user, account, feedState, videoState, productState, settings, ticketState } = this.props;
+    const { performer, countries, dataLoaded, rootUrl } = this.state;
+
     if (dataLoaded === false) {
       return (
         <div style={{ margin: 30, textAlign: "center" }}>
-          <Spin />
+          <img src="/static/trax_loading_optimize.gif" alt="Loading..." className='w-28 m-auto'/>
         </div>
       );
     }
+
     if (error || performer === null || performer.length === 0) {
       return <Error statusCode={error?.statusCode || 404} title={error?.message || "Artist not found"} />;
     }
 
+    // Construct absolute URLs for images
+    const avatarUrl = performer?.avatar ? `${rootUrl}${performer.avatar}` : `${rootUrl}/static/no-avatar.png`;
+    const coverUrl = performer?.cover ? `${rootUrl}${performer.cover}` : `${rootUrl}/static/placeholder-cover-image.jpg`;
+    const profileUrl = `${rootUrl}/artist/${performer?.username || performer?._id}`;
+
+    console.log('Profile URLs:', {
+      avatarUrl,
+      coverUrl,
+      profileUrl,
+      rootUrl,
+      performerAvatar: performer?.avatar,
+      performerCover: performer?.cover
+    });
+
+    // Log all meta tags before rendering
+    if (typeof window !== 'undefined') {
+      const head = document.getElementsByTagName('head')[0];
+      const metaTags = head.getElementsByTagName('meta');
+      console.log('Current meta tags before render:', Array.from(metaTags).map(tag => ({
+        property: tag.getAttribute('property'),
+        name: tag.getAttribute('name'),
+        content: tag.getAttribute('content')
+      })));
+    }
 
     const { items: feeds = [], total: totalFeed = 0, requesting: loadingFeed } = feedState;
     const { items: videos = [], total: totalVideos = 0, requesting: loadingVideo } = videoState;
@@ -1049,20 +884,33 @@ class PerformerProfile extends PureComponent<IProps> {
       subscriptionType,
       isFollowed,
       isDesktop,
+      isMobile,
       colorHex,
       openTipProgressModal,
       tipProgress,
+      showFollowModal,
       nfts,
+      activeTab,
       loadNft,
       _videos,
       music,
-      confetti
+      confetti,
+      openCancelSubscriptionModal
     } = this.state;
+    const activeSubaccount = account.activeSubaccount || 'user';
+    const isUser = activeSubaccount === 'user';
+    const isPerformer = activeSubaccount === 'performer';
+
 
     return (
       <Layout
         className={styles.componentsPerformerVerificationFormModule}
-        style={{marginTop: -55}}
+        style={{
+          borderRadius: isPerformer ? '0.5rem' : '0',
+          marginTop: isPerformer ? 0 : -80,
+          backgroundColor: performer?.backgroundColor || '#0e0e0e'
+        }}
+        // `linear-gradient(180deg, #0e0e0e 25%, ${performer?.backgroundColor} 50%, transparent 100%)`
         // style={{
         //   background: `${
         //     isDesktop
@@ -1078,206 +926,168 @@ class PerformerProfile extends PureComponent<IProps> {
         <Head>
           <title>{`${ui?.siteName} | ${performer?.name || performer?.username}`}</title>
           <meta name="keywords" content={`${performer?.username}, ${performer?.name}`} />
-          <meta name="description" content={performer?.bio} />
-          <meta property="og:type" content="website" />
-          <meta property="og:title" content={`${ui?.siteName} | ${performer?.name || performer?.username}`} />
-          <meta property="og:image" content={performer?.avatar || "/static/no-avatar.png"} />
-          <meta property="og:description" content={performer?.bio} />
-          <meta name="twitter:card" content="summary" />
-          <meta name="twitter:title" content={`${ui?.siteName} | ${performer?.name || performer?.username}`} />
-          <meta name="twitter:image" content={performer?.avatar || "/static/no-avatar.png"} />
-          <meta name="twitter:description" content={performer?.bio} />
+          <meta name="description" content={`Follow ${performer.name} on TRAX and stay up-to-date with their latest releases`} />
+          {/* OG tags */}
+          <meta property="og:type" content="profile" />
+          <meta property="og:title" content={`${performer?.name || performer?.username} | ${ui?.siteName}`} />
+          <meta property="og:image" content={performer.avatar || performer.cover} />
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
+          <meta property="og:description" content={`Follow ${performer.name} on TRAX and stay up-to-date with their latest releases`} />
+          <meta property="og:url" content={profileUrl} />
+          <meta property="og:site_name" content={ui?.siteName} />
+          {/* Twitter tags */}
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content={`${performer?.name || performer?.username} | ${ui?.siteName}`} />
+          <meta name="twitter:image" content={performer.avatar || performer.cover} />
+          <meta name="twitter:description" content={`Follow ${performer.name} on TRAX and stay up-to-date with their latest releases`} />
         </Head>
-        <div className="top-profile">
+        <motion.div initial={initial_1} animate={animate_1} className="top-profile">
           <ParallaxBanner
-            layers={[{ image: `${performer?.cover || "/static/banner-image.jpg"}`, scale: [1.1, 1], speed: -14 }]}
-            className="parallax-banner-profile"
+            layers={[{ image: `${performer?.cover || "/static/placeholder-cover-image.jpg"}`, scale: [1.1, 1], speed: -14 }]}
+            className={`parallax-banner-profile ${isPerformer ? 'rounded-lg' : ''}`}
+            style={{ '--background-color': performer?.backgroundColor || '#0e0e0e' } as React.CSSProperties}
           >
-            <div className="bg-2nd">
-              <div className="top-banner">
-                <a aria-hidden className="arrow-back" onClick={() => Router.back()}>
-                  {/* <div style={{ background: "#0000008a", borderRadius: "20px", padding: "2px 5px" }}>
-                    <LeftOutlined />
-                  </div> */}
-                </a>
-                {/* <div className="top-right-wrapper">
-                  <div className="profile-genres-row">
-                    {performer?.genreOne && performer?.genreOne !== "Unset" && (
-                      <span className="genre-profile-val">{performer?.genreOne}</span>
-                    )}
-                    {performer?.genreTwo && performer?.genreTwo !== "Unset" && (
-                      <span className="genre-profile-val">{performer?.genreTwo}</span>
-                    )}
-                    {performer?.genreThree && performer?.genreThree !== "Unset" && (
-                      <span className="genre-profile-val">{performer?.genreThree}</span>
-                    )}
-                    {performer?.genreFour && performer?.genreFour !== "Unset" && (
-                      <span className="genre-profile-val">{performer?.genreFour}</span>
-                    )}
-                    {performer?.genreFive && performer?.genreFive !== "Unset" && (
-                      <span className="genre-profile-val">{performer?.genreFive}</span>
-                    )}
-                  </div>
-                  {performer?.verifiedAccount && (
-                    <div className="verified-artist-tag-wrapper">
-                      <div className="verified-artist-tag">
-                        <span>Verified artist</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {performer?.wallet_icp && (
-                    <div className="verified-artist-tag-wrapper">
-                      <div className="verified-artist-tag">
-                        <span>Accepts crypto</span>
-                      </div>
-                    </div>
-                  )}
-
-
-
-                </div> */}
-
-              </div>
+            <div className="bg-2nd" >
+              <div className="top-banner"/>
             </div>
           </ParallaxBanner>
-        </div>
+        </motion.div>
         <div className="main-profile">
-          <div className="main-container" style={{ width: "95% !important", maxWidth: "unset" }}>
+          <div className="" style={{ width: "95% !important", maxWidth: "unset", margin: 'unset' }}>
+            <FollowNotification
+              visible={this.state.showFollowNotification}
+              closeNotification={this.closeFollowNotification}
+              artist={performer?.name}
+            />
             <div className={!user._id ? "fl-col fl-col-not-logged" : "fl-col"}>
               <Parallax speed={-0.8} easing="easeInQuad">
-                {user._id && [
-                  <div className="btn-grp" key="btn-grp">
-                    {!user.isPerformer && (
-                      <div className="msg-tip-wrapper" style={{ display: "flex" }}>
-
-                        <Tooltip title="Send Tip">
-                          <button
-                            type="button"
-                            className="profile-tip-btn"
-                            disabled={!user._id || user.isPerformer}
-                            onClick={() => this.setState({ openTipModal: true })}
-                          >
-                            <DollarOutlined />
-                          </button>
-
-
-
-
-                        </Tooltip>
-                      </div>
-                    )}
-                    {!user.isPerformer && (
-                      <div style={{ display: "flex" }}>
-                        <Button
-                          disabled={!user._id}
-                          className={`${isFollowed ? "profile-following-btn" : "profile-follow-btn"}`}
-                          onClick={(e) => this.handleFollow()}
-                        >
-                          <p>{isFollowed ? "Following" : "Follow"}</p>
-                        </Button>
-                          <Button
-                            className={`${performer?.isSubscribed ? "subbed-btn" : "sub-btn"}`}
-                            disabled={!user._id}
-                            onClick={(e) => { this.setState({ openSubscriptionModal: true, subscriptionType: "monthly" }) }}
-                          >
-                            {performer?.isSubscribed ? "Subscribed" : "Subscribe"}
-                          </Button>
-                        {/* <button className="bubbly-button" onClick={(e)=> this.animateButton(e)}>Click me!</button> */}
-                      </div>
-                    )}
-                  </div>,
-                ]}
+                {user._id && isUser && account?.performerId !== performer._id && (
+                  <motion.div initial={initial_2} animate={animate_3} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto pb-12">
+                    <div className="w-full sm:w-auto flex justify-center sm:justify-start">
+                      <TraxButton
+                        htmlType="button"
+                        styleType="primaryPerformer"
+                        buttonSize={!isMobile? "large" : 'full'}
+                        buttonText={performer?.isSubscribed ? "Subscribed" : "Subscribe"}
+                        disabled={!user._id}
+                        isActive={performer?.isSubscribed}
+                        onClick={() => this.handleSubscriptionBtn()}
+                        color={performer?.themeColor || '#A8FF00'}
+                      />
+                    </div>
+                    <div className="w-full sm:w-auto flex justify-center sm:justify-start sm:gap-4 gap-3">
+                      <TraxButton
+                        htmlType="button"
+                        styleType="secondaryPerformer"
+                        buttonSize={isMobile ? "full" : "medium"}
+                        buttonText={isFollowed ? "Following" : "Follow"}
+                        disabled={!user._id}
+                        isActive={isFollowed}
+                        onClick={() => !isFollowed ? this.setState({showFollowModal: true}) : this.handleFollow()}
+                        color={performer?.themeColor || '#A8FF00'}
+                      />
+                      <TraxButton
+                        htmlType="button"
+                        styleType="secondaryPerformer"
+                        buttonSize={isMobile ? "full" : "medium"}
+                        buttonText="Support"
+                        disabled={!user._id || user.isPerformer}
+                        onClick={() => this.setState({ openTipModal: true })}
+                        color={performer?.themeColor || '#A8FF00'}
+                      />
+                    </div>
+                  </motion.div>
+                )}
               </Parallax>
               <div className={user.isPerformer ? "m-user-name-artist" : "m-user-name"}>
-
                 <div className="profile-heading-col">
                   <Parallax speed={0} easing="easeInQuad">
-
-                    <h4>
+                    <motion.h4
+                    initial={initial_2}
+                    animate={animate_2}
+                    className="uppercase tracking-tight"
+                    style={{
+                      color: performer?.themeColor || "#A8FF00",
+                       }}>
                       {performer?.name || "N/A"}
-                      &nbsp;
-                      {performer?.live > 0 && user?._id !== performer?._id && (
-                        <a aria-hidden onClick={this.handleJoinStream} className="live-status">
-                          Live
-                        </a>
-                      )}
-                    </h4>
-                    {performer.promoMsg && (
-                      <div className="performer-profile-desc">
-                            <span>{performer.promoMsg}</span>
+                    </motion.h4>
+                    <motion.div initial={initial_2} animate={animate_3} className="follow-sub-stats-container">
+                      <div className={`follow-sub-stats-wrapper ${user.isPerformer ? 'pb-12' : 'pb-0'}`}>
+                        {user._id == performer._id && (
+                            <Link href="/artist/account" className="edit-profile-link" style={{ '--theme-color': performer?.themeColor || '#A8FF00' } as React.CSSProperties}>
+                              Edit profile
+                            </Link>
+                        )}
                       </div>
-                    )}
-
-                    <div className="follow-sub-stats-container">
-                    <div className="follow-sub-stats-wrapper">
-                      {/* <div className="sub-stats" key="sub-stats">
-                        {shortenLargeNumber(performer?.stats?.followers || 0)}{" "}
-                        <span>
-                          {performer?.stats?.followers > 1 || performer?.stats?.followers === 0
-                            ? "followers"
-                            : "follower"}
-                        </span>
-                      </div> */}
-
-
-
-                      {user._id == performer._id && (
-                        <div className="follow-stats" key="follow-stats-edit">
-                          <Link href="/artist/account" className="edit-profile-link">
-                            <span className="">Edit profile</span>
-                          </Link>
-                        </div>
-                      )}
-
-
-
-                    </div>
-
-                    </div>
+                    </motion.div>
                   </Parallax>
                 </div>
-
               </div>
             </div>
           </div>
         </div>
         {user.isPerformer && <div style={{ marginTop: `${isDesktop ? "15px" : "-4px"}` }} />}
 
-        <div className="main-container" style={{ width: "95% !important", maxWidth: "unset" }}>
-          <div className="artist-content">
+        <div className="" style={{ width: "95% !important", maxWidth: "unset" }}>
+          <motion.div initial={initial_2} animate={animate_4} className="artist-content"
+          style={{willChange: 'unset !important', background: `linear-gradient(0deg, #0e0e0e, transparent)`, minHeight: '60vh'}}>
             <div className="line-divider"/>
             <Tabs
               defaultActiveKey="music"
               className="profile-tabs"
+              style={{ '--theme-color': performer?.themeColor || '#A8FF00' } as React.CSSProperties}
               size="large"
               onTabClick={(t: string) => {
-                this.setState({ tab: t, filter: initialFilter, isGrid: false }, () => this.loadItems());
+                this.setState({ tab: t, filter: initialFilter, isGrid: false, activeTab: t }, () => this.loadItems());
               }}
             >
 
+              <TabPane
+                key="music"
+                className="posts-tab-wrapper"
+                tab={ isMobile ? "Music" :
+                  <div className="flex flex-row">
+                    <span style={activeTab === "music" ? { color: performer?.themeColor || '#A8FF00' } : {color: '#7a7a7a'}}>Music</span>
+                    <div
+                    className={`absolute right-2 bg-[#414141B2] rounded-lg ${activeTab === "music" ? "border" : ""}`}
+                    style={activeTab === "music" ? { borderColor: performer?.themeColor || '#A8FF00' } : undefined}
+                    >
+                      <ChevronRightIcon
+                      className={`w-7 h-7 ${activeTab !== "music" ? "text-trax-white" : ""}`}
+                      style={activeTab === "music" ? { color: performer?.themeColor || '#A8FF00' } : undefined}/>
+                    </div>
+                  </div>
+                }>
 
-
-              <TabPane tab="Music" key="music" className="posts-tab-wrapper">
-                {/* <div className="performer-container"> */}
                   <ScrollListMusic
+                    user={user}
                     isProfileGrid={true}
-
                     items={videos.filter((video) => video.trackType === "audio")}
                     loading={loadingVideo}
                     canLoadmore={videos && videos.length < totalVideos}
                     loadMore={this.loadMoreItem.bind(this)}
+                    performerThemeColor={performer?.themeColor || '#A8FF00'}
                   />
-
-
-
-                {/* </div> */}
               </TabPane>
 
-              <TabPane tab="Video" key="video" className="posts-tab-wrapper">
-                {/* <div className="performer-container"> */}
+              <TabPane
+                key="video"
+                className="posts-tab-wrapper"
+                tab={ isMobile ? "Video" :
+                  <div className="flex flex-row">
+                    <span style={activeTab === "video" ? { color: performer?.themeColor || '#A8FF00' } : {color: '#7a7a7a'}}>Video</span>
+                    <div
+                    className={`absolute right-2 bg-[#414141B2] rounded-lg ${activeTab === "video" ? `border` : ""}`}
+                    style={activeTab === "video" ? { borderColor: performer?.themeColor || '#A8FF00' } : undefined}>
+                      <ChevronRightIcon
+                      className={`w-7 h-7 ${activeTab !== "video" ? 'text-trax-white' : ''}`}
+                      style={activeTab === "video" ? { color: performer?.themeColor || '#A8FF00' } : undefined}/>
+                    </div>
+                  </div>
+                }>
                   <ScrollListVideo
-
+                    user={user}
                     isProfileGrid={true}
                     isDesktop={isDesktop}
                     items={videos.filter((video) => video.trackType === "video")}
@@ -1285,79 +1095,102 @@ class PerformerProfile extends PureComponent<IProps> {
                     canLoadmore={videos && videos.length < totalVideos}
                     loadMore={this.loadMoreItem.bind(this)}
                   />
-
-
-
-                {/* </div> */}
               </TabPane>
 
-
-
-              <TabPane tab="About" key="about" className="posts-tab-wrapper">
+              <TabPane tab={ isMobile ? "About" :
+                  <div className="flex flex-row">
+                    <span style={activeTab === "about" ? { color: performer?.themeColor || '#A8FF00' } : {color: '#7a7a7a'}}>About</span>
+                    <div
+                    className={`absolute right-2 bg-[#414141B2] rounded-lg ${activeTab === "about" ? `border` : ""}`}
+                    style={activeTab === "about" ? { borderColor: performer?.themeColor || '#A8FF00' } : undefined}
+                    >
+                      <ChevronRightIcon
+                      className={`w-7 h-7 ${activeTab !== "about" ? 'text-trax-white' : ''}`}
+                      style={activeTab === "about" ? { color: performer?.themeColor || '#A8FF00' } : undefined}
+                      />
+                    </div>
+                  </div>
+                } key="about" className="posts-tab-wrapper">
                 <div className="about-container">
                   <div className="about-wrapper">
-
                     <div className="about-metrics">
-
                       <div className={user.isPerformer ? 'mar-0 pro-desc' : 'pro-desc'}>
+
                       <div className="about-img">
-                        <img src={performer?.avatar}/>
+                        <img src={performer?.avatar || '/static/no-avatar.png'}/>
                       </div>
-                        <PerformerInfo countries={countries} performer={performer} />
+
                       </div>
                     </div>
                     <div className="about-intro">
                       <p className="bio">{performer?.bio}</p>
+                      <PerformerInfo countries={countries} performer={performer} />
                     </div>
                   </div>
                 </div>
               </TabPane>
             </Tabs>
-          </div>
+          </motion.div>
         </div>
 
         <Modal
-          key="tip_performer"
-          className="subscription-modal"
-          open={openTipModal}
+          key="follow_performer"
+          className="subscription-modal border border-[#282828]"
+          open={showFollowModal}
           centered
-          onOk={() => this.setState({ openTipModal: false })}
+          onOk={() => this.setState({ showFollowModal: false })}
           footer={null}
-          width={420}
           title={null}
-          onCancel={() => this.setState({ openTipModal: false })}
+          onCancel={() => this.setState({ showFollowModal: false })}
         >
-
-          <TipPerformerForm
-            user={user}
-            performer={performer}
-            submiting={submiting}
-            onFinish={this.sendTip.bind(this)}
-            participants={null}
-            isProfile
-          />
+          <div className="text-trax-white mx-auto px-4 pb-6 pt-16 gap-4 flex flex-col">
+            <span className="flex justify-center uppercase font-heading font-extrabold text-5xl text-center"
+            style={{ color: performer?.themeColor || '#A8FF00' }}>
+              Communication Consent
+            </span>
+            <span className="text-base px-4 text-center">By following, you'll allow us to share your name and email with {performer.name} so you can receive exclusive updates about new music, upcoming shows, and special announcements.</span>
+            <div className="flex justify-center mt-3">
+              <TraxButton
+                htmlType="button"
+                styleType="secondary"
+                buttonSize={isMobile ? "full" : "medium"}
+                buttonText="Follow"
+                disabled={!user._id || user.isPerformer}
+                onClick={() => this.handleFollow()}
+              />
+            </div>
+          </div>
         </Modal>
-        {/* <Modal
-          key="tip_progress"
-          className="progress-modal"
-          open={openTipProgressModal}
-          centered
-          onOk={() => this.setState({ openTipProgressModal: false })}
-          footer={null}
-          width={450}
-          title={null}
-          onCancel={() => this.setState({ openTipProgressModal: false })}
-        > */}
-        {openTipProgressModal && (
-            <PaymentProgress stage={tipProgress}  confetti={confetti}/>
-          )}
 
-        {/* </Modal> */}
+        {((!Capacitor.isNativePlatform() && Capacitor.getPlatform() !== 'ios')) && (
+          <Modal
+            key="tip_performer"
+            className="ppv-purchase-common ppv-purchase-desktop"
+            open={openTipModal}
+            centered
+            onOk={() => this.setState({ openTipModal: false })}
+            footer={null}
+            title={null}
+            onCancel={() => this.setState({ openTipModal: false })}
+          >
+            {(!Capacitor.isNativePlatform()) && (
+              <TipPerformerForm
+                user={user}
+                account={account}
+                performer={performer}
+                submiting={submiting}
+                progress={tipProgress}
+                openProgress={openTipProgressModal}
+                onFinish={this.sendTip.bind(this)}
+              />
+            )}
+          </Modal>
+        )}
 
         <Modal
           key="subscribe_performer"
           className="subscription-modal"
-          width={600}
+          width={500}
           centered
           title={null}
           open={openSubscriptionModal}
@@ -1374,6 +1207,36 @@ class PerformerProfile extends PureComponent<IProps> {
             user={user}
           />
         </Modal>
+
+        <Modal
+          key="cancel_subscription"
+          className="subscription-modal"
+          width={500}
+          centered
+          title={null}
+          open={openCancelSubscriptionModal}
+          footer={null}
+          onCancel={() => this.setState({ openCancelSubscriptionModal: false})}
+          destroyOnClose
+        >
+          <div className="send-tip-container gap-8">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4">
+                <span className="text-4xl uppercase font-heading font-bold text-trax-white mt-2">Cancel Subscription</span>
+                <span className="text-trax-gray-400 text-base font-base ">Are you sure you want to cancel your subscription to {performer.name}? After your current term finishes you will lose access to their members only content.</span>
+              </div>
+
+              <TraxButton
+                htmlType="button"
+                styleType="alert"
+                buttonSize='full'
+                buttonText="Cancel"
+                onClick={() => this.cancelSubscription()}
+              />
+            </div>
+          </div>
+        </Modal>
+
       </Layout>
     );
   }
@@ -1387,6 +1250,7 @@ const mapStates = (state: any) => ({
   ticketState: { ...state.ticket.tickets },
   galleryState: { ...state.gallery.galleries },
   user: { ...state.user.current },
+  account: { ...state.user.account },
   settings: { ...state.settings },
 });
 

@@ -261,7 +261,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
     if (ticket === null) return;
     if (user?.isPerformer) return;
 
-    if (payload.currency === 'USD' && user.balance < payload.price) {
+    if (payload.currency === 'USD' && user?.account?.balance < payload.price) {
       message.error('You have an insufficient token balance. Please top up.');
       return;
     }
@@ -553,11 +553,11 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
     const ledgerCanID = settings.icLedger;
     const ckBTCLedgerCanID = Principal.fromText(settings.icCKBTCMinter);
 
-    const recipientAccountIdBlob = this.getRecipientAccountIdentity(Principal.fromText(ticket?.performer?.wallet_icp))
+    const recipientAccountIdBlob = this.getRecipientAccountIdentity(Principal.fromText(ticket?.performer.account?.wallet_icp))
     const platformAccountIdBlob = this.getPlatformAccountIdentity(Principal.fromText(settings.icTraxAccountPercentage))
 
     const fanAI = AccountIdentifier.fromPrincipal({
-      principal: Principal.fromText(user.wallet_icp)
+      principal: Principal.fromText(user.account?.wallet_icp)
     });
     // @ts-ignore
     const fanBytes = fanAI.bytes;
@@ -591,7 +591,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
         fee: BigInt(10),
         from_subaccount: null,
         to: {
-          owner: Principal.fromText(ticket?.performer?.wallet_icp),
+          owner: Principal.fromText(ticket?.performer.account?.wallet_icp),
           subaccount: [],
         },
         created_at_time: BigInt(Date.now() * 1000000)
@@ -612,7 +612,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
         fee: BigInt(100000),
         from_subaccount: null,
         to: {
-          owner: Principal.fromText(ticket?.performer?.wallet_icp),
+          owner: Principal.fromText(ticket?.performer.account?.wallet_icp),
           subaccount: [],
         },
         created_at_time: BigInt(Date.now() * 1000000)
@@ -673,7 +673,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
             });
 
             let balICRC1 = await ledgerActor.balance({
-              owner: Principal.fromText(user?.wallet_icp),
+              owner: Principal.fromText(user.account?.wallet_icp),
               certified: false,
             });
             if(Number(balICRC1) < Number(amountToSend + amountToSendPlatform) + 20){
@@ -693,7 +693,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
             });
 
             let balICRC1 = await ledgerActor.balance({
-              owner: Principal.fromText(user?.wallet_icp),
+              owner: Principal.fromText(user.account?.wallet_icp),
               certified: false,
             });
             if(Number(balICRC1) < Number(amountToSend + amountToSendPlatform) + 200000){
@@ -781,7 +781,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
               canisterId: ckBTCLedgerCanID
             });
             let balICRC1 = await ledgerActor.balance({
-              owner: Principal.fromText(user?.wallet_icp),
+              owner: Principal.fromText(user.account?.wallet_icp),
               certified: false,
             });
             if(Number(balICRC1) < Number(amountToSend) + 20){
@@ -800,7 +800,7 @@ class TicketViewPage extends PureComponent<IProps, IStates> {
               canisterId: TRAXLedgerCanID
             });
             let balICRC1 = await ledgerActor.balance({
-              owner: Principal.fromText(user?.wallet_icp),
+              owner: Principal.fromText(user.account?.wallet_icp),
               certified: false,
             });
             if(Number(balICRC1) < Number(amountToSend) + 200000){

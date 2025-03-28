@@ -1,14 +1,16 @@
 /* eslint-disable react/no-did-update-set-state */
 import { authService } from '@services/index';
-import {
-  Button, Col, Form, Input, Layout, Row, message
-} from 'antd';
+import { Col, Form, Input, Layout, Row, message } from 'antd';
 import Head from 'next/head';
 import Link from 'next/link';
 import { PureComponent } from 'react';
 import { connect } from 'react-redux';
 import { IForgot } from 'src/interfaces';
 import AuthFrame from 'src/components/common/base/auth-frame'
+
+import TraxButton from '@components/common/TraxButton';
+import { ArrowLeft } from 'lucide-react';
+import TraxInputField from '@components/common/layout/TraxInputField';
 
 interface IProps {
   ui?: any;
@@ -48,11 +50,13 @@ class Forgot extends PureComponent<IProps, IState> {
     clearInterval(this._intervalCountdown);
   }
 
-  handleReset = async (data: IForgot) => {
+  handleReset = async (data: any) => {
+    const { emailValue } = this.state;
     await this.setState({ submiting: true });
     try {
+      console.log("resetiram", emailValue);
       await authService.resetPassword({
-        ...data
+        email: emailValue
       });
       message.success('An email has been sent to you to reset your password.');
       this.handleCountdown();
@@ -87,6 +91,18 @@ class Forgot extends PureComponent<IProps, IState> {
     });
   };
 
+  handleBack = () => {
+    const { onClose } = this.props;
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile && onClose) {
+      onClose();
+    } else {
+      // For desktop, go back to previous page
+      window.history.back();
+    }
+  };
+
   render() {
     const { ui, onClose } = this.props;
     const { submiting, countTime, emailValue } = this.state;
@@ -98,39 +114,22 @@ class Forgot extends PureComponent<IProps, IState> {
           <title>{`${ui?.siteName} | Forgot Password`}</title>
         </Head>
         <Layout className="min-w-full min-h-full pt-0">
+        <div className="absolute top-10 left-10">
+                    <button
+                      className="flex text-sm items-center gap-2 bg-slaps-gray p-3 rounded-md font-semibold text-custom-green"
+                      onClick={this.handleBack}
+                    >
+                      <ArrowLeft/>
+
+                    </button>
+                  </div>
           <AuthFrame>
                 <div className='log-in-form items-center'>
-                  <div className="w-full text-left">
-                  {!isMobile ? (
-                    <a className="flex text-sm items-center gap-2 font-semibold" href='/'>
-                      <img className='w-5 h-5'src="/static/frameIcon.svg" alt="Right arrow" />
-                      Back
-                    </a>
-                  ) : (
-                    <button
-                      className="flex text-sm items-center gap-2 font-semibold text-custom-lime-green pb-4"
-                      onClick={onClose}
-                    >
-                      <img className="w-5 h-5" src="/static/frameIcon.svg" alt="Right arrow" />
-                      Back
-                    </button>
-                  )}
-                  </div>
-                  <div className='log-in-header text-center md:text-left'>
-                    <h1 className='main-title pb-4'>Reset your password</h1>
-                    <p className='main-subtitle text-center md:text-left pt-2 pb-2 md:pb-6 text-sm md:text-sm font-medium'>If you signed up with an email and password, reset your password below.</p>
-                    <p className='main-subtitle text-center md:text-left pt-2 pb-2 md:pb-12 text-sm md:text-sm font-medium'>
-                      If you signed up using a wallet, Plug or Internet Identity, get help accessing your account
-                      <Link
-                        href={{
-                          pathname: 'https://x.com/trax_so'
-                        }}
-                        target="_blank"
-                        className="forgot-password ml-2 underline"
-                      >
-                        here.
-                      </Link>
-                    </p>
+
+                  <div className='log-in-header '>
+                    <h1 className='font-body text-[#FFF] text-3xl text-center pb-2'>Trouble signing in?</h1>
+                    <p className='main-subtitle text-center pt-2 pb-2 md:pb-6 text-sm md:text-md tracking-loose font-regular'>Enter the email address connected to your account. We'll send you an email with a link to get back into your account.</p>
+
 
                   </div>
                   <div className='w-full m-auto md:py-0 py-2'>
@@ -155,32 +154,25 @@ class Forgot extends PureComponent<IProps, IState> {
                             }
                           ]}
                         >
-                          <Input
-                            onChange = {this.handleInputChange}
+                          <TraxInputField
+                            type="email"
                             name="emailValue"
-                            type="text"
+                            label="Enter your email address"
+                            value={emailValue}
+                            onChange={this.handleInputChange}
                           />
-                          <label
-                            htmlFor="usernameInput"
-                            className={`floating-label ${this.state.emailValue ? 'label-transition-active' : 'label-transition-initial'
-                              }`}
-                          >
-                            Enter your email address
-                          </label>
                         </Form.Item>
                       </div>
                       <div className='log-in-btn-wrapper py-3'>
-                        <Form.Item style={{ textAlign: 'center' }}>
-                          <Button
+                        <Form.Item>
+                          <TraxButton
                             htmlType="submit"
-                            className="log-in-btn"
-                            disabled={!emailValue.trim() ||submiting || countTime < 60}
+                            styleType="primary"
+                            buttonSize='full'
+                            buttonText={countTime < 60 ? `Resend in ${countTime}s`: 'Reset password'}
                             loading={submiting || countTime < 60}
-                          >
-                            {countTime < 60 ? 'Resend in' : 'Reset password'}
-                            {' '}
-                            {countTime < 60 && `${countTime}s`}
-                          </Button>
+                            disabled={!emailValue.trim() || submiting || countTime < 60}
+                          />
                         </Form.Item>
                       </div>
                       <div className='sign-in-link pt-28'>

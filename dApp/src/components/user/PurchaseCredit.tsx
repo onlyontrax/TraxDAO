@@ -2,20 +2,39 @@ import { message } from 'antd';
 import { useState, useEffect } from 'react';
 import { IUser, ISettings } from '@interfaces/index';
 import { useRouter } from 'next/router';
-import { paymentService } from '@services/index';
+import { paymentService, userService } from '@services/index';
+import { connect } from 'react-redux';
+import { updateBalance } from '@redux/user/actions';
+import { useDispatch } from 'react-redux';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import TraxButton from '@components/common/TraxButton';
+import AddCard from '@components/performer/add-card';
+import StripeExpressCheckout from '../user/stripe-express-checkout/express-checkout';
+import PriceBreakdown from './price-breakdown';
 
 interface IProps {
-  user: IUser,
-  settings: ISettings,
+  user: IUser;
+  settings: ISettings;
+  updateBalance?: Function;
+  initialAmount?: number;
+  isFromPPV?: boolean;
+  onFinish?(canPay: boolean): void;
 }
 
-const PurchaseCredit: React.FC<IProps> = ({ user, settings }) => {
-  const [amount, setAmount] = useState(10);
+const PurchaseCredit: React.FC<IProps> = ({ user, settings, initialAmount = 10, onFinish, isFromPPV, updateBalance: handleUpdateBalance }) => {
+  const [amount, setAmount] = useState(initialAmount);
   const [couponCode, setCouponCode] = useState('');
+  const [paymentOption, setPaymentOption] = useState('noPayment');
   const [coupon, setCoupon] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [card, setCard] = useState<any>(null);
+  const [showStripe, setShowStripe] = useState(false);
+  const [cards, setCards] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [option, setOption] = useState(isFromPPV ? "content" : "ten");
+  const [custom, setCustom] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const dispatch = useDispatch();
 
   useEffect(() => {
     fetchCards();
@@ -29,16 +48,16 @@ const PurchaseCredit: React.FC<IProps> = ({ user, settings }) => {
     try {
       setLoading(true);
       const resp = await paymentService.getStripeCards();
-      if (resp.data.data.length > 0) {
-        const cardData = resp.data.data[0].card ? resp.data.data[0].card : resp.data.data[0];
-        setCard({
-          brand: cardData.brand,
-          last4: cardData.last4,
-        });
-      }
-      setLoading(false);
+      setCards(resp.data.data.map((d) => {
+        if (d.card) return { ...d.card, id: d.id };
+        if (d.three_d_secure) return { ...d.three_d_secure, id: d.id };
+        return d;
+      }));
+
+      // setPaymentOption("card")
     } catch (error) {
-      message.error('Failed to load card information');
+      message.error('An error occurred while fetching cards. Please try again.');
+    }finally{
       setLoading(false);
     }
   };
@@ -49,6 +68,14 @@ const PurchaseCredit: React.FC<IProps> = ({ user, settings }) => {
       router.push('/user/account');
       return;
     };
+
+    if (!amount || amount < 1) {
+      message.error('Minimum amount is $1.00');
+      return;
+    }
+
+
+    let success;
 
     try {
       setSubmitting(true);
@@ -61,13 +88,23 @@ const PurchaseCredit: React.FC<IProps> = ({ user, settings }) => {
         window.location.href = resp?.data?.paymentUrl;
       };
 
-      message.success('Payment successful! Your wallet has been topped up.');
+
+      if (resp?.data?.status === 'success') {
+        message.success('Payment successful! Your wallet has been topped up.');
+        await userService.reloadCurrentUser(dispatch);
+      } else {
+        message.success('Payment pending! The transaction is taking longer than usual. Please refresh page after few minutes.', 7);
+      }
+      isFromPPV && onFinish(true);
     } catch (e) {
+      isFromPPV && onFinish(false)
 
       const error = await e;
       message.error(error.message || 'Error occured, please try again later');
       setSubmitting(false);
     } finally {
+
+
 
       setSubmitting(false);
     };
@@ -92,8 +129,15 @@ const PurchaseCredit: React.FC<IProps> = ({ user, settings }) => {
   const handleRedirectToSettings = () => {
     router.push({
       pathname: '/user/account',
-      query: { tab: 'subscription' }
+      query: { tab: 'billing' }
     });
+  };
+
+  const formatAmount = (amount: number | undefined | null): string => {
+    if (!amount && amount !== 0) return '0';
+    const num = Number(amount);
+    if (isNaN(num)) return '0';
+    return num.toString();
   };
 
   const adjustInputWidth = (input) => {
@@ -105,89 +149,186 @@ const PurchaseCredit: React.FC<IProps> = ({ user, settings }) => {
     }
   };
 
-  return (
-    <div className="flex p-4 md:p-8  ">
-      <div className="rounded shadow-md  w-full max-w-md">
-        <h1 className="text-3xl font-heading text-left mb-6">Add credit</h1>
+  const stripeFee = (amount * (parseFloat(settings.stripeFeesPercentageAmount) / 100)) + parseFloat(settings.stripeFeesFixedAmount);
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            addFund({ amount });
-          }}
-          className="space-y-4"
-        >
-          <div className="flex flex-col items-center">
-            <label htmlFor="amount" className="sr-only">
+
+  const formatNumber = (number) => {
+    if (number === '' || number === undefined || number === null) return '0.00';
+    if (number === '0' || number === 0 || number < 1) return '0.00';
+    const numStr = number.toString().replace(/,/g, '');
+    const isNegative = numStr.startsWith('-');
+    const cleanNum = isNegative ? numStr.slice(1) : numStr;
+    const floatNum = parseFloat(cleanNum);
+    if (isNaN(floatNum)) return '0.00';
+    const withDecimals = floatNum.toFixed(2);
+    const [integerPart, decimalPart] = withDecimals.split('.');
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return `${isNegative ? '-' : ''}${formattedInteger}.${decimalPart}`;
+  };
+
+
+  const changeShortcut = (value: number, option: string, e: any) => {
+    e.preventDefault();
+    const safeValue = Math.max(1, value);
+    setOption(option);
+    setAmount(safeValue);
+  };
+
+  const handleBlur = () => {
+    if (isNaN(amount) || amount < 1) {
+      setAmount(1);
+    } else {
+      // Ensure amount has maximum 2 decimal places
+      setAmount(Math.round(amount * 100) / 100);
+    }
+  };
+
+
+  const afterAddCard = (cards: any, selected: boolean) => {
+    cards.length == 0 && setCards(cards)
+    selected ? setPaymentOption('card') : setPaymentOption('noPayment');
+  }
+
+
+  const handlePaymentMethodsAvailable = (methods) => {
+    if(methods.applePay || methods.googlePay || methods.link){
+      setShowStripe(true)
+    }else{
+      setShowStripe(false)
+    }
+  };
+
+  const handleSubmit = () => {
+    if(paymentOption === 'card'){
+      addFund({ amount });
+    }
+
+  };
+
+  const getButtonText = () => {
+    if (paymentOption === "noPayment") return "Select payment method";
+    if (amount < 1) return "$1 minimum spend";
+    if (submitting) return "Processing... please wait";
+    return "Top up";
+  };
+
+  const handleDisabled = () => {
+    return paymentOption === "noPayment" ||
+           amount < 1 ||
+           submitting;
+  };
+
+
+  return (
+    <div className="flex p-4  w-full">
+      <div className="rounded shadow-md  w-full max-w-md">
+         <h1 className="text-4xl font-heading uppercase text-center sm:text-center text-trax-white mb-6 font-bold">Add credit</h1>
+          {isFromPPV && (initialAmount > user?.account?.balance) && (
+            <div className='bg-transparent bg-trax-zinc-900 text-trax-amber-500 border border-trax-amber-500 rounded-lg py-2 px-3 mb-4'>
+              <span>You don't have enough available credits to purchase this content, please top up your wallet to continue</span>
+            </div>
+          )}
+
+          {isFromPPV &&  (
+            <>
+              <div className='w-fit text-sm flex flex-row justify-start gap-2 mb-2 text-custom-green bg-trax-zinc-900 border border-trax-zinc-700 px-3 py-1 rounded-full'>
+                <span className='text-custom-green justify-start'>Available balance:</span>
+                <div className='flex flex-row justify-end '>
+                  <img src="/static/credit.png" className="w-4 h-4 mr-1 mt-[2px]" />
+                  <span className=' text-sm text-trax-white'>{formatNumber(user?.account?.balance)}</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          <div className="flex flex-col items-start ">
+            <label htmlFor="amount" className="sr-only ">
               Amount
             </label>
-            <div className="flex flex-col items-center border-1 border border-trax-white/10 rounded-lg p-6 w-full">
-              <div className="flex items-center bg-trax-white/10 p-3 rounded-lg mx-auto">
-                <span className="text-trax-white pr-1 text-2xl text-center">$</span>
-                <input
-                  type="number"
-                  step="0.10"
-                  id="amount"
-                  name="amount"
-                  className="border-none rounded bg-trax-transparent text-trax-white text-2xl text-left focus:outline-none"
-                  min="1.00"
-                  value={amount}
-                  onChange={(e) => {
-                    setAmount(parseFloat(e.target.value));
-                    adjustInputWidth(e.target);
-                  }}
-                  required
-                  style={{ width: 'auto' }} // Set initial width to auto
-                />
-                <span
-                  id="input-width-measurer"
-                  className="absolute invisible whitespace-nowrap text-2xl font-inherit"
-                ></span>
-              </div>
-              <div className="flex items-center justify-center pt-6 space-x-2 text-center text-trax-gray-400 text-sm">
-                <p className='text-trax-lime-500'>Fee $0.30</p>
-                <span>•</span>
-                <p>You’ll pay ${amount > 0.30 ? (amount + 0.30).toFixed(2) : '0.00'}</p>
-              </div>
-            </div>
-          </div>
+            <div className="flex flex-col items-start gap-y-4 rounded-lg w-full">
+              <div className="buy-credit-amount-container">
+                <div className={`tip-amount-btn flex-col ${option === "one" ? 'active border-custom-green' : ''}`} onClick={(e) => changeShortcut(1.00, "one", e)}>
+                  <span className='flex-col'><img src="/static/credit1.png" className="w-12 h-12 mx-auto my-auto rounded-none mb-2 mt-2" />1 credit</span>
+                  <p className='flex-col'>$1.00</p>
+                </div>
 
-          <div className="flex flex-col items-center">
-            <label htmlFor="coupon" className="sr-only">
-              Coupon Code
-            </label>
-            <div className="flex space-x-2 py-4 text-trax-white">
-              <input
-                type="text"
-                id="coupon"
-                name="coupon"
-                placeholder="Enter coupon code here"
-                className="px-4 bg-trax-transparent rounded focus:outline-none"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-                disabled={!!coupon}
-              />
-              {!coupon ? (
-                <button
-                  type="button"
-                  onClick={applyCoupon}
-                  className="px-4 py-1 bg-trax-lime-500 text-trax-white rounded"
-                  disabled={!couponCode}
-                >
-                  Apply!
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCouponCode('');
-                    setCoupon(null);
-                  }}
-                  className="px-4 bg-trax-lime-500 text-trax-white rounded"
-                >
-                  Use Later!
-                </button>
+                <div className={`tip-amount-btn flex-col ${option === "five" ? 'active border-custom-green' : ''}`} onClick={(e) => changeShortcut(5.00, "five", e)}>
+                  <span className='flex-col'><img src="/static/credit5.png" className="w-12 h-12 mx-auto my-auto rounded-none mb-2 mt-2" />5 credits</span>
+                  <p className='flex-col'>$5.00</p>
+                </div>
+
+                <div className={`tip-amount-btn flex-col ${option === "ten" ? 'active border-custom-green' : ''}`} onClick={(e) => changeShortcut(10.00, "ten", e)}>
+                  <span className='flex-col'><img src="/static/credit10.png" className="w-12 h-12 mx-auto my-auto rounded-none mb-2 mt-2" />10 credits</span>
+                  <p className='flex-col'>$10.00</p>
+                </div>
+
+                <div className={`tip-amount-btn ${option === "custom" ? 'active border-custom-green' : ''}`} onClick={(e) => changeShortcut(0, "custom", e)}>
+                  <span>Custom</span>
+                </div>
+              </div>
+
+              {(option === "custom" || option === "content") && (
+                <div className="flex flex-row items-start bg-transparent rounded-lg w-full bg-[#161616] border border-[#414141] p-2.5 pb-[0.4rem]">
+                  <img src="/static/credit.png" className="w-11 h-11 flex rounded-none mr-2 mt-[3px]" />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={1.00}
+                    id="amount"
+                    name="amount"
+                    className="border-none rounded bg-trax-transparent font-heading font-extrabold text-trax-white text-5xl text-left focus:outline-none w-fit"
+                    value={amount}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      if (!isNaN(value)) {
+                        setAmount(value);
+                        adjustInputWidth(e.target);
+                        setOption("custom");
+                      }
+                    }}
+                    onBlur={handleBlur}
+                    required
+                    style={{ width: 'auto' }}
+                  />
+                  <span
+                    id="input-width-measurer"
+                    className="absolute invisible whitespace-nowrap text-2xl font-inherit"
+                  ></span>
+                </div>
               )}
+
+
+                <div className={showStripe ? 'block w-full' : 'hidden'}>
+                  <StripeExpressCheckout
+                    amount={Math.round((amount >= 1 ? amount : 1) + stripeFee)}
+                    onSuccess={() => {
+                      message.success('Payment successful!');
+                      onFinish(true);
+                    }}
+                    settings={settings}
+                    onError={(err) => {
+                      message.error(err.message || 'Payment failed');
+                    }}
+                    returnUrl={window.location.href}
+                    onPaymentMethodsAvailable={handlePaymentMethodsAvailable}
+                  />
+                  <div className="text-center w-full">
+                    <div className="flex items-center justify-center gap-0">
+                      <hr className="w-full border-t border-trax-gray-500" />
+                      <span className="text-trax-gray-300 w-full">Or pay with card</span>
+                      <hr className="w-full border-t border-trax-gray-500" />
+                    </div>
+                  </div>
+                </div>
+
+              <AddCard
+                settings={settings}
+                user={user}
+                paymentOption={paymentOption}
+                initialAmount={amount}
+                onFinish={(cards: any, selected: boolean) => afterAddCard(cards, selected)}
+              />
+              <PriceBreakdown amount={amount} stripeFee={stripeFee} />
             </div>
           </div>
 
@@ -199,55 +340,23 @@ const PurchaseCredit: React.FC<IProps> = ({ user, settings }) => {
             </div>
           )}
 
-          {/* <div className="flex flex-col items-center">
-            <p className="text-lg text-trax-white">
-              Total: ${couponAmount.toFixed(2)}
-            </p>
-          </div> */}
-
-          <div className="flex flex-col pb-4 md:pb-10">
-            <h2 className="text-base font-medium text-[#B3B3B3] text-left">
-              Payment method
-            </h2>
-            <div className="flex flex-col items-left rounded-md px-0 w-full">
-              {card ? (
-                <div className="flex flex-row items-center gap-4">
-                  <div className="size-8">
-                    {card.brand === 'Visa' && <img src="/static/visa_logo.png" alt="Visa" />}
-                    {card.brand === 'MasterCard' && <img src="/static/mastercard_logo.png" alt="MasterCard" />}
-                    {card.brand === 'American Express' && <img src="/static/amex_logo.png" alt="American Express" />}
-                  </div>
-                  <div className="text-trax-gray-300">
-                    <span>{`**** **** **** ${card.last4}`}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className='flex justify-between gap-1'>
-
-                  <button
-                    onClick={handleRedirectToSettings}
-                    className="px-4 py-1 bg-[#A8FF00] text-xl font-semibold uppercase text-black font-heading rounded"
-                  >
-                    Add card
-                  </button>
-                </div>
-              )}
-            </div>
+          <div>
+            <TraxButton
+              htmlType="button"
+              styleType="primary"
+              buttonSize='full'
+              buttonText={getButtonText()}
+              disabled={handleDisabled()}
+              onClick={handleSubmit}
+            />
           </div>
-
-          <div className="flex justify-center">
-            <button
-              type="submit"
-              className="px-6 py-2 bg-trax-lime-500 text-trax-white font-heading uppercase text-2xl rounded-lg w-full disabled:cursor-not-allowed disabled:bg-custom-gray"
-              disabled={submitting || !card}
-            >
-              {submitting ? 'Processing...' : 'Purchase'}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );
 };
 
-export default PurchaseCredit;
+const mapStates = (state) => ({
+});
+const mapDispatch = { updateBalance };
+
+export default connect(mapStates, mapDispatch)(PurchaseCredit);

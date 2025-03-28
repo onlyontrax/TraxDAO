@@ -100,11 +100,11 @@ export default class FeedForm extends PureComponent<IProps> {
 
       for (let i = 0; i < ids.length; i += 1) {
         const resp = await performerService.findOne(ids[i]);
-        if (resp.data.wallet_icp) {
+        if (resp.data._id) {
           result.push(resp.data);
         } else {
           message.config({ duration: 6 });
-          message.info('This artist cannot benefit from royalty sharing as they have not connected their wallet.');
+          message.info('This artist cannot be found. Please try again.');
         }
       }
 
@@ -176,7 +176,7 @@ export default class FeedForm extends PureComponent<IProps> {
 
   changeUploadToIC = (option: boolean) => {
     const { performer } = this.props;
-    if (!performer?.wallet_icp) {
+    if (!performer.account?.wallet_icp) {
       message.info('You must connect your wallet id to TRAX in order to make use of web3 features.');
     }
     this.setState({ uploadToIC: option });
@@ -444,7 +444,7 @@ export default class FeedForm extends PureComponent<IProps> {
         }}
         >
           <Form.Item style={{ width: '50%' }} name="percentageCut">
-            <InputNumber id={performers._id} defaultValue={0} onChange={(e) => this.updatePercentages(performers._id, performers.wallet_icp, e)} style={{ width: '100%' }} min={1} max={100} />
+            <InputNumber id={performers._id} defaultValue={0} onChange={(e) => this.updatePercentages(performers._id, performers.account?.wallet_icp, e)} style={{ width: '100%' }} min={1} max={100} />
             {' '}
             %
           </Form.Item>
@@ -527,12 +527,12 @@ export default class FeedForm extends PureComponent<IProps> {
               validateTrigger={['onChange', 'onBlur']}
               rules={[{ required: true, message: `${type === 'text'? 'Please add a description' : 'Please add a caption' }` }]}
             >
-              <Input.TextArea 
-                showCount 
-                value={text} 
-                onChange={(e) => this.setState({ text: e.target.value })}  
-                style={{ width: '100%', marginLeft: '0.4rem' }} 
-                rows={3} 
+              <Input.TextArea
+                showCount
+                value={text}
+                onChange={(e) => this.setState({ text: e.target.value })}
+                style={{ width: '100%', marginLeft: '0.4rem' }}
+                rows={3}
                 minLength={1}
                       maxLength={500}
                 placeholder={!fileIds.length ? 'Have something to share with your fans?' : 'Have something to share with your fans?'}
@@ -568,12 +568,12 @@ export default class FeedForm extends PureComponent<IProps> {
                         Upload this post to the Internet Computer
                       </p>
                         </div>
-                      
+
                       <Form.Item name="upload-option">
                           <Switch
                             checkedChildren=""
                             unCheckedChildren=""
-                            disabled={!performer?.wallet_icp}
+                            disabled={!performer.account?.wallet_icp}
                             checked={uploadToIC}
                             style={{marginTop: '1rem'}}
                             onChange={(val) => this.changeUploadToIC(val)}
@@ -715,7 +715,7 @@ export default class FeedForm extends PureComponent<IProps> {
                   <p className="create-post-subheading">Poll</p>
                     <div className="poll-form">
                       <div className="poll-top">
-                        
+
                         {feed ? (
                           <>
                             <span aria-hidden="true" onClick={() => this.setState({ openPollDuration: true })}>
@@ -729,7 +729,7 @@ export default class FeedForm extends PureComponent<IProps> {
                           </>
                         ) : (
                           <span>
-                            Poll expiration 
+                            Poll expiration
                             {' '}
                             {formatDate(feed?.pollExpiredAt)}
                           </span>
@@ -824,10 +824,10 @@ export default class FeedForm extends PureComponent<IProps> {
               <div className='form-access-wrapper' style={{width: '100%', marginTop: '0.5rem'}}>
               <p className="create-post-subheading">Price</p>
                 <p className="create-post-info">
-                 Input the price of this piece of content 
+                 Input the price of this piece of content
                 </p>
               <Form.Item style={{ width: '100%'}} name="price" label="" rules={[{ required: true, message: 'Please add the price' }]}>
-              
+
                 <InputNumber
                   type="number" prefix="$" placeholder='0.00'
                   datatype="currency"
@@ -837,7 +837,7 @@ export default class FeedForm extends PureComponent<IProps> {
               </Form.Item>
               </div>
             )}
-            
+
             <div className='form-option-wrapper' style={{marginTop: '0.5rem'}}>
               <div>
                 <p className="create-post-subheading">Earn crypto</p>
@@ -854,7 +854,7 @@ export default class FeedForm extends PureComponent<IProps> {
                     onChange={(val) => this.setState({shareTip: val})}
                     className={`${shareTip ? 'switch-toggle-on' : 'switch-toggle-off'}`}
                   />
-          
+
               </Form.Item>
               </div>
               </div>
@@ -876,7 +876,7 @@ export default class FeedForm extends PureComponent<IProps> {
                         onChange={(e) => {
                           this.pushFeaturedArtists(e);
                         }}
-                        defaultValue={[performer?._id] || []}
+                        defaultValue={[performer?._id]}
                       >
                         {performers
                         && performers.length > 0
@@ -895,10 +895,10 @@ export default class FeedForm extends PureComponent<IProps> {
                     <div className='form-access-wrapper' style={{ marginTop: '0.5rem' }}>
                     <p className="create-post-subheading">Royalty split</p>
                         <p className="create-post-info">
-                          Distribute the revenue of this post with collaborators. Only artists with a web3 wallet connected qualify for royalty sharing, and will be displayed below.
+                          Distribute the revenue of this post with collaborators.
                         </p>
                       <Form.Item>
-                        
+
                         <Table
                           dataSource={dataSource}
                           columns={this.columns}

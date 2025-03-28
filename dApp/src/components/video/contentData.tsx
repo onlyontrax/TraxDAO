@@ -2,74 +2,47 @@
 /* eslint-disable react/jsx-no-useless-fragment */
 /* eslint-disable no-prototype-builtins */
 import {
-    Layout, Tabs, message, Button, Spin, Tooltip, Avatar, Modal, Progress, Image
+    Tabs, message, Modal
   } from 'antd';
-  import { BsCheckCircleFill } from 'react-icons/bs';
-  import {
-    PlusOutlined, FireOutlined, FireFilled, CommentOutlined, LoadingOutlined
-  } from '@ant-design/icons';
-  import { CheckBadgeIcon, LockClosedIcon } from '@heroicons/react/24/solid';
-
   import { PureComponent } from 'react';
   import { connect } from 'react-redux';
   import {
     getComments, moreComment, createComment, deleteComment
   } from 'src/redux/comment/actions';
-  import { updateBalance } from '@redux/user/actions';
-  import { getRelated } from 'src/redux/video/actions';
-  import Head from 'next/head';
-  import { motion } from 'framer-motion';
+  import { updateBalance } from "@redux/user/actions";
   import {
-    authService, videoService, reactionService, tokenTransctionService, paymentService
+    authService, videoService, followService, performerService
   } from '@services/index';
-
-
   import { ListComments, CommentForm } from '@components/comment';
-  import ConfirmSubscriptionPerformerForm from '@components/performer/confirm-subscription';
-  import { PPVPurchaseModal } from '@components/performer';
   import { shortenLargeNumber, formatDate } from '@lib/index';
   import {
-    IVideo, IUser, IUIConfig, IPerformer, ISettings
+    IVideo, IUser, IUIConfig, IPerformer, ISettings,
+    IAccount
   } from 'src/interfaces';
-
-  // import { ppv } from "../../src/smart-contracts/ppv";
-  // import { idlFactorySUB } from "../../src/smart-contracts/declarations/subscriptions";
-  import { Principal } from '@dfinity/principal';
-  import { AccountIdentifier } from '@dfinity/nns';
-  import { Actor, HttpAgent } from '@dfinity/agent';
-  import { AuthClient } from '@dfinity/auth-client';
   import Link from 'next/link';
-  import Router, { useRouter } from 'next/router';
-  import Error from 'next/error';
-  /*import { subscriptions } from '../../src/smart-contracts/declarations/subscriptions';
-  import { SubType } from '../../src/smart-contracts/declarations/subscriptions/subscriptions.did';*/
-
-  import { idlFactory as idlFactoryPPV } from '../../smart-contracts/declarations/ppv/ppv.did.js';
+  import Router from 'next/router';
   import type { _SERVICE as _SERVICE_PPV, Content } from '../../smart-contracts/declarations/ppv/ppv2.did.js';
-
-  import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-  import { faEllipsis } from '@fortawesome/free-solid-svg-icons'
-
-  import { idlFactory as idlFactoryLedger } from '../../smart-contracts/declarations/ledger/ledger.did.js';
   import type { _SERVICE as _SERVICE_LEDGER } from '../../smart-contracts/declarations/ledger/ledger2.did.js';
-  import {
-    TransferArgs, Tokens, TimeStamp, AccountBalanceArgs
-  } from '../../smart-contracts/declarations/ledger/ledger2.did.js';
-  import { IcrcLedgerCanister, TransferParams } from "@dfinity/ledger";
-  import { faInstagram, faSoundcloud, faXTwitter, faSpotify } from '@fortawesome/free-brands-svg-icons'
-  import { faCheck } from '@fortawesome/free-solid-svg-icons'
-  import PaymentProgress from '../user/payment-progress.js';
   import { debounce } from 'lodash';
-  import LogInModal from 'src/components/log-in/log-in-modal';
-  import SignUpModal from '@components/sign-up/sign-up-modal';
-  import { Description } from '@headlessui/react/dist/components/description/description.js';
-  import { PlusIcon, MinusIcon } from '@heroicons/react/24/solid';
+  import { PICK_GENRES } from 'src/constants';
+  import TraxButton from '@components/common/TraxButton';
+  // import { TipFunction } from '@components/user/tip-service';
+  import TipPerformerForm from '@components/performer/TipPerformerForm';
+  import { tokenTransctionService } from '@services/index';
+  import {
+    requestConnectPlug,
+    tipCrypto,
+    requestPlugBalance
+  } from "../../../src/crypto/transactions/plug-tip";
+  import PaymentProgress from '@components/user/payment-progress';
+  import { Principal } from "@dfinity/principal";
 
   const { TabPane } = Tabs;
 
   interface IProps {
     commentMapping: any;
     comment: any;
+    account: IAccount;
     getComments: Function;
     moreComment: Function;
     createComment: Function;
@@ -79,6 +52,8 @@ import {
     video: IVideo;
     settings: ISettings;
     user: IUser;
+    isMobile: boolean;
+    updateBalance: Function;
   }
 
   const variants = {
@@ -100,9 +75,13 @@ import {
     static noredirect = true;
 
     async getData() {
+      const { video } = this.props;
       if (this.props.video && this.props.video._id) {
         return { video: this.props.video };
       }
+
+
+
 
       const url = new URL(window.location.href);
       const id = url.searchParams.get('id');
@@ -122,8 +101,6 @@ import {
       videoStats: {
         likes: 0, comments: 0, views: 0, bookmarks: 0
       },
-
-
       itemPerPage: 24,
       commentPage: 0,
       isFirstLoadComment: true,
@@ -135,15 +112,58 @@ import {
       showComments: true,
       showCollabs: true,
       showDescription: true,
+      activeTags: null,
+      isFollowed: false,
+      showFollowModal: false,
+      openTipModal: false,
+      performer: [],
+      openProgressModal: false,
+      confetti: false,
+      tipProgress: 0,
+      participants: []
     };
 
+    getMatchingTextValues(genres, valueArray) {
+      return valueArray
+        .map(value => {
+          if(value !== "featuredVideoOne" || value !== "traxOriginal"){
+            const matchingGenre = genres.find(genre => genre.value === value);
+            return matchingGenre ? matchingGenre.text : null;
+          }
+
+        })
+        .filter(text => text !== null);
+    }
+
     async componentDidMount() {
-      const { video } = this.state;
+      const { video, performer } = this.state;
+
       if (video === null) {
         const data = await this.getData();
         this.promptSignIn()
 
+
+        const _id = data.video.performer._id
+        const [performer] = await Promise.all([
+          performerService.findOne(_id as string, {
+            Authorization: authService.getToken() || "",
+          }),
+        ]);
+        this.setState({performer: performer?.data})
+
+
+
         this.setState({ video: data.video }, () => this.updateDataDependencies());
+
+        this.setState({ isFollowed: !!performer?.data.isFollowed })
+        let tags = data.video.tags;
+
+        if(tags.length > 0){
+
+
+          let activeTags = this.getMatchingTextValues(PICK_GENRES, tags);
+          this.setState({activeTags});
+        }
       } else {
         await this.updateDataDependencies();
       }
@@ -189,6 +209,8 @@ import {
         this.onShallowRouteChange();
       }
 
+
+
       if (
         (!prevProps.comment.data
           && comment.data
@@ -218,6 +240,35 @@ import {
       });
     }
 
+
+  handleFollow = async () => {
+    const { user, video } = this.props;
+    if (video.performer === null) return;
+    const { isFollowed, requesting } = this.state;
+    if (!user._id) {
+      message.error("Please log in or register!");
+      return;
+    }
+    if (requesting || user.isPerformer) return;
+    try {
+      this.setState({ requesting: true });
+      if (!isFollowed) {
+        this.setState({ showFollowModal: false })
+        await followService.create(video?.performer?._id);
+        this.setState({ isFollowed: true, requesting: false });
+        // this.openFollowNotification();
+      } else {
+        await followService.delete(video?.performer?._id);
+        this.setState({ isFollowed: false, requesting: false });
+        // this.closeFollowNotification()
+      }
+    } catch (e) {
+      const error = await e;
+      message.error(error.message || "An error occured, please try again later");
+      this.setState({ requesting: false });
+    }
+  };
+
     onChangeTab(tab: string) {
       this.setState({ activeTab: tab });
       const { isFirstLoadComment, itemPerPage } = this.state;
@@ -238,6 +289,106 @@ import {
             });
           }
         );
+      }
+    }
+
+  async beforeSendTipCrypto(amount: number, ticker: string, wallet: string) {
+    const { settings, video } = this.props;
+    const { performer } = this.state;
+    const whitelist = [settings.icTipping, settings.icTraxToken];
+    const host = settings.icHost;
+
+    if(await requestConnectPlug(whitelist, host)) {
+        try {
+            this.setState({
+              tipProgress: 0,
+              openTipModal: false,
+              tipStatus: '',
+              requesting: true,
+              submiting: true,
+              openTipProgressModal: true
+            });
+
+            //TODO: Work out edge cases for participants
+
+            // console.log(video)
+            // let participants: any = [];
+
+            const artist: any = [{
+              participantID: video.performer && Principal.fromText(video.performer.account?.wallet_icp),
+              participantPercentage: 1.0
+            }];
+
+
+            // participants.push(artist)
+
+            // video.participants.map((artist, index)=>{
+            //   if(artist.account?.wallet_icp){
+            //     const part: any = [{
+            //       participantID: Principal.fromText(artist.account?.wallet_icp),
+            //       participantPercentage: 1.0
+            //     }];
+            //   }
+            // })
+
+            const res = await tipCrypto(
+                artist,
+                amount,
+                ticker,
+                settings,
+                (update) => {
+                    this.setState({
+                        tipProgress: update.progress,
+                    });
+                }
+            );
+
+            if (res) {
+                this.setState({requesting: false, submiting: false, confetti: true });
+                setTimeout(()=>{
+                  this.setState({openTipProgressModal: true})
+                }, 6000)
+                message.success('Tip sent successfully!');
+            }else{
+
+            }
+        } catch (error) {
+
+            this.setState({openTipProgressModal: false, requesting: false, submiting: false });
+            message.error(error.message);
+        }
+    } else {
+      this.setState({openTipProgressModal: false, requesting: false, submiting: false });
+        message.error('Failed to connect to Plug wallet');
+    }
+  }
+
+
+    async handleTip(price: number, ticker: string, paymentOption: string) {
+
+      if(paymentOption === "card" || paymentOption === "credit"){
+        const { user, updateBalance: handleUpdateBalance, video } = this.props;
+        const { performer } = this.state;
+        if (performer === null) return;
+        if (user?.account?.balance < price) {
+          message.error("You have an insufficient wallet balance. Please top up.");
+          Router.push("/user/wallet/");
+          return;
+        }
+        try {
+          this.setState({ requesting: true });
+          await tokenTransctionService.sendTip(video.performer?._id, { performerId: video.performer?._id, price });
+          message.success(`Thank you for supporting ${video.performer.name}! Your tip has been sent successfully`, 5);
+          handleUpdateBalance({ token: -price });
+        } catch (e) {
+          const err = await e;
+          message.error(err.message || "error occured, please try again later");
+        } finally {
+          this.setState({ requesting: false, openTipModal: false });
+        }
+
+      }else if(paymentOption === "plug" || paymentOption === "II"){
+        await this.beforeSendTipCrypto(price, ticker, paymentOption);
       }
     }
 
@@ -266,19 +417,38 @@ import {
       handleDeleteComment(item._id);
     }
 
-
-
     render() {
-      const {   user, commentMapping, comment, ui, settings, video, contentUnlocked } = this.props;
-
-      const {  videoStats, showComments, showCollabs, showDescription, submiting, requesting, activeTab, isFirstLoadComment } = this.state;
+      const {   user, commentMapping, comment, ui, settings, video, contentUnlocked, isMobile, account } = this.props;
+      const {  videoStats, showComments, showCollabs, showFollowModal, openProgressModal, confetti, tipProgress, showDescription, openTipModal, submiting, requesting, activeTab, isFollowed, activeTags, isFirstLoadComment } = this.state;
       const { requesting: commenting } = comment;
       const fetchingComment = commentMapping.hasOwnProperty(video._id) ? commentMapping[video._id].requesting : false;
       const comments = commentMapping.hasOwnProperty(video._id) ? commentMapping[video._id].items : [];
       const totalComments = commentMapping.hasOwnProperty(video._id) ? commentMapping[video._id].total : 0;
 
       return (
-            <div className={video.trackType == 'video' ? 'vid-tab-wrapper-vid': 'vid-tab-wrapper'} style={{marginTop: (contentUnlocked && video.trackType == 'video') && '0rem'}}>
+            <div className={`vid-tab-wrapper ${video.trackType === 'video' ? 'pr-4 sm:pr-0' : 'pr-0'}`}>
+              {/* {user._id && (
+                <div className='flex flex-row gap-x-2 mb-4'>
+                  <TraxButton
+                    htmlType="button"
+                    disabled={video.limitSupply && video.supply === 0}
+                    styleType="primary"
+                    buttonSize={'full'}
+                    buttonText='Support'
+                    loading={false}
+                    onClick={() => this.setState({ openTipModal: true })}
+                  />
+                  <TraxButton
+                    htmlType="button"
+                    styleType="secondary"
+                    buttonSize={"full"}
+                    buttonText={isFollowed ? "Following" : "Follow"}
+                    disabled={!user._id}
+                    onClick={() => !isFollowed ? this.setState({showFollowModal: true}) : this.handleFollow()}
+                  />
+                </div>
+              )} */}
+
               <Tabs
                 defaultActiveKey="comment"
                 activeKey={activeTab}
@@ -286,100 +456,11 @@ import {
                 className="flex flex-col"
               >
                 <TabPane key="description">
-                  <div className='bg-[#1e1e1e] p-3 rounded-lg'>
-                    <div className='descriptions-wrapper'>
-                        <div className='flex flex-row gap-4 justify-between text-lg'>
-                          <span className=''>
-                            {shortenLargeNumber(videoStats?.views || 0)}
-                            &nbsp;
-                            <span>views</span>
-                          </span>
-                          <span>
-                          {shortenLargeNumber(videoStats?.likes || 0)}
-                          &nbsp;
-                            <span>likes</span>
-                          </span>
-                          <span className=''>
-                            {formatDate(video?.updatedAt, 'll')}
-                          </span>
-                        </div>
-                    <div className='cursor-pointer text-trax-white px-2.5 py-0.5 flex-end flex' onClick={()=> this.setState({showDescription: !showDescription})}>
-                      <span>{showDescription ? <MinusIcon width={20} height={20} className='text-trax-white'/> : <PlusIcon width={20} height={20} className='text-trax-white'/>}</span>
-                    </div>
-                  </div>
-                  <div style={reveal(showDescription)}>
-                  <span>
-                      {video.tags && video.tags.length > 0 && (
-                        <div className='flex flex-row gap-[5px] mt-2 overflow-auto'>
-                          {video.tags.map((tag) => (
-                            <span className='genre-tag-video' key={tag} style={{ marginRight: 5 }}>
 
-                            {tag || 'tag'}
-                          </span>
-                          ))}
-                        </div>
-                      )}
-                      </span>
-                    <p className='text-trax-white mt-2 flex'>{video.description || 'No description...'}</p>
-                    </div>
-                  </div>
-
-                  <div style={{display: video?.participants?.length < 2 && 'none'}}>
-                    <div className='bg-[#1e1e1e] p-3 rounded-lg mt-2'>
-                      <div className='flex flex-row justify-between w-full '>
-                        <span className='flex w-full  text-base text-trax-white font-light '>{video?.participants?.length} {video?.participants?.length > 1 ? 'collaborators' : 'collaborator'}</span>
-                        <div className='cursor-pointer text-trax-white px-2.5 py-0.5  flex-end flex' onClick={()=> this.setState({showCollabs: !showCollabs})}>
-                          <span>{showCollabs ? <MinusIcon width={20} height={20} className='text-trax-white'/> : <PlusIcon width={20} height={20} className='text-trax-white'/>}</span>
-                        </div>
-                      </div>
-
-                        <div style={reveal(showCollabs)} className='flex flex-row gap-2 justify-start overflow-auto pt-3'>
-                        {video?.participants && video?.participants?.length > 0 && (
-                          video?.participants?.map((per: IPerformer) => (
-                            <Link
-                              key={per._id}
-                              href={`/${per?.username || per?._id}`}
-                              as={`/${per?.username || per?._id}`}
-                              legacyBehavior
-
-                            >
-                              <div key={per._id} className="participant-card">
-                                <img
-                                  alt="per_atv"
-                                  src={per?.avatar || '/no-avatar.png'}
-                                />
-                                <div className="participant-info">
-                                  <h4>
-                                    {per?.name || 'N/A'}
-                                    &nbsp;
-                                    {per?.verifiedAccount && <CheckBadgeIcon style={{ height: '1rem', color: '#c8ff02' }} />}
-                                    &nbsp;
-                                    {per?.wallet_icp && (
-
-                                      <Image src="/static/infinity-symbol.png" style={{ height: '1rem' }} />
-                                    )}
-                                  </h4>
-
-                                  <h5>
-                                    @
-                                    {per?.username || 'n/a'}
-                                  </h5>
-
-                                </div>
-                              </div>
-                            </Link>
-                          ))
-                        )}
-
-                      </div>
-                    </div>
-                  </div>
-                  <div className='bg-[#1e1e1e] p-3 rounded-lg mt-2'>
-                    <div className='flex flex-row justify-between w-full '>
-                      <span className='flex w-full text-base text-trax-white font-light pb-1'>{`${comments.length} ${comments.length > 1 || comments.length === 0 ? 'comments' : 'comments'}`}</span>
-                      <div className='cursor-pointer text-trax-white px-2.5 py-0.5  flex-end flex' onClick={()=> this.setState({showComments: !showComments})}>
-                        <span>{showComments ? <MinusIcon width={20} height={20} className='text-trax-white'/> : <PlusIcon width={20} height={20} className='text-trax-white'/>}</span>
-                      </div>
+                  <div className='bg-transparent p-0 sm:px-3 sm:pb-3 rounded-lg backdrop-blur mb-2'>
+                    <div className='flex flex-row justify-between w-full text-trax-white'>
+                      <span className='text-base align-top font-body font-light mr-2'>({comments.length})</span>
+                      <span className='flex w-full font-heading uppercase font-bold text-3xl pb-1'>{`${comments.length > 1 || comments.length === 0 ? 'comments' : 'comments'}`}</span>
                     </div>
                     <div style={reveal(showComments)}>
                       <ListComments
@@ -408,9 +489,128 @@ import {
                       )}
                     </div>
                   </div>
+
+                  <div style={{display: video?.participants?.length < 2 && 'none'}}>
+                    <div className='bg-transparent p-0 sm:p-3 rounded-lg mt-4'>
+                      <div className='flex flex-row justify-between w-full text-trax-white '>
+                        <span className='text-base align-top font-body font-light mr-2'>({video?.participants?.length})</span>
+                        <span className='flex w-full text-3xl  font-bold font-heading uppercase'>collaborators</span>
+                      </div>
+                        <div style={reveal(showCollabs)} className='flex flex-row gap-2 justify-start overflow-auto pt-3'>
+                        {video?.participants && video?.participants?.length > 0 && (
+                          video?.participants?.map((per: IPerformer) => (
+                            <Link
+                              key={per._id}
+                              href={`/artist/profile/?id=${per?.username || per?._id}`}
+                              as={`/artist/profile/?id=${per?.username || per?._id}`}
+                              legacyBehavior
+                            >
+                              <div key={per._id} className="participant-card">
+                                <img
+                                  alt="per_atv"
+
+                                  src={per?.avatar || '/static/no-avatar-dark-mode.png'}
+                                />
+                                <div className="participant-info">
+                                  <h4>
+                                    {per?.name || 'N/A'}
+                                  </h4>
+                                </div>
+                              </div>
+                            </Link>
+                          ))
+                        )}
+
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className=' p-0 sm:p-3 rounded-lg mt-4 backdrop-blur'>
+                    <div className='descriptions-wrapper'>
+                      <span className='uppercase font-heading text-trax-white text-3xl font-bold'>About</span>
+                    </div>
+                    <div style={reveal(showDescription)}>
+                      {video.description && (
+                        <p className='text-trax-white mt-2 flex'>{video.description}</p>
+                      )}
+                      <span>
+                        {activeTags && activeTags.length > 0 && (
+                          <div className='flex flex-row gap-[5px] mt-4 overflow-auto'>
+                            {activeTags.map((tag) => (
+                              <span className='genre-tag-video' key={tag} style={{ marginRight: 5 }}>
+                              {tag || 'tag'}
+                            </span>
+                            ))}
+                          </div>
+                        )}
+                      </span>
+                    </div>
+                  </div>
                 </TabPane>
               </Tabs>
+
+              <Modal
+                key="follow_performer"
+                className="subscription-modal border border-[#282828]"
+                open={showFollowModal}
+                centered
+                onOk={() => this.setState({ showFollowModal: false })}
+                footer={null}
+                title={null}
+                onCancel={() => this.setState({ showFollowModal: false })}
+              >
+                <div className="text-trax-white mx-auto px-4 pb-6 pt-16 gap-4 flex flex-col">
+                  <span className="flex justify-center uppercase font-heading font-extrabold text-5xl text-custom-green text-center">
+                    Communication Consent
+                  </span>
+                  <span className="text-base px-4 text-center">By following, you'll allow us to share your name and email with {video?.performer?.name} so you can receive exclusive updates about new music, upcoming shows, and special announcements.</span>
+                  <div className="flex justify-center mt-3">
+                    <TraxButton
+                      htmlType="button"
+                      styleType="secondary"
+                      buttonSize={isMobile ? "full" : "medium"}
+                      buttonText="Follow"
+                      disabled={!user._id || user.isPerformer}
+                      onClick={() => this.handleFollow()}
+                    />
+                  </div>
+                </div>
+              </Modal>
+              {/* <Modal
+                key="tip_performer"
+                className="ppv-purchase-common ppv-purchase-desktop"
+                open={openTipModal}
+                centered
+                onOk={() => this.setState({ openTipModal: false })}
+                footer={null}
+                title={null}
+                onCancel={() => this.setState({ openTipModal: false })}
+              >
+                <TipPerformerForm
+                  user={user}
+                  account={account}
+                  performer={video.performer}
+                  submiting={submiting}
+                  onFinish={this.handleTip.bind(this)}
+                />
+              </Modal> */}
+              <Modal
+                key="progress"
+                className="ppv-purchase-common ppv-purchase-desktop"
+                open={openProgressModal}
+                centered
+                onOk={() => this.setState({ openProgressModal: false })}
+                footer={null}
+                title={null}
+                onCancel={() => this.setState({ openProgressModal: false })}
+              >
+              {openProgressModal && (
+                <PaymentProgress stage={tipProgress}  confetti={confetti}/>
+              )}
+              </Modal>
             </div>
+
+
 
       );
     }
@@ -431,5 +631,6 @@ import {
     moreComment,
     createComment,
     deleteComment,
+    updateBalance
   };
   export default connect(mapStates, mapDispatch)(ContentData);

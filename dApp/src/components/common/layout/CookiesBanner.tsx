@@ -26,11 +26,11 @@ export default function CookiesBanner() {
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 px-6 pb-24 md:pb-6 z-20">
-      <div className="pointer-events-auto mx-auto max-w-xl rounded-xl bg-trax-black/50 p-6 shadow-lg">
+      <div className="pointer-events-auto mx-auto max-w-xl rounded-xl bg-trax-black/50 p-6 shadow-lg backdrop-blur font-light">
         <p className="text-sm leading-6 text-trax-white">
           We use cookies to enhance your browsing experience, provide personalized content, and analyze site traffic. By
           clicking "Accept all," you consent to our use of cookies. For more details, see our{' '}
-          <a href="http://stagingapp.trax.so/page/?id=cookies-policy" className="font-semibold">
+          <a href={`${process.env.NEXT_PUBLIC_API_ENDPOINT}/page/?id=cookies-policy`} className="font-semibold">
             cookies policy
           </a>
           .

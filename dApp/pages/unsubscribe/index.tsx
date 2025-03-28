@@ -1,8 +1,8 @@
 /* eslint-disable camelcase */
 import Loader from '@components/common/base/loader';
 import { login, loginSocial, loginSuccess } from '@redux/auth/actions';
-import { updateCurrentUser } from '@redux/user/actions';
-import { authService, userService } from '@services/index';
+import { setAccount } from '@redux/user/actions';
+import { authService, userService, accountService } from '@services/index';
 import {
   Button, Col, Divider, Form, Image, Input, Layout, Row, message
 } from 'antd';
@@ -18,7 +18,7 @@ import styles from '../auth/index.module.scss';
 
 interface IProps {
   store: any;
-  updateCurrentUser: Function;
+  setAccount: Function;
   ui: IUIConfig;
   settings: ISettings;
 }
@@ -41,7 +41,7 @@ class Unsubscribe extends PureComponent<IProps> {
       const urlParams = new URLSearchParams(window.location.search);
       const fromUser = urlParams.get('fromUser');
 
-      const unsubscribe = await userService.unsubscribe({ fromUser });
+      const unsubscribe = await accountService.unsubscribe({ fromUser });
 
       if (unsubscribe?.data?.unsubscribed) {
         this.setState({ isLoading: false, unsubscribed: true });
@@ -173,6 +173,6 @@ const mapStatesToProps = (state: any) => ({
 });
 
 const mapDispatchToProps = {
-  updateCurrentUser
+  setAccount
 };
 export default connect(mapStatesToProps, mapDispatchToProps)(Unsubscribe);

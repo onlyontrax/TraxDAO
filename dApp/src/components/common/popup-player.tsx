@@ -74,11 +74,9 @@ export class VideoPlayer extends PureComponent<any> {
   };
 
   handleNext = () => {
-    console.log("mijenjam index");
     const { currentIndex } = this.state;
     const { sources } = this.props;
     const nextIndex = (currentIndex + 1) % sources.length;
-    console.log("nextIndex", nextIndex);
     this.setState({ currentIndex: nextIndex });
   };
 
@@ -86,9 +84,6 @@ export class VideoPlayer extends PureComponent<any> {
     const { isDesktop, currentIndex, showPrevious, showNext } = this.state;
     const videoSettings = { ...this.props };
     const currentSource = videoSettings.sources[currentIndex];
-console.log("currentSource", currentSource);
-
-console.log("tu sam");
     return (
       <div className="videojs-player">
         <div>

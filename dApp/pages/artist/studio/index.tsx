@@ -1,5 +1,5 @@
 /* eslint-disable react/no-unused-prop-types, jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */
-import { Layout, Button } from 'antd';
+import { Layout } from 'antd';
 import Head from 'next/head';
 import Link from 'next/link';
 import { PureComponent } from 'react';
@@ -12,6 +12,13 @@ import Products from '../my-store';
 import Video from '../my-video';
 import Music from '../my-video/my-music';
 import Tickets from '../my-events';
+import { AnimatePresence, motion } from "framer-motion";
+import TraxToggle from '@components/common/TraxToggleButton';
+import { authService, settingService, userService, cryptoService, routerService } from '@services/index';
+import { Heading } from '@components/common/catalyst/heading'
+import { Input, InputGroup } from '@components/common/catalyst/input'
+import { MagnifyingGlassIcon } from '@heroicons/react/16/solid'
+import { Button } from '@components/common/catalyst/button'
 
 interface IProps {
   currentUser: IUser;
@@ -20,12 +27,34 @@ interface IProps {
   user: IPerformer;
 }
 
+
+const initial = { opacity: 0, y: 0 };
+const animate_1 = {opacity: 1, y: 0,
+  transition: {
+    duration: 1,
+    delay: 0.3,
+    ease: "easeOut",
+    once: true,
+  },
+}
+
+const animate_2 = {opacity: 1, y: 0,
+  transition: {
+    duration: 1,
+    delay: 0.5,
+    ease: "easeOut",
+    once: true,
+  },
+}
+
+
 class MyContentPage extends PureComponent<IProps> {
   static authenticate = true;
 
   state = {
     isMobile: false,
-    stage: 0
+    isVideo: false,
+    activeTab: 'music'
   };
 
   async componentDidMount() {
@@ -43,46 +72,22 @@ class MyContentPage extends PureComponent<IProps> {
     this.setState({ isMobile: window.innerWidth < 500 });
   };
 
-  changeStage(val: number) {
-    this.setState({ stage: val });
-  }
+  handleToggleChange = (value: boolean) => {
+    this.setState({ isVideo: value });
+  };
 
   render() {
-    const { stage, isMobile } = this.state;
+    const { isVideo, isMobile, activeTab } = this.state;
     const { ui, user } = this.props;
+    const token = authService.getToken();
     return (
-      <Layout>
+      <Layout className='px-4 dark:bg-trax-zinc-900 rounded-lg'>
         <Head>
           <title>{`${ui?.siteName} | My Payments`}</title>
         </Head>
-        <div className="main-container content-container mt-4 sm:mt-0">
-          <div className='flex flex-row justify-between items-center px-4'>
-            {!isMobile && (
-              <h1 className="content-heading">Studio</h1>
-            )}
-          </div>
-
-          <div className="tab-bar-studio">
-
-            <div onClick={() => this.changeStage(0)} className="tab-btn-studio-wrapper">
-              <h1 className={`${stage === 0 ? 'selected-studio-btn' : ''}`}>Music</h1>
-              <div className={`${stage === 0 ? 'active' : ''} tab-btn-studio`} />
-            </div>
-
-            <div onClick={() => this.changeStage(1)} className="tab-btn-studio-wrapper">
-              <h1 className={`${stage === 1 ? 'selected-studio-btn' : ''}`}>Videos</h1>
-              <div className={`${stage === 1 ? 'active' : ''} tab-btn-studio`} />
-            </div>
-
-            {/* <div onClick={() => this.changeStage(2)} className="tab-btn-studio-wrapper">
-              <h1 className={`${stage === 2 ? 'selected-studio-btn' : ''}`}>Events</h1>
-              <div className={`${stage === 2 ? 'active' : ''} tab-btn-studio`} />
-            </div> */}
-          </div>
-
-          {stage === 0 && <Music />}
-          {stage === 1 && <Video/>}
-          {/* {stage === 2 && <Tickets user={user} />} */}
+        <div className="main-container content-container mt-4 pt-[20px] sm:mt-0">
+          <Heading>STUDIO</Heading>
+            <Video />       
         </div>
       </Layout>
     );

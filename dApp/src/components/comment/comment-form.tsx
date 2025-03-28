@@ -9,6 +9,9 @@ import { IUser } from 'src/interfaces';
 import { ICreateComment } from 'src/interfaces/comment';
 import styles from './comment.module.scss';
 import { spawn } from 'child_process';
+import TraxButton from '@components/common/TraxButton';
+import { Send } from 'lucide-react';
+
 
 interface IProps {
   objectId: string;
@@ -28,7 +31,7 @@ export class CommentForm extends PureComponent<IProps> {
   formRef: any;
 
   state = {
-    // text: ''
+    text: ''
   };
 
   componentDidMount() {
@@ -58,9 +61,12 @@ export class CommentForm extends PureComponent<IProps> {
 
   render() {
     const { creator, requesting, isReply } = this.props;
+    const { text } = this.state;
     if (!this.formRef) this.formRef = createRef();
     return (
       <div className={styles.componentsCommentsCommentModule}>
+        {/*  bg-[#272727] */}
+        <div className='border border-[#353535] bg-transparent rounded-lg p-1'>
         <Form
           ref={(ref) => {
             this.formRef = ref;
@@ -74,17 +80,12 @@ export class CommentForm extends PureComponent<IProps> {
           <div className="comment-form">
             <div className="cmt-area">
               <Form.Item name="content">
-                <div className="add-comment-wrapper pt-3 pr-0">
-                  {/* <Avatar
-                    alt="per_atv"
-                    src={creator?.avatar || '/static/no-avatar.png'}
-                    className="comment-avatar"
-                    size={25}
-                  /> */}
+                <div className="add-comment-wrapper pr-0">
                   <TextArea
                     className="cmt-text-area"
                     disabled={!creator || !creator._id}
                     style={{ width: '100%' }}
+                    onChange={(e) => this.setState({text: e.target.value})}
                     minLength={2}
                     rows={1}
                     placeholder={!isReply ? 'Add a comment...' : 'Add a reply here'}
@@ -92,22 +93,26 @@ export class CommentForm extends PureComponent<IProps> {
                 </div>
               </Form.Item>
             </div>
-            <Button
-              className={!isReply ? 'submit-btn' : 'reply-btn'}
-              style={{ background: '' }}
+            <div className="grp-icons" style={{ paddingRight: 0 }}>
+            <div aria-hidden className="grp-send" onClick={() => {
+              const values = this.formRef.getFieldsValue();
+              this.onFinish(values);
+            }}>
+              <Send className='w-6 h-6 text-trax-white mx-2 mt-[2px] cursor-pointer hover:text-custom-green'/>
+            </div>
+          </div>
+            {/* <Send className='w-6 h-6 text-trax-white mx-2 mt-[2px] cursor-pointer hover:text-custom-green'/>
+            <TraxButton
               htmlType="submit"
-              disabled={!creator || !creator._id || requesting}
-            >
-              {!isReply ? (
-                <span className='text-sm text-trax-white font-light'>Post</span>
-
-                ): (
-                  <span className='text-sm text-trax-white font-light'>Reply</span>
-
-                  )}
-            </Button>
+              styleType="primary"
+              disabled={!text}
+              buttonSize='small'
+              buttonText={isReply ? "Reply" : "Post"}
+              loading={false}
+            /> */}
           </div>
         </Form>
+      </div>
       </div>
     );
   }

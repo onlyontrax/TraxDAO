@@ -25,6 +25,7 @@ import {
   Upload,
   message
 } from 'antd';
+import ImgCrop from 'antd-img-crop';
 import { debounce } from 'lodash';
 import moment from 'moment';
 import { PureComponent } from 'react';
@@ -34,6 +35,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { PICK_GENRES } from 'src/constants';
 import {BsCheckCircleFill} from 'react-icons/bs';
 import { faXmark, faBullhorn, faImage, faVideo, faSquarePollHorizontal, faCircleCheck } from '@fortawesome/free-solid-svg-icons';
+import { Capacitor } from '@capacitor/core';
+
+
 interface IProps {
   user: IPerformer;
   video?: IVideo;
@@ -60,9 +64,11 @@ export class FormUploadVideo extends PureComponent<IProps> {
 
   state = {
     previewThumbnail: null,
+    previewThumbnailMobile: null,
     previewTeaser: null,
     previewVideo: null,
     selectedThumbnail: null,
+    selectedThumbnailMobile: null,
     selectedVideo: null,
     trackType: 'video',
     selectedTeaser: null,
@@ -77,6 +83,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
     previewType: '',
     removedTeaser: false,
     removedThumbnail: false,
+    removedThumbnailMobile: false,
     stage: 0,
     featuring: [],
     royaltyCut: [],
@@ -87,50 +94,83 @@ export class FormUploadVideo extends PureComponent<IProps> {
     header: 'Upload',
     limitSupply: false,
     supply: 0,
-    selectedCurrency: 'USD'
+    selectedCurrency: 'USD',
+    filter: {sortBy: 'latest'} as any
   };
 
   changeTrackType(val: any) {
     this.setState({ trackType: val });
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     const { video, user } = this.props;
-    const {selectedThumbnail} = this.state;
+    let {selectedThumbnail, featuring} = this.state;
     if (video && Object.keys(video).length) {
       video?.thumbnail && this.setState({selectedThumbnail: video?.thumbnail})
-      video?.video && this.setState({selectedVideo: video?.video})
+      video?.video && this.setState({selectedVideo: video?.video});
+      video.royaltyCut = video?.royaltyCut && typeof video?.royaltyCut === 'string' ? JSON.parse(video.royaltyCut) : video.royaltyCut;
+
+      if (video?.royaltyCut) {
+        for (let i = 0; i < video?.royaltyCut.length; i += 1) {
+          //console.log(video?.royaltyCut[i])
+          const resp = await performerService.findOne(video?.royaltyCut[i].performerId);
+          if (resp.data._id) {
+            resp.data.percentage = video?.royaltyCut[i].percentage;
+            featuring.push(resp.data);
+          } else {
+            message.config({ duration: 6 });
+            message.info('This artist cannot be found. Please try again.');
+          }
+        }
+      } else {
+        await this.pushFeaturedArtists([user._id]);
+      }
+
+      //console.log("featuring", featuring);
+      //console.log("video", video);
       this.setState({
         previewThumbnail: video?.thumbnail,
+        previewThumbnailMobile: video?.thumbnailMobile,
         previewVideo: video?.video,
         trackType: video?.trackType,
         previewTeaser: video?.teaser,
         isSale: video.isSale,
         isSchedule: video.isSchedule,
         scheduledAt: video.scheduledAt ? moment(video.scheduledAt) : moment(),
-        limitSupply: video?.limitSupply,
-        supply: video?.supply,
-        active: video?.status === 'active'
+        royaltyCut: video.royaltyCut || [],
+        active: video?.status === 'active',
+        limitSupply: video.limitSupply || false,
+        supply: video.supply || 0,
+        selectedCurrency: video.selectedCurrency || 'USD'
       });
+    } else {
+      await this.pushFeaturedArtists([user._id]);
     }
-    this.pushFeaturedArtists([user._id]);
-    this.getPerformers('', video?.participantIds || [user._id]);
+
+    this.getPerformers_('', video?.participantIds || [user._id]);
   }
 
-  async handleRemovefile(type: string) {
-    if (!window.confirm('Confirm to remove file!')) return;
+  handleRemovefile = (field: string) => {
     const { video } = this.props;
-    try {
-      await videoService.deleteFile(video._id, type);
-      type === 'teaser' && this.setState({ removedTeaser: true });
-      type === 'thumbnail' && this.setState({ removedThumbnail: true });
-    } catch (e) {
-      const err = await e;
-      message.error(err?.message || 'Error occured, please try again later');
+    switch (field) {
+      case 'thumbnail':
+        this.setState({ removedThumbnail: true, selectedThumbnail: null, previewThumbnail: null });
+        break;
+      case 'thumbnailMobile':
+        this.setState({ removedThumbnailMobile: true, selectedThumbnailMobile: null, previewThumbnailMobile: null });
+        break;
+      case 'teaser':
+        this.setState({ removedTeaser: true, selectedTeaser: null });
+        break;
+      case 'video':
+        this.setState({ selectedVideo: null, previewVideo: null });
+        break;
+      default:
+        break;
     }
-  }
+  };
 
-  getPerformers = debounce(async (q, performerIds) => {
+  getPerformers_ = debounce(async (q, performerIds) => {
     try {
       const resp = await (
         await performerService.search({
@@ -149,19 +189,24 @@ export class FormUploadVideo extends PureComponent<IProps> {
 
   pushFeaturedArtists = debounce(async (ids) => {
     try {
+      const { user } = this.props;
       const result = [];
+      const { royaltyCut } = this.state;
+      const royaltyCutChanged = [];
 
       for (let i = 0; i < ids.length; i += 1) {
         const resp = await performerService.findOne(ids[i]);
-        if (resp.data.wallet_icp) {
+        if (resp.data._id) {
+          resp.data.percentage = user._id === ids[i] ? 100 : 0;
           result.push(resp.data);
+          royaltyCutChanged.push({ performerId: resp.data._id, wallet_id: resp.data.account?.wallet_icp, percentage: royaltyCut.length > i ? royaltyCut[i].percentage : resp.data.percentage })
         } else {
           message.config({ duration: 6 });
-          message.info('This artist cannot benefit from royalty sharing as they have not connected their wallet.');
+          message.info('This artist cannot be found. Please try again.');
         }
       }
 
-      this.setState({ featuring: result });
+      this.setState({ featuring: result, royaltyCut: royaltyCutChanged });
     } catch (e) {
       const err = await e;
 
@@ -205,7 +250,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
 
   changeUploadToIC = (option: boolean) => {
     const { user } = this.props;
-    if (!user?.wallet_icp) {
+    if (!user.account?.wallet_icp) {
       message.info('You must connect your wallet id to TRAX in order to make use of web3 features.');
     }
     this.setState({ uploadToIC: option });
@@ -213,15 +258,22 @@ export class FormUploadVideo extends PureComponent<IProps> {
 
   beforeUpload(file: File, field: string) {
     const { beforeUpload: beforeUploadHandler } = this.props;
-    if (field === 'thumbnail') {
+    const { trackType } = this.state;
+    let trackTypeChanged = trackType;
+    const isVideo = file.type.startsWith('video/');
+    const isAudio = file.type.startsWith('audio/');
+    if (field === 'thumbnail' || field === 'thumbnailMobile') {
       const isValid = file.size / 1024 / 1024 < (process.env.NEXT_PUBLIC_MAX_SIZE_IMAGE as any || 100);
       if (!isValid) {
         message.error(`File is too large please provide an file ${process.env.NEXT_PUBLIC_MAX_SIZE_IMAGE || 100}MB or below`);
         return isValid;
       }
 
-
-      this.setState({ selectedThumbnail: file, previewThumbnail: file });
+      if (field === 'thumbnail') {
+        this.setState({ selectedThumbnail: file, previewThumbnail: file });
+      } else if (field === 'thumbnailMobile') {
+        this.setState({ selectedThumbnailMobile: file, previewThumbnailMobile: file });
+      }
     }
     if (field === 'teaser') {
       const isValid = file.size / 1024 / 1024 < (process.env.NEXT_PUBLIC_MAX_SIZE_TEASER as any || 50000);
@@ -241,7 +293,16 @@ export class FormUploadVideo extends PureComponent<IProps> {
         );
         return isValid;
       }
-      this.setState({ selectedVideo: file, previewVideo: file });
+
+      if (trackType === 'audio' && isVideo) {
+        trackTypeChanged = 'video';
+      }
+
+      if (trackType === 'video' && isAudio) {
+        trackTypeChanged = 'audio';
+      }
+
+      this.setState({ selectedVideo: file, previewVideo: file, trackType: trackTypeChanged });
     }
 
     return beforeUploadHandler(file, field);
@@ -252,7 +313,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
     const currentState = [...royaltyCut];
     if (currentState.length > 0) {
       for (let i = 0; i < currentState.length; i += 1) {
-        if (currentState[i].wallet_id === walletId) {
+        if (currentState[i].performerId === performerId) {
           const item = { ...currentState[i] };
           item.percentage = e;
           currentState[i] = item;
@@ -276,11 +337,6 @@ export class FormUploadVideo extends PureComponent<IProps> {
     }
 
     this.setState({ royaltyCut: currentState });
-
-  }
-
-  changeCryptoPaymentPreference(val: string){
-    this.setState({isCrypto: val === 'enable' ? true : false});
   }
 
 
@@ -290,7 +346,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
     this.setState({limitSupply: val})
     if(val && isSale !== 'pay' ){
       message.info("Only pay-per-access content can have a limited supply. Please enter the price at which you want to sell the content. ", 10)
-      this.setState({isSale: 'pay', stage: 4})
+      this.setState({isSale: 'pay', stage: 5})
     }
   }
 
@@ -311,24 +367,33 @@ export class FormUploadVideo extends PureComponent<IProps> {
     this.setState({selectedCurrency: ticker})
   }
 
-  checkPercentages() {
-    const { user } = this.props;
-    if(!user.wallet_icp){
-      this.setState({openConnectModal: true})
-    }
-    let total = 0;
+  setTrackTypeState(trackType: string){
+    this.setState({trackType: trackType, selectedVideo: null, previewVideo: null, selectedTeaser: null, selectedThumbnail: null, selectedThumbnailMobile: null, previewThumbnailMobile: null});
+  }
+
+  checkPercentages(setStage = true) {
     const { royaltyCut, isSale, isCrypto } = this.state;
+
+    if (isSale !== 'pay') {
+      setStage && this.setState({ stage: 6 });
+      return true;
+    }
+
+    const { user } = this.props;
+    let total = 0;
     const state = [...royaltyCut];
 
     for (let i = 0; i < state.length; i += 1) {
       total += state[i].percentage;
     }
 
-    if (isSale !== 'pay' || !isCrypto) {
-      this.setState({ stage: 4 });
-    } else {
-      total !== 100 ? message.error('Total percentage must be equal to 100%') : this.setState({ stage: 4 });
+    if (total !== 100) {
+      message.error('Total percentage must be equal to 100%');
+      return false;
     }
+    isCrypto && this.setState({openConnectModal: true});
+    setStage && this.setState({ stage: 6 });
+    return true;
   }
 
   columns = [
@@ -337,7 +402,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
       key: 'Name',
       render: (performers) => (
         <div>
-          <Avatar src={performers.avatar || '/static/no-avatar.png'} />
+          <Avatar src={performers.avatar || '/static/no-avatar-dark-mode.png'} />
           {' '}
           {performers.name || performers?.username || 'N/A'}
         </div>
@@ -358,11 +423,13 @@ export class FormUploadVideo extends PureComponent<IProps> {
           <Form.Item style={{ width: '50%' }} name="percentageCut">
             <InputNumber
               id={performers._id}
-              defaultValue={0}
-              onChange={(e) => this.updatePercentages(performers._id, performers.wallet_icp, e)}
+              defaultValue={performers.percentage}
+              onChange={(e) => this.updatePercentages(performers._id, performers.account?.wallet_icp, e)}
               style={{ width: '100%' }}
               min={1}
               max={100}
+              precision={0}
+              step={1}
             />
             {' '}
             %
@@ -372,12 +439,95 @@ export class FormUploadVideo extends PureComponent<IProps> {
     }
   ];
 
+  handleSubmit = async (values: any) => {
+    const {
+      video, submit, uploading, uploadPercentage, user
+    } = this.props;
+    const {
+      selectedThumbnail,
+      selectedThumbnailMobile,
+      selectedTeaser,
+      selectedVideo,
+      removedTeaser,
+      removedThumbnail,
+      removedThumbnailMobile,
+      trackType,
+      performers,
+      isSale,
+      isCrypto,
+      isSchedule,
+      scheduledAt,
+      featuring,
+      royaltyCut,
+      uploadToIC,
+      active,
+      limitSupply,
+      walletOption,
+      supply,
+      selectedCurrency
+    } = this.state;
+
+    const formData = {
+      ...values,
+      trackType,
+      performers,
+      isSale,
+      isCrypto,
+      isSchedule,
+      scheduledAt,
+      featuring,
+      royaltyCut,
+      uploadToIC,
+      active,
+      limitSupply,
+      walletOption,
+      supply,
+      selectedCurrency
+    };
+
+    if (video?._id) {
+      formData._id = video._id;
+    }
+
+    if (selectedThumbnail) {
+      formData.thumbnail = selectedThumbnail;
+    }
+
+    if (selectedThumbnailMobile) {
+      formData.thumbnailMobile = selectedThumbnailMobile;
+    }
+
+    if (selectedTeaser) {
+      formData.teaser = selectedTeaser;
+    }
+
+    if (selectedVideo) {
+      formData.video = selectedVideo;
+    }
+
+    if (removedTeaser) {
+      formData.removedTeaser = true;
+    }
+
+    if (removedThumbnail) {
+      formData.removedThumbnail = true;
+    }
+
+    if (removedThumbnailMobile) {
+      formData.removedThumbnailMobile = true;
+    }
+
+    submit(formData);
+  };
+
   render() {
     const {
       video, submit, uploading, uploadPercentage, user
     } = this.props;
     const {
       previewThumbnail,
+      previewThumbnailMobile,
+      selectedThumbnailMobile,
       previewTeaser,
       previewVideo,
       trackType,
@@ -391,6 +541,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
       selectedVideo,
       removedTeaser,
       removedThumbnail,
+      removedThumbnailMobile,
       stage,
       featuring,
       royaltyCut,
@@ -404,7 +555,26 @@ export class FormUploadVideo extends PureComponent<IProps> {
       selectedCurrency
     } = this.state;
 
+    const imgCropPropsDesktop: any = {
+      aspect: 16/9,
+      cropShape: 'rect',
+      quality: 1,
+      modalTitle: 'Edit thumbnail image',
+      modalWidth: 767,
+      fillColor: 'white'
+    };
+    const imgCropPropsMobile: any = {
+      aspect: 1/2,
+      cropShape: 'rect',
+      quality: 1,
+      modalTitle: 'Edit thumbnail image',
+      modalWidth: 767,
+      fillColor: 'white'
+    };
+
     const dataSource = featuring.map((p) => ({ ...p, key: p._id }));
+    //console.log("royaltyCut u form-upload renderu", royaltyCut);
+
 
     return (
       <div className={styles.componentVideoModule}>
@@ -443,7 +613,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
               data.participantIds = [user._id];
             }
             if(isSale !== 'pay' && limitSupply){
-              message.error("You cannot release a limited number of free or subscriber only songs. They must be pay-per-access.")
+              message.error("Only pay-per-access content can have a limited supply")
             }else{
               submit(data);
             }
@@ -485,7 +655,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
                     <FontAwesomeIcon icon={faXmark} />
                   </Button>
                   </div>
-                  <h1 className='upload-header'>Upload {trackType === 'audio' ? "music " : "a video" }</h1>
+                  <h1 className='upload-header'>Upload video or track</h1>
                   <div className="new-post-create-btn-wrapper">
                     <Button
                       className="new-post-create-btn"
@@ -498,22 +668,6 @@ export class FormUploadVideo extends PureComponent<IProps> {
                     </Button>
                   </div>
                 </div>
-              <div className='form-access-wrapper' style={{width: '100%'}}>
-                <div className='form-type-wrapper'>
-                  <Form.Item name="trackType" >
-                    <div style={{display: 'flex', justifyContent: 'space-around', flexDirection: 'row', width: '100%'}}>
-                      <div className={`feed-type-option-wrapper ${trackType === 'audio' && 'selected'}`} onClick={(val) => this.setState({trackType: 'audio'})}>
-                        <FontAwesomeIcon icon={faImage} />
-                        <span>Audio</span>
-                      </div>
-                      <div className={`feed-type-option-wrapper ${trackType === 'video' && 'selected'}`} onClick={(val) => this.setState({trackType: 'video'})}>
-                        <FontAwesomeIcon icon={faVideo} />
-                        <span>Video</span>
-                      </div>
-                    </div>
-                  </Form.Item>
-                </div>
-              </div>
               {this.props.settings.icEnableIcStorage === 'true' && (
                 <div className='form-middle-wrapper'>
                 <div className='form-option-wrapper' style={{marginTop: -4}}>
@@ -527,7 +681,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
                     <Switch
                       checkedChildren=""
                       unCheckedChildren=""
-                      disabled={!user?.wallet_icp}
+                      disabled={!user.account?.wallet_icp}
                       checked={uploadToIC}
                       style={{marginTop: '0.5rem'}}
                       onChange={(val) => this.changeUploadToIC(val)}
@@ -563,7 +717,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
                     customRequest={() => false}
                     listType="picture-card"
                     className="avatar-uploader"
-                    accept={trackType === 'video' ? 'video/*' : 'audio/*'}
+                    accept="video/*, audio/*"
                     multiple={false}
                     showUploadList={false}
                     disabled={uploading}
@@ -578,9 +732,9 @@ export class FormUploadVideo extends PureComponent<IProps> {
                       : 'files'}
 
                         {' '}
-                        <span className='span-upload-msg'>Upload {trackType === 'audio' ? 'audio' : trackType === 'video' ? 'a video' : 'files'}</span>
+                        <span className='span-upload-msg'>Upload</span>
                         <br />
-                        <span className='span-upload-sub-msg'> {trackType === 'audio' ? 'File should be 1GB or less' : trackType === 'video' ? 'Video file should be 50GB or less' : ''}</span>
+                        <span className='span-upload-sub-msg'> File should be 50GB or less</span>
                         {' '}
                         {previewVideo &&
                             <div className='uploaded-tag' >
@@ -608,7 +762,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
                           Back
                         </Button>
                       </div>
-                      <h1 className='upload-header'>Upload {trackType === 'audio' ? "music " : "a video" }</h1>
+                      <h1 className='upload-header'>Upload</h1>
                       <div className="new-post-create-btn-wrapper">
                         <Button
                           className="new-post-create-btn"
@@ -625,7 +779,6 @@ export class FormUploadVideo extends PureComponent<IProps> {
                   <div className='form-access-wrapper' style={{width: '100%'}}>
                   <Form.Item
                     className="upload-bl-track-form"
-
                     help={
                       (previewThumbnail && !removedThumbnail && (
                         <a
@@ -643,9 +796,9 @@ export class FormUploadVideo extends PureComponent<IProps> {
                         </a>
                       ))
                       || (selectedThumbnail && <a className='uploaded-badge'> <FontAwesomeIcon width={20} icon={faCircleCheck} /> Upload complete</a>)
-
                     }
                   >
+                    <ImgCrop modalClassName='img-crop-modal' {...imgCropPropsDesktop} className="img-crop-modal">
                     <Upload
                       listType="picture-card"
                       className="avatar-uploader"
@@ -657,7 +810,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
                     >
                       <div>
                         <img src="/static/add-photo.png" className='upload-photos-img' width={50} style={{width: '70px'}}/>
-                        <span className='span-upload-msg'>Upload a thumbnail</span>
+                        <span className='span-upload-msg'>Upload desktop thumbnail</span>
                         <br />
                         <span className='span-upload-sub-msg'>Image should be 5MB or less</span>
                         {/* {previewThumbnail &&
@@ -668,6 +821,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
                           } */}
                       </div>
                     </Upload>
+                    </ImgCrop>
 
                   </Form.Item>
                   </div>
@@ -686,14 +840,92 @@ export class FormUploadVideo extends PureComponent<IProps> {
                           Back
                         </Button>
                       </div>
-                      <h1 className='upload-header'>Upload {trackType === 'audio' ? "music " : "a video" }</h1>
+                      <h1 className='upload-header'>Upload</h1>
+                      <div className="new-post-create-btn-wrapper">
+                        <Button
+                          className="new-post-create-btn"
+                          loading={uploading}
+                          disabled={uploading || !previewThumbnailMobile || !selectedThumbnailMobile}
+                          style={{ marginRight: 10, marginTop: 3 }}
+                          onClick={() => this.setState({ stage: 3 })}
+                        >
+                          Continue
+                        </Button>
+                      </div>
+                  </div>
+                  <div className='form-middle-wrapper' style={{padding: '10px 1rem', borderBottom: 'none'}}>
+                  <div className='form-access-wrapper' style={{width: '100%'}}>
+                  <Form.Item
+                    className="upload-bl-track-form"
+                    help={
+                      (previewThumbnailMobile && !removedThumbnailMobile && (
+                        <a
+                          aria-hidden
+                          className='uploaded-badge'
+                          // style={{marginTop: 10}}
+                          onClick={() => this.setState({
+                            isShowPreview: true,
+                            previewUrl: previewThumbnailMobile?.url,
+                            previewType: 'thumbnailMobile'
+                          })}
+                        >
+                          {/* {previewThumbnail?.name || 'Click here to preview'} */}
+                          <FontAwesomeIcon width={20} icon={faCircleCheck} /> Upload complete
+                        </a>
+                      ))
+                      || (selectedThumbnailMobile && <a className='uploaded-badge'> <FontAwesomeIcon width={20} icon={faCircleCheck} /> Upload complete</a>)
+                    }
+                  >
+                    <ImgCrop modalClassName='img-crop-modal' {...imgCropPropsMobile} className="img-crop-modal">
+                    <Upload
+                      listType="picture-card"
+                      className="avatar-uploader"
+                      accept="image/*"
+                      multiple={false}
+                      showUploadList={false}
+                      disabled={uploading}
+                      beforeUpload={(file) => this.beforeUpload(file, 'thumbnailMobile')}
+                    >
+                      <div>
+                        <img src="/static/add-photo.png" className='upload-photos-img' width={50} style={{width: '70px'}}/>
+                        <span className='span-upload-msg'>Upload mobile thumbnail</span>
+                        <br />
+                        <span className='span-upload-sub-msg'>Image should be 5MB or less</span>
+                        {/* {previewThumbnail &&
+                            <div className='uploaded-tag' >
+                              <BsCheckCircleFill/>
+                              <span>Uploaded</span>
+                            </div>
+                          } */}
+                      </div>
+                    </Upload>
+                    </ImgCrop>
+
+                  </Form.Item>
+                  </div>
+                  </div>
+                  </div>
+                  <div style={{ display: `${stage === 3 ? 'contents' : 'none'}` }}>
+                  <div className='form-top-wrapper'>
+                    <div className="new-post-create-btn-wrapper">
+                        <Button
+                          className="new-post-create-btn"
+                          loading={uploading}
+                          disabled={uploading}
+                          style={{ marginRight: 10, marginTop: 3 }}
+                          onClick={() => this.setState({ stage: 2 })}
+                        >
+                          Back
+                        </Button>
+                      </div>
+                      <h1 className='upload-header'>Upload</h1>
                       <div className="new-post-create-btn-wrapper">
                         <Button
                           className="new-post-create-btn"
                           loading={uploading}
                           disabled={uploading}
                           style={{ marginRight: 10, marginTop: 3 }}
-                          onClick={() => this.setState({ stage: 3 })}
+                          onClick={() => this.setState({ stage: 4 })}
                         >
                           {selectedTeaser ? 'Continue' : 'Skip'}
                         </Button>
@@ -723,7 +955,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
                       customRequest={() => false}
                       listType="picture-card"
                       className="avatar-uploader"
-                      accept={trackType === 'video' ? 'video/*' : 'audio/*'}
+                      accept="video/*, audio/*"
                       multiple={false}
                       showUploadList={false}
                       disabled={uploading}
@@ -749,7 +981,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
                   </div>
 
 
-                  <div style={{ display: `${stage === 3 ? 'contents' : 'none'}` }}>
+                  <div style={{ display: `${stage === 4 ? 'contents' : 'none'}` }}>
             <div className='form-top-wrapper'>
               <div className="new-post-create-btn-wrapper">
                     <Button
@@ -758,19 +990,19 @@ export class FormUploadVideo extends PureComponent<IProps> {
                       loading={uploading}
                       disabled={uploading}
                       style={{ marginRight: 10, marginTop: 3 }}
-                      onClick={() => this.setState({ stage: 2 })}
+                      onClick={() => this.setState({ stage: 3 })}
                     >
                       Back
                     </Button>
                   </div>
-                  <h1 className='upload-header'>Upload {trackType === 'audio' ? "music " : "a video" }</h1>
+                  <h1 className='upload-header'>Upload</h1>
                   <div className="new-post-create-btn-wrapper">
                     <Button
                       className="new-post-create-btn"
                       loading={uploading}
                       disabled={uploading}
                       style={{ marginRight: 10, marginTop: 3 }}
-                      onClick={() => this.setState({ stage: 4 })}
+                      onClick={() => this.setState({ stage: 5 })}
                     >
                       Continue
                     </Button>
@@ -800,7 +1032,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
                 <div className='upload-track-text-wrapper'>
                 <div className='form-access-wrapper' style={{ marginTop: '0.5rem' }}>
               <p className="create-post-subheading">Tags</p>
-                        <p className="create-post-info">Add hashtags for better discoverability</p>
+                        <p className="create-post-info">Add genre tags for better discoverability</p>
                 <Form.Item name="tags">
                   <Select
                     className='upload-select'
@@ -821,7 +1053,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
               </div>
               </div>
               </div>
-            <div style={{ display: `${stage === 4 ? 'contents' : 'none'}` }}>
+            <div style={{ display: `${stage === 5 ? 'contents' : 'none'}` }}>
             <div className='form-top-wrapper'>
               <div className="new-post-create-btn-wrapper">
                     <Button
@@ -830,19 +1062,19 @@ export class FormUploadVideo extends PureComponent<IProps> {
                       loading={uploading}
                       disabled={uploading}
                       style={{ marginRight: 10, marginTop: 3 }}
-                      onClick={() => this.setState({ stage: 3 })}
+                      onClick={() => this.setState({ stage: 4 })}
                     >
                       Back
                     </Button>
                   </div>
-                  <h1 className='upload-header'>Upload {trackType === 'audio' ? "music " : "a video" }</h1>
+                  <h1 className='upload-header'>Upload</h1>
                   <div className="new-post-create-btn-wrapper">
                     <Button
                       className="new-post-create-btn"
                       loading={uploading}
                       disabled={uploading}
                       style={{ marginRight: 10, marginTop: 3 }}
-                      onClick={() => this.setState({ stage: 5 })}
+                      onClick={() => this.checkPercentages()}
                     >
                       Continue
                     </Button>
@@ -868,37 +1100,54 @@ export class FormUploadVideo extends PureComponent<IProps> {
                 </Select>
               </Form.Item>
               </div>
+              
+
                   {isSale === 'pay' && (
                     <div>
+                      {!Capacitor.isNativePlatform() && (
                       <div className='form-access-wrapper' style={{width: '100%', marginTop: '0.5rem'}}>
-                      <p className="create-post-subheading">Select currency</p>
+                        <p className="create-post-subheading">
+                          Select currency
+                        </p>
                         <p className="create-post-info">
                          Select the currency you wish to recieve payment in
                         </p>
-                      <Form.Item style={{ width: '100%'}} name="selectedCurrency" label="">
-                      <div className='currency-picker-btns-container' style={{marginTop: '1rem'}}>
-                        <div className='currency-picker-btns-wrapper'>
-                          <div className='currency-picker-btn-wrapper' onClick={(v)=> this.changeTicker('USD')}>
-                            <img src='/static/usd-logo.png' width={40} height={40} style={{border: selectedCurrency === 'USD' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
+                        <Form.Item style={{ width: '100%'}} name="selectedCurrency" label="">
+                        <div className='currency-picker-btns-container' style={{marginTop: '1rem'}}>
+                          <div className='currency-picker-btns-wrapper'>
+                            <div
+                              className='currency-picker-btn-wrapper'
+                              onClick={(v)=> {
+                                this.changeTicker('USD')
+                                this.setState({isCrypto: false})
+                              }}
+                            >
+                              <img src='/static/credit.png' width={40} height={40} style={{border: selectedCurrency === 'USD' ? '1px solid #c8ff02' : '1px solid grey'}}/>
+                            </div>
+                            {(user.account?.wallet_icp) && (
+                              <>
+                                {/* <div className='currency-picker-btn-wrapper' onClick={()=> this.changeTicker('ICP')}>
+                                  <img src='/static/icp-logo.png' width={40} height={40} style={{border: selectedCurrency === 'ICP' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
+                                </div>
+                                <div className='currency-picker-btn-wrapper' onClick={()=> this.changeTicker('ckBTC')}>
+                                  <img src='/static/ckbtc_nobackground.png' width={40} height={40} style={{border: selectedCurrency === 'ckBTC' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
+                                </div> */}
+                                <div
+                                  className='currency-picker-btn-wrapper'
+                                  onClick={()=> {
+                                    this.changeTicker('TRAX')
+                                    this.setState({isCrypto: true})
+                                  }}
+                                >
+                                  <img src='/static/logo_48x48.png' width={40} height={40} style={{border: selectedCurrency === 'TRAX' ? '1px solid #c8ff02' : '1px solid grey'}}/>
+                                </div>
+                              </>
+                            )}
                           </div>
-                          {(user.wallet_icp) && (
-                            <>
-                              <div className='currency-picker-btn-wrapper' onClick={()=> this.changeTicker('ICP')}>
-                                <img src='/static/icp-logo.png' width={40} height={40} style={{border: selectedCurrency === 'ICP' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
-                              </div>
-                              <div className='currency-picker-btn-wrapper' onClick={()=> this.changeTicker('ckBTC')}>
-                                <img src='/static/ckbtc_nobackground.png' width={40} height={40} style={{border: selectedCurrency === 'ckBTC' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
-                              </div>
-                              <div className='currency-picker-btn-wrapper' onClick={()=> this.changeTicker('TRAX')}>
-                                <img src='/static/trax-token.png' width={40} height={40} style={{border: selectedCurrency === 'TRAX' ? '1px solid #c8ff02' : '1px solid transparent'}}/>
-                              </div>
-                            </>
-                          )}
                         </div>
+                        </Form.Item>
                       </div>
-                      </Form.Item>
-                      </div>
-
+                      )}
                       <div className='form-access-wrapper' style={{width: '100%', marginTop: '0.5rem'}}>
                       <p className="create-post-subheading">Price</p>
                         <p className="create-post-info">
@@ -917,8 +1166,9 @@ export class FormUploadVideo extends PureComponent<IProps> {
                       </div>
                     </div>
                   )}
-
-                  {user?.wallet_icp && isSale === 'pay' && (
+                
+{/*
+                  {user.account?.wallet_icp && isSale === 'pay' && (
                       <div className='form-option-wrapper' style={{marginTop: '0.5rem'}}>
                         <div>
                           <p className="create-post-subheading">Earn crypto</p>
@@ -937,8 +1187,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
                           />
                       </Form.Item>
                       </div>
-
-                  )}
+                  )} */}
 
 
                   <div className='form-access-wrapper' style={{width: '100%', marginTop: '0.5rem' }}>
@@ -949,39 +1198,51 @@ export class FormUploadVideo extends PureComponent<IProps> {
                       className='upload-select'
                         mode="multiple"
                         style={{ width: '100%', backgroundColor: 'transparent', border: 'none',}}
-                        showSearch
+                        showSearch={true}
                         placeholder="Search performers here"
+                        filterOption={false}
                         optionFilterProp="children"
-                        onSearch={this.getPerformers.bind(this)}
+                        onSearch={this.getPerformers_.bind(this)}
                         loading={uploading}
                         onChange={(e) => {
                           this.pushFeaturedArtists(e);
                         }}
-                        defaultValue={[user._id] || []}
+                        defaultValue={[user._id]}
+                        optionLabelProp="label"
                       >
                         {performers
-                          && performers.length > 0
-                          && performers.map((p) => (
-                            <Option key={p._id} value={p._id}>
-                              <Avatar src={p?.avatar || '/static/no-avatar.png'} />
-                              {' '}
-                              {p?.name || p?.username || 'N/A'}
-                            </Option>
-                          ))}
+                        && performers.length > 0
+                        && performers.map((p) => (
+                          <Option
+                            key={p._id}
+                            value={p._id}
+                            label={  // Add this to define how selected values should appear
+                              <div className='flex flex-row gap-[6px]'>
+                                <Avatar className='flex w-[27px] h-[27px]' src={p?.avatar || '/static/no-avatar.png'} />
+                                <span className='flex items-center'>{p?.name || p?.username || 'N/A'}</span>
+                              </div>
+                            }
+                          >
+                            <div className='flex flex-row gap-[6px]'>
+                              <Avatar className='flex w-[27px] h-[27px]' src={p?.avatar || '/static/no-avatar.png'} />
+                              <span className='flex items-center'>{p?.name || p?.username || 'N/A'}</span>
+                            </div>
+                          </Option>
+                        ))}
                       </Select>
                     </Form.Item>
                   </div>
-              {isSale === 'pay' && isCrypto && (
+              {isSale === 'pay' && (
                 <div className='form-access-wrapper' style={{ marginTop: '0.5rem' }}>
                  <p className="create-post-subheading">Royalty split</p>
                         <p className="create-post-info">
-                        Distribute the revenue of this post with collaborators. Only artists with a web3 wallet connected qualify for royalty sharing, and will be displayed below.
+                        Distribute the revenue of this post with collaborators.
                         </p>
                   <Form.Item>
                     <Table
                       dataSource={dataSource}
                       columns={this.columns}
-                      className="table royalty-table"
+                      className="royalty-table"
                       rowKey="_id"
                       showSorterTooltip={false}
                     />
@@ -990,7 +1251,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
               )}
           </div>
             </div>
-            <div style={{ display: `${stage === 5 ? 'contents' : 'none'}` }}>
+            <div style={{ display: `${stage === 6 ? 'contents' : 'none'}` }}>
             <div className='form-top-wrapper'>
               <div className="new-post-create-btn-wrapper">
                     <Button
@@ -998,39 +1259,14 @@ export class FormUploadVideo extends PureComponent<IProps> {
                       loading={uploading}
                       disabled={uploading}
                       style={{ marginRight: 10, marginTop: 3 }}
-                      onClick={() => this.setState({ stage: 4 })}
+                      onClick={() => this.setState({ stage: 5 })}
                     >
                       Back
                     </Button>
                   </div>
-                  <h1 className='upload-header'>Upload {trackType === 'audio' ? "music " : "a video" }</h1>
+                  <h1 className='upload-header'>Upload</h1>
                   <div className="new-post-create-btn-wrapper">
-                    {isSale === 'pay' && isCrypto && !walletOption && (
-                      <Button
-                      className="new-post-create-btn"
-                      // htmlType="submit"
-                      loading={uploading}
-                      disabled={uploading}
-                      style={{ marginRight: 10, marginTop: 3 }}
-                      onClick={()=> this.checkPercentages()}
-                    >
-                      Continue
-                    </Button>
-                    )}
-                    { !isCrypto && (
-                      <Button
-                      className="new-post-create-btn"
-                      htmlType="submit"
-                      loading={uploading}
-                      disabled={uploading}
-                      style={{ marginRight: 10, marginTop: 3 }}
-                      >
-                        Upload
-                      </Button>
-                    )}
-
-
-                    {isSale === 'pay' && isCrypto && walletOption && (
+                    {(
                       <Button
                         className="new-post-create-btn"
                         htmlType="submit"
@@ -1137,7 +1373,89 @@ export class FormUploadVideo extends PureComponent<IProps> {
                 )}
               </div>
             </div>
-          {uploadPercentage ? <Progress percent={Math.round(uploadPercentage)} /> : null}
+
+            <div style={{ display: `${stage === 7 ? 'contents' : 'none'}` }}>
+              <div className='form-top-wrapper'>
+                <div className="new-post-create-btn-wrapper">
+                        <Button
+                          className="new-post-create-btn"
+                          loading={uploading}
+                          disabled={uploading}
+                          style={{ marginRight: 10, marginTop: 3 }}
+                          onClick={() => this.setState({ stage: 5 })}
+                        >
+                          Back
+                        </Button>
+                      </div>
+                      <h1 className='upload-header'>Upload</h1>
+                      <div className="new-post-create-btn-wrapper">
+                        <Button
+                          className="new-post-create-btn"
+                          loading={uploading}
+                          disabled={uploading}
+                          style={{ marginRight: 10, marginTop: 3 }}
+                          onClick={() => this.setState({ stage: 3 })}
+                        >
+                          {selectedTeaser ? 'Continue' : 'Skip'}
+                        </Button>
+                      </div>
+                  </div>
+                  <div className='form-middle-wrapper' style={{padding: '10px 1rem', borderBottom: 'none'}}>
+                  <div className='form-access-wrapper' style={{width: '100%'}}>
+                  <Form.Item
+                    className="upload-bl-track-form"
+                    help={
+                      (previewTeaser && !removedTeaser && (
+                        <a
+                          aria-hidden
+                          onClick={() => this.setState({
+                            isShowPreview: true,
+                            previewUrl: previewTeaser?.url,
+                            previewType: 'teaser'
+                          })}
+                        >
+                          {previewTeaser?.name || 'Click here to preview'}
+                        </a>
+                      ))
+                      || (selectedTeaser && <a className='uploaded-badge'> <FontAwesomeIcon width={20} icon={faCircleCheck} /> Upload complete</a>)
+                    }
+                  >
+                    <Upload
+                      customRequest={() => false}
+                      listType="picture-card"
+                      className="avatar-uploader"
+                      accept="video/*, audio/*"
+                      multiple={false}
+                      showUploadList={false}
+                      disabled={uploading}
+                      beforeUpload={(file) => this.beforeUpload(file, 'teaser')}
+                    >
+                      <div>
+                        <img src="/static/add-video.png" className='upload-photos-img' width={50} style={{width: '70px'}}/>
+                        <span className='span-upload-msg'>Upload a trailer</span>
+                        <br />
+                        <span className='span-upload-sub-msg'>Video should be 200MB or less</span>
+                        {previewTeaser &&
+                            <div className='uploaded-tag' >
+                              <BsCheckCircleFill/>
+                              <span>Uploaded</span>
+                            </div>
+                          }
+                      </div>
+                    </Upload>
+
+                  </Form.Item>
+                </div>
+              </div>
+            </div>
+
+
+          {uploadPercentage ? (
+            <div className='flex w-5/6 mx-auto mt-4'>
+              <Progress percent={Math.round(uploadPercentage)} />
+            </div>
+          ) : null }
+
           <Form.Item wrapperCol={{ ...layout.wrapperCol, offset: 4 }} />
           {this.previewModal()}
           <Modal
@@ -1153,25 +1471,24 @@ export class FormUploadVideo extends PureComponent<IProps> {
           >
             <div className='selected-wallet-upload-container'>
               <div className='selected-wallet-upload'>
-                  <span style={{fontSize: '23px', fontWeight: '600', color: 'white'}}>Connect</span>
-                  <span style={{ fontSize: '14px', color: 'grey'}}>Select your preferred wallet and click Continue</span>
+                  <span style={{fontSize: '23px', fontWeight: '600', color: 'white'}}>Select wallet</span>
+                  <span style={{ fontSize: '14px', color: 'grey'}}>Select your preferred wallet and click Continue. Make sure it is the same one that you have connected to your account.</span>
               </div>
               <div className='connect-wallets-wrapper'>
-
-                    <div className='wallet-wrapper' onClick={()=> this.setState({walletOption: 'plug'})}>
-                      <img src="/static/plug-favicon.png" alt="" className='plug-icon-sign'/>
-                      <span>Plug Wallet</span>
-                      {walletOption === 'plug' && (
-                        <FontAwesomeIcon width={25} height={25} icon={faCircleCheck} className="tick-icon-wallet"/>
-                      )}
-                    </div>
-                    <div className='wallet-wrapper' onClick={()=> this.setState({walletOption: 'ii'})}>
-                      <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
-                      <span>Internet Identity</span>
-                      {walletOption === 'ii' && (
-                        <FontAwesomeIcon width={25} height={25} icon={faCircleCheck} className="tick-icon-wallet"/>
-                      )}
-                    </div>
+                <div className={`wallet-wrapper ${walletOption === 'plug' && 'border border-custom-green'}`} onClick={()=> this.setState({walletOption: 'plug'})}>
+                  <img src="/static/plug-favicon.png" alt="" className='plug-icon-sign'/>
+                  <span>Plug Wallet</span>
+                  {walletOption === 'plug' && (
+                    <FontAwesomeIcon width={25} height={25} icon={faCircleCheck} className="tick-icon-wallet"/>
+                  )}
+                </div>
+                <div className={`wallet-wrapper ${walletOption === 'II' && 'border border-custom-green'}`} onClick={()=> this.setState({walletOption: 'II'})}>
+                  <img src="/static/icp-logo.png" alt="" className='icp-icon-sign'/>
+                  <span>Internet Identity</span>
+                  {walletOption === 'II' && (
+                    <FontAwesomeIcon width={25} height={25} icon={faCircleCheck} className="tick-icon-wallet"/>
+                  )}
+                </div>
               </div>
               <div>
               <Button
@@ -1180,7 +1497,7 @@ export class FormUploadVideo extends PureComponent<IProps> {
                 disabled={uploading}
                 onClick={()=> this.setState({openConnectModal: false})}
               >
-                Continue
+                Confirm
               </Button>
               </div>
 

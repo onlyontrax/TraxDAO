@@ -27,6 +27,7 @@ interface IProps {
   headers?: any;
   onUploaded?: Function;
   options?: any;
+  isForMobile: boolean;
 }
 
 export class CoverUpload extends PureComponent<IProps, IState> {
@@ -74,9 +75,9 @@ export class CoverUpload extends PureComponent<IProps, IState> {
 
   render() {
     const { loading } = this.state;
-    const { headers, uploadUrl, options, image } = this.props;
+    const { headers, uploadUrl, options, isForMobile } = this.props;
     const imgCropProps: any = {
-      aspect: 2 / 1,
+      aspect: isForMobile ? 1/1 : 2/1,
       cropShape: 'rect',
       quality: 1,
       modalTitle: 'Edit cover image',
@@ -97,19 +98,13 @@ export class CoverUpload extends PureComponent<IProps, IState> {
             onPreview={this.onPreview}
             headers={headers}
           >
-            {/* <div className="edit-avatar-wrapper">
-            <div className="edit-avatar-btn" >
-              {' '}
-              Edit cover
-            </div>
-            </div> */}
             <div
                 className="top-profile-account"
                 style={{
                   position: 'relative',
                   marginBottom: -20,
                   minWidth: 200,
-                  backgroundImage: image ? `url('${image}')` : "url('/static/banner-image.jpg')"
+                  backgroundImage: this.props.image ? `url('${this.props.image}')` : "url('/static/banner-image.jpg')"
                 }}
               />
           </Upload>

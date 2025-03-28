@@ -2,28 +2,35 @@ import type { Principal } from '@dfinity/principal';
 import type { ActorMethod } from '@dfinity/agent';
 import type { IDL } from '@dfinity/candid';
 
-export type AccountIdentifier = Uint8Array | number[];
-export interface AccountIdentifierToBlobErr {
-  'kind' : { 'InvalidAccountIdentifier' : null } |
-    { 'Other' : null },
-  'message' : [] | [string],
-}
-export type AccountIdentifierToBlobResult = {
-    'ok' : AccountIdentifierToBlobSuccess
-  } |
-  { 'err' : AccountIdentifierToBlobErr };
-export type AccountIdentifierToBlobSuccess = Uint8Array | number[];
-export type AccountIdentifier__1 = { 'principal' : Principal } |
-  { 'blob' : Uint8Array | number[] } |
-  { 'text' : string };
 export type ArtistID = Principal;
 export type ArtistID__1 = Principal;
+export interface Event {
+  'kind' : EventKind,
+  'message' : string,
+  'timestamp' : bigint,
+  'details' : [] | [
+    {
+      'participants' : [] | [Array<Principal>],
+      'error' : [] | [string],
+      'amount' : [] | [bigint],
+    }
+  ],
+  'caller' : Principal,
+}
+export type EventKind = { 'Error' : null } |
+  { 'AdminAction' : null } |
+  { 'TipSent' : null } |
+  { 'AllowanceUpdated' : null };
 export type FanID = Principal;
 export interface Participants {
   'participantPercentage' : Percentage,
   'participantID' : ArtistID,
 }
 export type Percentage = number;
+export type Result = { 'ok' : Array<bigint> } |
+  { 'err' : string };
+export type Result_1 = { 'ok' : bigint } |
+  { 'err' : string };
 export interface StatusRequest {
   'memory_size' : [] | [boolean],
   'trax_balance' : [] | [boolean],
@@ -40,40 +47,26 @@ export interface StatusResponse {
   'cycles' : [] | [bigint],
   'heap_memory_size' : [] | [bigint],
   'ckbtc_balance' : [] | [bigint],
-  'icp_balance' : [] | [Tokens__1],
+  'icp_balance' : [] | [Tokens],
 }
 export type Ticker = string;
 export type Timestamp = bigint;
 export interface Tipping {
-  'accountIdentifierToBlob' : ActorMethod<
-    [AccountIdentifier__1],
-    AccountIdentifierToBlobResult
-  >,
-  'addToReferralMap' : ActorMethod<[ArtistID__1, ArtistID__1], undefined>,
-  'canisterAccount' : ActorMethod<[], AccountIdentifier>,
-  'changePlatformFee' : ActorMethod<[number], undefined>,
-  'ckbtcBalance' : ActorMethod<[Principal], bigint>,
+  'approveSpending' : ActorMethod<[bigint, Ticker, [] | [bigint]], Result_1>,
   'ckbtcBalanceOfCanister' : ActorMethod<[], bigint>,
-  'cyclesBalance' : ActorMethod<[], bigint>,
-  'drainCanisterBalance' : ActorMethod<[bigint, Principal, Ticker], boolean>,
+  'getAllEvents' : ActorMethod<[], Array<Event>>,
   'getAllTippingTransactions' : ActorMethod<
     [],
     Array<[ArtistID__1, FanID, Timestamp, bigint, Ticker]>
   >,
+  'getMyBalance' : ActorMethod<[Ticker], Result_1>,
   'getStatus' : ActorMethod<[[] | [StatusRequest]], [] | [StatusResponse]>,
-  'icpBalance' : ActorMethod<[Principal], Tokens>,
-  'icpBalanceOfCanister' : ActorMethod<[], Tokens>,
-  'myAccountId' : ActorMethod<[Principal], AccountIdentifier>,
-  'sendTip' : ActorMethod<
-    [bigint, TippingParticipants, bigint, Ticker],
-    undefined
-  >,
-  'traxBalance' : ActorMethod<[Principal], bigint>,
+  'sendTip' : ActorMethod<[TippingParticipants, bigint, Ticker], Result>,
   'traxBalanceOfCanister' : ActorMethod<[], bigint>,
+  'updatePlatformFee' : ActorMethod<[number], undefined>,
 }
 export type TippingParticipants = Array<Participants>;
 export interface Tokens { 'e8s' : bigint }
-export interface Tokens__1 { 'e8s' : bigint }
 export interface _SERVICE extends Tipping {}
 export declare const idlFactory: IDL.InterfaceFactory;
 export declare const init: (args: { IDL: typeof IDL }) => IDL.Type[];

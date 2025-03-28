@@ -1,0 +1,183 @@
+.ppv-purchase-common {
+  .send-tip-container {
+    @apply bg-[#060606] text-trax-white p-5 rounded-lg border-none;
+
+    .tip-header-wrapper {
+      @apply mb-4;
+
+      .h3-header {
+        @apply font-heading text-custom-green text-center font-extrabold text-4xl lg:text-5xl tracking-tight uppercase pt-8;
+      }
+    }
+
+    .payment-thumbnail {
+      @apply w-full h-64 md:h-96 object-cover rounded-lg;
+    }
+
+    .payment-details {
+      @apply mb-0 md:mb-4;
+
+      .payment-heading {
+        @apply text-font-gray text-sm mb-3 font-medium;
+      }
+
+      .payment-recipient-wrapper {
+        @apply bg-custom-gray border border-border-gray mb-4 h-16;
+
+        .payment-recipient {
+          @apply w-full py-5 px-5 flex items-center justify-between gap-4;
+
+          .payment-avatar {
+            @apply border border-font-light-gray w-8 h-8 p-0.5;
+          }
+
+          .payment-recipient-info {
+            @apply flex-grow py-0;
+
+            .recipient-name {
+              @apply text-sm text-font-light-gray font-medium;
+            }
+
+            .recipient-subtitle {
+              @apply text-xs text-font-gray font-medium my-0;
+            }
+          }
+
+          .info-icon {
+            @apply w-5 h-5;
+          }
+        }
+      }
+
+      .ant-select-selector {
+        @apply bg-trax-inherit w-full h-full py-3.5 px-5 border-none;
+
+        &:hover {
+          @apply border-none;
+        }
+
+        .ant-select-selection-item {
+          @apply flex justify-between items-center pr-0 gap-4;
+
+          .payment-type-img-wrapper {
+            @apply w-8 h-8 rounded-full border border-[#6b6b6b];
+
+            img {
+              @apply w-8 h-8 rounded-full p-0.5;
+            }
+          }
+
+          .payment-type-info {
+            @apply flex flex-col p-0 mt-0 w-full;
+
+            .currency-name {
+              @apply text-sm text-font-light-gray font-medium;
+            }
+
+            .currency-amount {
+              @apply text-xs text-font-gray font-medium my-0;
+            }
+          }
+        }
+      }
+
+      .ant-select-arrow {
+        @apply w-4 h-4 pr-6;
+      }
+    }
+
+    .tip-custom-input {
+      @apply w-full bg-custom-gray text-trax-white border border-border-gray rounded-lg py-4 px-5 text-base placeholder:text-trax-white placeholder:font-extralight focus:outline-none focus:border-border-gray;
+    }
+  }
+
+  // .tip-amount-container {
+  //   @apply grid grid-cols-2 gap-4 w-full pb-2;
+  
+  //   .tip-amount-btn {
+      
+  //     @apply h-11 rounded border  bg-[#161616] border-[#414141] hover:border-custom-green  cursor-pointer flex items-center justify-center text-font-light-gray active:text-custom-green active:border-custom-green;
+  //     span {
+  //       @apply text-lg font-extrabold font-heading uppercase;
+  //     }
+  
+  //     &.active {
+  //       @apply text-custom-green;
+  //     }
+  //   }
+  // }
+
+  .payment-number-container {
+    @apply font-heading tracking-tight flex flex-col items-center justify-between mt-4 mb-2 md:mb-6 text-font-light-gray font-extrabold text-4xl lg:text-5xl uppercase;
+
+    .payment-number-wrapper {
+      @apply flex;
+    }
+  }
+
+  .error-message {
+    @apply text-trax-amber-500 text-xs md:text-sm mb-0 md:mb-2 rounded-lg px-3 py-1 bg-slaps-gray border border-trax-amber-500;
+  }
+
+  .tip-button {
+    @apply w-full bg-custom-green text-trax-black font-bold py-2 rounded-md hover:bg-[#a6d902] transition-colors duration-200;
+  }
+}
+
+.ppv-purchase-desktop {
+  @apply w-modal-mobile h-modal-mobile md:w-modal-desktop md:h-auto border-none ;
+
+  .ant-modal-content {
+    @apply border-none;
+
+    .ant-modal-close {
+      @apply bg-custom-gray p-2 lg:mt-3 lg:mr-3;
+
+      .ant-modal-close-x {
+        @apply justify-normal;
+
+        .ant-modal-close-icon {
+          @apply text-font-light-gray;
+        }
+      }
+    }
+  }
+}
+
+.ppv-purchase-mobile {
+  @apply w-full border-none max-h-[90vh] overflow-y-auto;
+
+  .payment-thumbnail {
+    @apply h-72 -mt-12;
+  }
+
+  .ant-modal-content {
+    @apply border-none;
+  }
+}
+
+.payment-type-option-content {
+  .ant-select-item-option-content {
+    @apply flex gap-4 items-center pl-2.5 rounded-lg;
+
+    .payment-type-img-wrapper {
+      @apply rounded-full border border-[#6b6b6b];
+
+      img {
+        @apply w-8 h-8 p-1.5;
+      }
+    }
+
+    .payment-type-info {
+      @apply flex flex-col p-0 mt-0 w-full;
+
+      .currency-name {
+        @apply text-sm text-font-light-gray font-medium;
+      }
+
+      .currency-amount {
+        @apply text-xs text-font-gray font-medium my-0;
+      }
+    }
+  }
+}

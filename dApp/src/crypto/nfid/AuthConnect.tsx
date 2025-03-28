@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { CopyOutlined } from '@ant-design/icons';
 import { useInternetIdentity } from '@internet-identity-labs/react-ic-ii-auth';
 import { Button, message } from 'antd';
-import { userService, cryptoService, performerService, authService } from '@services/index';
+import { userService, cryptoService, performerService, authService, accountService } from '@services/index';
 import * as crypto from 'crypto';
 import { NFIDIcon } from '../../icons/index';
 import AuthButton from './AuthButton';
@@ -28,6 +28,7 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
 
     const principalIdPlug2 = await getPrincipalId();
     setPrincipalIdPlug(principalIdPlug2);
+    return principalIdPlug2;
   };
 
   const handleNFIDConnect = async () => {
@@ -50,22 +51,15 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
       return;
     }
 
-    if (isPerformer) {
-      performerService.setWalletPrincipal(payload).then(val => {
+    accountService.setWalletPrincipal(payload).then(val => {
         message.success('Wallet Principal has been set.');
         onNFIDConnect(identity?.getPrincipal().toText());
       }).catch(err => { message.error('There was a problem in updating your wallet principal.'); });
-    } else {
-      userService.setWalletPrincipal(payload).then(val => {
-        message.success('Wallet Principal has been set.');
-        onNFIDConnect(identity?.getPrincipal().toText());
-      }).catch(err => { message.error('There was a problem in updating your wallet principal.'); });
-    }
   };
 
   const handlePlugWalletConnect = async () => {
     setPlugLoading(true);
-    await verifyPlugWalletConnection();
+    const principal = await verifyPlugWalletConnection();
     const userKey = crypto.randomBytes(64).toString('hex');
     const fetchedResult = await cryptoService.getCanisterHashTokenwithPlugWallet(userKey);
     const referralCode = typeof window !== 'undefined' ? localStorage.getItem('referralCode') : '';
@@ -76,7 +70,7 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
       role: '',
       messageSigned: fetchedResult[0],
       publicKeyRaw: userKey,
-      principalWallet: principalIdPlug || 'x',
+      principalWallet: principal || principalIdPlug || 'x',
       referralCode,
       walletType: 'plugWallet'
     };
@@ -84,27 +78,16 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
       message.success('Wallet Principal you are trying to set is the same.');
       return;
     }
-    if (isPerformer) {
-      performerService.setWalletPrincipal(payload).then(val => {
-        message.success('Wallet Principal has been set.');
-        onNFIDConnect(payload.principal);
-        setPlugLoading(false);
-      }).catch(err => {
-        console.log(err)
-        setPlugLoading(false);
-        message.error('There was a problem in updating your wallet principal.');
-      });
-    } else {
-      userService.setWalletPrincipal(payload).then(val => {
-        message.success('Wallet Principal has been set.');
-        onNFIDConnect(payload.principal);
-        setPlugLoading(false);
-      }).catch(err => {
-        console.log(err)
-        setPlugLoading(false);
-        message.error('There was a problem in updating your wallet principal.');
-      });
-    }
+
+    accountService.setWalletPrincipal(payload).then(val => {
+      message.success('Wallet Principal has been set.');
+      onNFIDConnect(payload.principal);
+      setPlugLoading(false);
+    }).catch(err => {
+      console.log(err)
+      setPlugLoading(false);
+      message.error('There was a problem in updating your wallet principal.');
+    });
   };
 
   const handleInternetIdentityConnect = async (internetIdentity) => {
@@ -128,19 +111,11 @@ function AuthConnect({ onNFIDConnect, isPerformer, oldWalletPrincipal }) {
       return;
     }
 
-    if (isPerformer) {
-      performerService.setWalletPrincipal(payload).then(val => {
-        message.success('Wallet Principal has been set.');
-        onNFIDConnect(payload.principal);
-        setIILoading(false);
-      }).catch(err => { message.error('There was a problem in updating your wallet principal.'); setIILoading(false); });
-    } else {
-      userService.setWalletPrincipal(payload).then(val => {
-        message.success('Wallet Principal has been set.');
-        onNFIDConnect(payload.principal);
-        setIILoading(false);
-      }).catch(err => { message.error('There was a problem in updating your wallet principal.'); setIILoading(false); });
-    }
+    accountService.setWalletPrincipal(payload).then(val => {
+      message.success('Wallet Principal has been set.');
+      onNFIDConnect(payload.principal);
+      setIILoading(false);
+    }).catch(err => { message.error('There was a problem in updating your wallet principal.'); setIILoading(false); });
   };
 
   useEffect(() => {

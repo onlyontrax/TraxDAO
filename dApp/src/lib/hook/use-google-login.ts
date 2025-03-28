@@ -43,7 +43,7 @@ const useGoogleLogin = ({
     if (loaded) {
       const { google } = window as any;
       google.accounts.id.renderButton(
-        document.getElementById('btnLoginWithGoogle'), // Ensure the element exist and it is a div to display correcctly
+        document.getElementById('google-render-container'), // Ensure the element exist and it is a div to display correcctly
         { theme: 'outline', size: 'large' } // Customization attributes
       );
     }
@@ -63,7 +63,8 @@ const useGoogleLogin = ({
           client_id: clientId,
           callback: (data) => {
             handleSigninSuccess(data);
-          }
+          },
+          ux_mode: 'popup'
         });
         if (!unmounted) {
           setLoaded(true);
@@ -71,6 +72,7 @@ const useGoogleLogin = ({
       },
       (err) => {
         onLoadFailure(err);
+        console.log("error", err);
       }
     );
 

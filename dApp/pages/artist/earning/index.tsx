@@ -99,7 +99,7 @@ class EarningPage extends PureComponent<IProps, IStates> {
     } = this.state;
     try {
       const { current, pageSize } = pagination;
-      const earning = await earningService.performerSearch({
+      const earning = await earningService.accountSearch({
         limit: pageSize,
         offset: (current - 1) * pageSize,
         sort,
@@ -122,7 +122,7 @@ class EarningPage extends PureComponent<IProps, IStates> {
   async getPerformerStats() {
     const { dateRange, type } = this.state;
     const { onGetStats } = this.props;
-    const resp = await earningService.performerStarts({
+    const resp = await earningService.accountStats({
       type,
       ...dateRange
     });

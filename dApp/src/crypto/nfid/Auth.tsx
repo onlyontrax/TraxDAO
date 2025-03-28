@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnyIfEmpty, useDispatch } from 'react-redux';
-import { userService, cryptoService, performerService, authService } from '@services/index';
+import { userService, cryptoService, performerService, authService, accountService } from '@services/index';
 import * as crypto from 'crypto';
 import Router from 'next/router';
 import { Button, message, Modal, Input } from 'antd';
@@ -116,13 +116,14 @@ function Auth({ onSignOut = null, onAuthenticate = null, from, onLoggedIn}: Auth
     }*/
 
     setPrincipalIdPlug(principalIdPlug2);
+    return principalIdPlug2;
   };
 
   const handlePlugWalletConnect = async () => {
     setPlugLoading(true);
 
     try {
-      await verifyPlugWalletConnection();
+      const principal = await verifyPlugWalletConnection();
       const userKey = crypto.randomBytes(64).toString('hex');
       const fetchedResult = await cryptoService.getCanisterHashTokenwithPlugWallet(userKey);
       const referralCode = typeof window !== 'undefined' ? localStorage.getItem('referralCode') : '';
@@ -132,7 +133,7 @@ function Auth({ onSignOut = null, onAuthenticate = null, from, onLoggedIn}: Auth
         role: '',
         messageSigned: fetchedResult[0],
         publicKeyRaw: userKey,
-        principalWallet: principalIdPlug || 'x',
+        principalWallet: principal || principalIdPlug || 'x',
         referralCode,
         walletType: 'plugWallet'
       };
@@ -261,7 +262,7 @@ function Auth({ onSignOut = null, onAuthenticate = null, from, onLoggedIn}: Auth
         <div className={"no-auth-button"}>
           <AuthButton from={from} {...authButtonProps} nfidLoading={nfidLoading}/>
         </div>
-        <div className="NFIDAuth">
+        <div className="NFIDAuth mb-1">
           <AuthPlugWallet
             {...authButtonProps}
             isAuthenticated={isAuthenticatedPlug}

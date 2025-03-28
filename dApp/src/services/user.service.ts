@@ -1,4 +1,7 @@
 import { APIRequest } from './api-request';
+import { setAccount } from '@redux/user/actions';
+import { authService } from '@services/index';
+import { Dispatch } from 'redux';
 
 export class UserService extends APIRequest {
   me(headers?: { [key: string]: string }): Promise<any> {
@@ -24,52 +27,23 @@ export class UserService extends APIRequest {
     return this.get(`/users/view/${id}`);
   }
 
-  setWalletPrincipal(data: any) {
-    return this.put('/users/setICPWallet', data);
-  }
-
   setFIATCurrency(data: any){
     return this.put('/users/setFIATCurrency', data);
   }
 
-  disconnectWalletPrincipal() {
-    return this.put('/users/disconnectICPWallet');
-  }
-
-  unsubscribe(data: any) {
-    return this.put('/auth/unsubscribe', data);
-  }
-
-  getQRCode(id: string) {
-    return this.get(`/users/${id}/generateQRCode`);
-  }
-
-  enable2FA(id: string) {
-    return this.put(`/users/${id}/enableTwoFactorSecret`);
-  }
-
-  disable2FA(id: string) {
-    return this.put(`/users/${id}/disableTwoFactorSecret`);
-  }
-
-  verify2FA(id: string, payload: any) {
-    return this.put(`/users/${id}/verify2FATokenForUser`, payload);
-  }
-
-  getSMSCode(id: string) {
-    return this.get(`/users/${id}/generateSMSCode`);
-  }
-
-  enableSms(id: string) {
-    return this.put(`/users/${id}/enableSmsAuthSecret`);
-  }
-
-  disableSms(id: string) {
-    return this.put(`/users/${id}/disableSmsAuthSecret`);
-  }
-
-  verifySms(id: string, payload: any) {
-    return this.put(`/users/${id}/verifySMSTokenForUser`, payload);
+  async reloadCurrentUser(dispatch: Dispatch) {
+    //const { setAccount: handleUpdateUser } = this.props;
+    const token = authService.getToken() || '';
+    if (token) {
+      // We are fetching account here not just user
+      const user = await userService.me({
+        Authorization: token
+      });
+      if (!user.data._id) {
+        return;
+      }
+      dispatch(setAccount(user.data));
+    }
   }
 }
 

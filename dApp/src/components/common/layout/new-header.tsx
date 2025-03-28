@@ -8,10 +8,13 @@ import React, { useRef} from "react";
 import { connect } from 'react-redux';
 import Link from 'next/link';
 import {
-  IUser, StreamSettings, IUIConfig, ISettings
+  IUser, IAccount, StreamSettings, IUIConfig, ISettings,
+  IVerifyEmail
 } from 'src/interfaces';
 import { logout } from '@redux/auth/actions';
 import Router, { withRouter, Router as RouterEvent } from 'next/router';
+import { Store } from 'redux';
+
 import {
   messageService, authService, tokenTransctionService, userService
 } from 'src/services';
@@ -23,11 +26,11 @@ import { SubscribePerformerModal } from 'src/components/subscription/subscribe-p
 import  LogInModal  from 'src/components/log-in/log-in-modal';
 import SignUpModal from '@components/sign-up/sign-up-modal';
 import NavMenu from './nav-menu';
-
+import { Sheet } from 'react-modal-sheet';
 import styles from './new-header.module.scss';
 import { PerformerAdvancedFilter } from '@components/common/base/performer-advanced-filter';
 import { performerService, utilsService, videoService } from 'src/services';
-import { UserCircleIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import { SHORT_GENRES, GENRES } from 'src/constants';
 import { HoverBorderGradient } from "@components/ui/hover-border-gradient";
 import { useState } from "react";
@@ -40,10 +43,18 @@ import { HomeIcon as HomeIconActive, VideoCameraIcon as VideoCameraIconActive, U
 import { HomeIcon, VideoCameraIcon, UserIcon, WalletIcon, BookmarkIcon, } from '@heroicons/react/24/outline';
 import {MultiColumnDropdown} from '../genre-drop-box';
 import {useOutsideClick} from "@components/ui/use-outside-click"
+import NavigationContents from "../navigation"
+import DropdownModal from "../base/drop-down-modal";
+import { motion, AnimatePresence } from 'framer-motion';
+import SlideUpModal from './slide-up-modal';
+import TraxButton from '../TraxButton';
+import { ArrowDownLeft, ArrowDownRight, CircleUserRound } from 'lucide-react';
+import { EmailVerificationBanner } from '../email-verification-banner';
 
 interface IProps {
   updateBalance: Function;
   updateUIValue: Function;
+  account: IAccount;
   user: IUser;
   logout: Function;
   router: any;
@@ -109,20 +120,10 @@ const countryToCurrencyMap = {
 
 const navbarBackground = (scrollNav: boolean, isArtist: boolean, isHome: boolean) => ({
   transition: `0.5s all ease-in-out`,
-  // background: (scrollNav) ?  'linear-gradient(177deg, #c8ff0217 5%, #cbcbcb00 50%)' : 'transparent',
-  // background: linear-gradient(177deg, #cc550066 5%, rgba(203, 203, 203, 0) 50%);
-
-
-  // background: (scrollNav) ? (isArtist) ? 'linear-gradient(178deg, rgb(182 2 255 / 22%) 5%, rgba(203, 203, 203, 0) 50%)' : 'linear-gradient(178deg, #c8ff0233 5%, #cbcbcb00 50%)' : '#00000000',
-
   background: (scrollNav) ? 'linear-gradient(177deg, #c8ff0200 5%, #cbcbcb00 50%)' : '#00000000',
 })
 
 
-const genreSelection = (scrollTop: boolean, isMobile: boolean) => ({
-  opacity: (isMobile && scrollTop) && '0',
-  transition: `0.5s all ease-in-out`,
-});
 
 const headerBackground = (scrollNav: boolean) => ({
   transition: `0.5s all ease-in-out`,
@@ -170,8 +171,13 @@ class NewHeader extends PureComponent<IProps> {
     scrollTop: false,
     openCurrencyModal: false,
     country: '',
-    currency: ''
-
+    currency: '',
+    openNavDropDown: false,
+    featuredContent: [],
+    lastScrollY: 0,
+    isHeaderVisible: true,
+    username: '',
+    openEmailVerifyModal: false
   };
 
   myRef: any;
@@ -219,14 +225,24 @@ class NewHeader extends PureComponent<IProps> {
 
   async componentDidMount() {
     if (!this.myRef) this.myRef = createRef();
-    const { countries, selectedGenre } = this.state;
+    const { countries, selectedGenre, filter, limit } = this.state;
     const { user } = this.props;
 
     // if(!user?.currency){
     //   this.getCurrency()
     // }
 
+    // let values = 'featured'
+
+    // let vals = {searchValue: values, q: values}
+    // let f = { ...filter, ...vals };
+    // this.setState({ offset: 0, filter: f, showFeaturedArtists: false });
+    // this.getPerformersByGenre(0, f, limit);
+    // this.getFeaturedContent()
+    // this.handleGenreFilter('featured')
+
     window.addEventListener('scroll', this.changeNav);
+    window.addEventListener('scroll', this.handleScroll);
 
     // let curr = await tokenTransctionService.getExchangeRateFIAT()
     // console.log("curr: ", curr)
@@ -240,10 +256,6 @@ class NewHeader extends PureComponent<IProps> {
 
     document.addEventListener("mousedown", listener);
     document.addEventListener("touchstart", listener);
-
-
-
-
 
     RouterEvent.events.on('routeChangeStart', this.handleChangeRoute);
 
@@ -319,6 +331,7 @@ class NewHeader extends PureComponent<IProps> {
 
   async componentWillUnmount() {
     window.addEventListener('scroll', this.changeNav);
+    window.removeEventListener('scroll', this.handleScroll);
     // document.removeEventListener('click', this.handleClick);
 
     RouterEvent.events.off('routeChangeStart', this.handleChangeRoute);
@@ -326,8 +339,6 @@ class NewHeader extends PureComponent<IProps> {
     const socket = this.context;
     // @ts-ignore
     token && socket && socket.emit('auth/logout', { token });
-
-
   }
 
   // handleClick = (event) => {
@@ -373,12 +384,11 @@ class NewHeader extends PureComponent<IProps> {
 
 
 
-  handleOpenSignUp = (isOpen: boolean, loggedIn: boolean) =>{
-
-    loggedIn ? this.setState({openLogInModal: isOpen, openSignUpModal: false}) : this.setState({openLogInModal: isOpen, openSignUpModal: true})
+  handleOpenSignUp = (isOpen: boolean, loggedIn: boolean, username?: string) =>{
+    loggedIn ? this.setState({openLogInModal: isOpen, openSignUpModal: false, username }) : this.setState({openLogInModal: isOpen, openSignUpModal: true, username })
   }
 
-  handleOpenModal = (isOpen: boolean, modal: string) =>{
+  handleOpenModal = (isOpen: boolean, modal: string) => {
     if(modal === 'email'){
       this.setState({openSignUpModal: isOpen, openLogInModal: isOpen, openEmailSignUpModal: true})
     }else if(modal === 'exit'){
@@ -443,7 +453,7 @@ class NewHeader extends PureComponent<IProps> {
 
       vals = {searchValue: genreName, q: genreName}
       f = { ...filter, ...vals };
-      this.setState({ offset: 0, filter: f, showFeaturedArtists: false });
+      this.setState({ offset: 0, filter: f});
       this.getPerformersByGenre(0, f, limit);
     }else{
       // this.setState(() => this.updateDataDependencies())
@@ -454,11 +464,6 @@ class NewHeader extends PureComponent<IProps> {
     }
 
 
-
-    // const { filter, limit } = this.state;
-    // const f = { ...filter, ...vals };
-    // this.setState({ offset: 0, filter: f });
-    // this.getPerformersByGenre(0, f, limit);
     this.setState({genre: genreName})
     sendGenreToParent(genreName)
 
@@ -478,6 +483,9 @@ class NewHeader extends PureComponent<IProps> {
     this.setState({ offset: 0, filter: f });
     this.getPerformers(0, f, limit, getGenre);
   }
+
+
+
 
 
   async getPerformers(offset: any, filter: any, limit: any, submit: boolean) {
@@ -563,31 +571,150 @@ class NewHeader extends PureComponent<IProps> {
 
     this.handleGenreFilter('featured');
     Router.push(path);
-    // if(currentPathCleaned !== ''){
-    //   Router.push(path);
-    // }else{
-    //   Router.push('/');
-    // }
+
+  }
+
+  async getFeaturedContent(){
+    let featured = [];
+    await videoService.homePageSearch({
+      limit: 10,
+      sortBy: 'latest',
+      tags: 'featured',
+      offset: 0,
+    }).then((res) => {
+      res.data.data.map((v)=>{
+        if(v._id){
+          featured.length === 0 && featured.push(v);
+          const exists = featured.some(obj => obj['_id'] === v['_id']);
+          if (!exists) {
+            if(v.trackType === 'audio'){
+              featured.push(v);
+            }
+          }
+        }
+      })
+    })
+
+    this.setState({featuredContent: this.shuffleArray(featured)});
+  }
+
+  shuffleArray(array){
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  handlePressHome(){
+    const { selectedGenre } = this.state;
+    if(selectedGenre !== "featured"){
+      this.handleGenreFilter("featured");
+    }
+    this.handleChangePage("/");
+  }
+
+  openDropDown(val: boolean){
+    this.setState({openNavDropDown: val})
+  }
+
+  handleScroll = () => {
+    const { lastScrollY } = this.state;
+    const currentScrollY = window.scrollY;
+
+    // Determine if scrolling up or down
+    const isScrollingUp = currentScrollY < lastScrollY;
+
+    // Update header visibility based on scroll direction
+    this.setState({
+      isHeaderVisible: isScrollingUp || currentScrollY < 100, // Show header when scrolling up or near top
+      lastScrollY: currentScrollY,
+      scrollNav: currentScrollY > 0,
+      scrollTop: currentScrollY > 70
+    });
+  };
+
+  handleSendEmail = async() => {
+    const {account} = this.props;
+
+    let token: IVerifyEmail = {
+      source: account,
+      sourceType: 'account'
+    }
+
+    try{
+      await authService.verifyEmail(token)
+      message.success("Email verification link sent!")
+    }catch(error){
+      console.log(error)
+    }
 
   }
 
 
 
-
   render() {
+    const menuVariants = {
+      initial: {
+        x: 320, // Start from outside the viewport (width + 20px)
+        opacity: 0
+      },
+      animate: {
+        x: 0,
+        opacity: 1,
+        transition: {
+          type: "spring",
+          stiffness: 400,
+          damping: 30,
+          mass: 1
+        }
+      },
+      exit: {
+        x: 320,
+        opacity: 0,
+        transition: {
+          type: "spring",
+          stiffness: 400,
+          damping: 40,
+          mass: 0.8
+        }
+      }
+    };
+
+
     const {
-      user, router, ui, settings, onFinish, onSidebarToggle, setSidebar, isClickedOutside
+      user, account, router, ui, settings, onFinish, onSidebarToggle, setSidebar, isClickedOutside
     } = this.props;
     const {
-      totalNotReadMessage, openNavMenuModal, selectedGenre, suggestions, scrollNav, scrollTop, openSearchBox, isSearchEmpty, limit, openGenreSelection, offset, performers, fetching, total, openProfile, isMobile, openLogInModal, openSignUpModal, openEmailSignUpModal, musicInfo, countries
+      isHeaderVisible, openEmailVerifyModal,
+      totalNotReadMessage, openNavDropDown, featuredContent, openNavMenuModal, selectedGenre, suggestions, scrollNav, scrollTop, openSearchBox, isSearchEmpty, limit, openGenreSelection, offset, performers, fetching, total, openProfile,
+      isMobile, openLogInModal, openSignUpModal, openEmailSignUpModal, musicInfo, countries, username
     } = this.state;
-    const referralCode = user?.userReferral;
+    const referralCode = account?.userReferral;
+    const activeSubaccount = account.activeSubaccount || 'user';
+    const isUser = activeSubaccount === 'user';
+    const isPerformer = activeSubaccount === 'performer';
 
+
+    const isEmailVerified = !account._id || account?.verifiedEmail ? true : false;
+
+    const headerStyle: React.CSSProperties = {
+      transition: '0.3s all ease-in-out',
+      transform: isHeaderVisible ? 'translateY(0)' : 'translateY(-100%)',
+      position: 'fixed' as const,
+      width: '100%',
+      zIndex: 30,
+      backdropFilter: scrollNav ? 'blur(12px)' : undefined,
+      height: isEmailVerified ? isMobile ? '60px' : '80px' : isMobile ? '168px' : '188px',
+      background: scrollNav ? '#090909cc' : 'linear-gradient(180deg,rgba(0,0,0,.7) 10%,transparent)'
+    };
 
     return (
       (
         <div className={styles.headerModule}>
-          <div style={headerBackground(scrollNav)} className={isMobile ? 'main-header-mobile mobile-navbar' : 'main-header'} >
+
+          <div style={headerStyle} className={isMobile ? 'main-header-mobile mobile-navbar' : 'main-header'}>
             {/* <Event
               event="nofify_read_messages_in_conversation"
               handler={this.handleMessage.bind(this)}
@@ -602,7 +729,11 @@ class NewHeader extends PureComponent<IProps> {
             /> */}
 
             <div className="feed-container main-container">
-{/* linear-gradient(177deg, #f602ff33 5%, #cbcbcb00 50%) */}
+
+              {!isEmailVerified && (
+                <EmailVerificationBanner onVerify={() => this.setState({openEmailVerifyModal: true})} />
+              )}
+              {/* linear-gradient(177deg, #f602ff33 5%, #cbcbcb00 50%) */}
               <Layout.Header className="header" id="layoutHeader"
               style={navbarBackground(scrollNav, user.isPerformer, openGenreSelection)}>
                {/*  style={{background: !scrollNav ? 'transparent' : 'linear-gradient(177deg, #c8ff0217 5%, #cbcbcb00 50%)'}}> */}
@@ -612,26 +743,11 @@ class NewHeader extends PureComponent<IProps> {
 
                   <ul className={user._id ? 'nav-icons' : 'nav-icons custom'}>
 
-                    {!user._id && !isMobile && [
-                      <li key="login2" className={router.pathname === '/login' ? 'active logged-out kr ' : 'logged-out kr'} >
-                        {/* <div className='logged-out-link' onClick={()=> this.setState({openLogInModal: true})}>
-                           <UserCircleIcon className="logged-out-link-icon"/> <span>Sign In</span>
-                        </div> */}
-                        <HoverBorderGradient
-                          containerClassName="rounded-md"
-                          as="button"
-                          onClick={()=> this.setState({openLogInModal: true})}
-                          className="logged-out-link bg-[#A8FF00] tracking-loose text-trax-black font-regular flex items-center  space-x-2 "
-                        >
-
-                          {/* <UserCircleIcon className="logged-out-link-icon"/> */} <span className='font-heading uppercase font-bold text-[20px]'>Sign in</span>
-                        </HoverBorderGradient>
-                      </li>
-                    ]}
-
+                  <Link href={'/'} className='my-auto relative  flex cursor-pointer z-[10]'>
+                  <Image alt="logo" preview={false} width="140px" className='' src="/static/trax_primary_logotype.svg" />
+                  </Link>
 
                     {/* {!user._id && !isMobile && [
-
                     <li key="login2" className={router.pathname === '/login' ? 'active btn' : 'btnn'}>
                       <span className="btnn__inner">
                         <span className="btnn__label" data-label="Get in touch" data-hover="Go for it 💪">
@@ -643,171 +759,158 @@ class NewHeader extends PureComponent<IProps> {
                     </li>
                     ]} */}
 
-
-
-
-
                     {!isMobile && (
                       <div className='top-nav-container'>
                         <ul className='top-nav-icons-wrapper'>
-                        {user._id && (
-                          <li className={router.pathname === '/' ? 'active' : ''}>
-                            <div onClick={()=> this.handleChangePage("/")} className={user._id ? 'nav-link' : 'nav-link logged-out'}>
-                              {/* <HomeIconActive className={router.pathname === '/' ? 'active-icon size-6' : 'display-none'} />
-                              <HomeIcon className={router.pathname === '/' ? 'display-none' : 'size-6'} /> */}
-                              <span className={router.pathname === '/' ? 'page-name-active' : 'page-name'}>Home</span>
-                            </div>
+                        {user._id && isUser && (
+                          <li className="relative overflow-hidden rounded-lg">
+                              <div
+                                  onClick={()=> this.handlePressHome()}
+                                  className={`${selectedGenre === 'featured' && router.pathname === '/' ? 'bg-[#ffffff20] backdrop-blur-2xl' : ''} hover:bg-[#ffffff4d] hover:backdrop-blur-2xl transition rounded-lg nav-link ${user._id ? '' : 'logged-out'}`}
+                              >
+                                  <span className={selectedGenre === 'featured' &&router.pathname === '/' ? 'page-name-active' : 'page-name'}>Home</span>
+                              </div>
                           </li>
                         )}
-                        {(user._id) &&(
-                        <li>
+
+                        {(user._id) && isUser &&(
+                        <li >
                             <MultiColumnDropdown isMobile={isMobile} selectedGenre={selectedGenre} onSelect={this.handleGenreFilter.bind(this)}/>
                         </li>
                         )}
-                          {user._id && !user.isPerformer && (
-                            <li key="wallet_user" className={router.pathname === '/user/wallet' ? 'active' : ''}>
-                              <div onClick={()=> this.handleChangePage("/user/wallet")} className='nav-link'>
-                                <>
-                                  {/* <WalletIconActive className={router.pathname === '/user/wallet' ? 'active-icon size-6' : 'display-none'} />
-                                  <WalletIcon className={router.pathname === '/user/wallet' ? 'display-none' : 'size-6'} /> */}
-                                  <span className={router.pathname === '/user/wallet' ? 'page-name-active' : 'page-name'} >Wallet</span>
-                                  </>
+
+                        {user._id && isUser && (
+                          <li key="library" className="relative overflow-hidden rounded-lg">
+                            <div
+                              onClick={() => this.handleChangePage("/user/library")}
+                              className={`${router.pathname === '/user/library' || router.pathname === '/user/purchased' ? 'bg-[#ffffff20] backdrop-blur-2xl' : ''} hover:bg-[#ffffff4d] hover:backdrop-blur-2xl transition rounded-lg nav-link`}
+                            >
+                              <span className={router.pathname === '/user/library' || router.pathname === '/user/purchased' ? 'page-name-active' : 'page-name'}>
+                                Library
+                              </span>
+                            </div>
+                          </li>
+                        )}
+
+                        {user._id && isPerformer && (
+                          <>
+                            <li key="content" className="relative overflow-hidden rounded-lg">
+                              <div
+                                onClick={() => this.handleChangePage("/artist/studio")}
+                                className={`${router.pathname === '/artist/studio' ? 'bg-[#ffffff20] backdrop-blur-2xl' : ''} hover:bg-[#ffffff4d] transition hover:backdrop-blur-2xl rounded-lg nav-link`}
+                              >
+                                <span className={router.pathname === '/artist/studio' ? 'page-name-active' : 'page-name'}>
+                                  Studio
+                                </span>
                               </div>
                             </li>
-                          )}
 
-                          {user._id && !user.isPerformer && (
-                              <li key="library" className={router.pathname === '/user/library' || router.pathname === '/user/purchased' ? 'active' : ''}>
-                                <div onClick={()=> this.handleChangePage("/user/library")} className='nav-link'>
-                                  <>
-                                    {/* <BookmarkIconActive className={router.pathname === '/user/library' ? 'active-icon size-6' : 'display-none'} />
-                                    <BookmarkIcon className={router.pathname === '/user/library' ? 'display-none' : 'size-6'} /> */}
-                                    <span className={router.pathname === '/user/library' || router.pathname === '/user/purchased' ? 'page-name-active' : 'page-name'}> {router.pathname === '/user/purchased' ? 'Purchased' : 'Library'}</span>
-                                  </>
-                                </div>
-                              </li>
-                          )}
-                          {user._id && user.isPerformer && (
-                            <>
-                              <li key="content" className={router.pathname === '/artist/studio' ? 'active' : ''}>
-                                <div onClick={()=> this.handleChangePage("/artist/studio")} className='nav-link'>
-                                  <>
-                                    {/* <VideoCameraIconActive className={router.pathname === '/artist/studio' ? 'active-icon size-6' : 'display-none'} />
-                                    <VideoCameraIcon className={router.pathname === '/artist/studio' ? 'display-none' : 'size-6'} /> */}
-                                    <span className={router.pathname === '/artist/studio' ? 'page-name-active' : 'page-name'} >Studio</span>
-                                  </>
-                                </div>
-                              </li>
-                              <li key="earnings" className={router.pathname === '/artist/earnings' ? 'active' : ''}>
-                                <div onClick={()=> this.handleChangePage("/artist/earnings")} className='nav-link'>
-                                  <>
-                                    {/* <WalletIconActive className={router.pathname === '/artist/earnings' ? 'active-icon size-6' : 'display-none'} />
-                                    <WalletIcon className={router.pathname === '/artist/earnings' ? 'display-none' : 'size-6'} /> */}
-                                    <span className={router.pathname === '/artist/earnings' ? 'page-name-active' : 'page-name'}>Earnings</span>
-                                  </>
-                                </div>
-                              </li>
-                              <li key="profile" className={router.pathname === '/artist/profile' ? 'active' : ''}>
-                                <div onClick={()=> this.handleChangePage(`/${user?.username || user?._id}`)} className='nav-link'
-                                >
-                                  <>
-                                    {/* <UserIconActive className={router.pathname === '/artist/profile' ? 'active-icon size-6' : 'display-none'}/>
-                                    <UserIcon className={router.pathname === '/artist/profile' ? 'display-none' : 'size-6'}/> */}
-                                    <span className={router.pathname === '/artist/profile' ? 'page-name-active' : 'page-name'}>You</span>
-                                  </>
-                                </div>
-                              </li>
+                            {<li key="earnings" className="relative overflow-hidden rounded-lg">
+                              <div
+                                onClick={() => this.handleChangePage("/artist/earnings")}
+                                className={`${router.pathname === '/artist/earnings' ? 'bg-[#ffffff20] backdrop-blur' : ''} hover:bg-[#ffffff4d] transition rounded-lg nav-link`}
+                              >
+                                <span className={router.pathname === '/artist/earnings' ? 'page-name-active' : 'page-name'}>
+                                  Earnings
+                                </span>
+                              </div>
+                            </li>}
 
-                            </>
-                          )}
+                            <li key="profile" className="relative overflow-hidden rounded-lg">
+                              <div
+                                onClick={() => this.handleChangePage(`/artist/profile/?id=${user?.username || user?._id}`)}
+                                className={`${router.pathname === '/artist/profile' ? 'bg-[#ffffff20] backdrop-blur' : ''} hover:bg-[#ffffff4d] transition rounded-lg nav-link`}
+                              >
+                                <span className={router.pathname === '/artist/profile' ? 'page-name-active' : 'page-name'}>
+                                  You
+                                </span>
+                              </div>
+                            </li>
+                          </>
+                        )}
                         </ul>
                       </div>
                     )}
 
                       {(user._id && isMobile && openGenreSelection) && (
-                        <div style={genreSelection(scrollTop, isMobile)} className='flex flex-row-reverse gap-4'>
-                          <li className='p-0 left-[11.3rem]'>
-                              <MultiColumnDropdown isMobile={isMobile} selectedGenre={selectedGenre} onSelect={this.handleGenreFilter.bind(this)}/>
-                          </li>
-                          <div onClick={()=> this.handleGenreFilter("featured")} className='py-[0.5rem] px-[1rem] border  rounded-full absolute left-[1rem] top-[3.7rem] m-auto bg-[#b3b3b3200] w-fit'>
+                        <div  className='flex flex-row gap-2 sm:gap-4 w-full justify-end mr-4'>
+
+                          {/* <div onClick={()=> this.handleGenreFilter("featured")} className='py-[5px] px-[1rem] border  rounded-lg bg-[#b3b3b3200] w-fit flex items-center'>
                             <span style={{color: selectedGenre === 'featured' ? "white" : "#b3b3b3", borderColor: selectedGenre === 'featured' ? "white" : "#b3b3b3" }}>Featured</span>
                           </div>
-                          <div onClick={()=> this.handleGenreFilter("new")} className='py-[0.5rem] px-[1rem] border  rounded-full absolute left-[7rem] top-[3.7rem] m-auto bg-[#b3b3b3200] w-fit'>
+                          <div onClick={()=> this.handleGenreFilter("new")} className='py-[5px] px-[1rem] border  rounded-lg bg-[#b3b3b3200] w-fit flex items-center'>
                             <span style={{color: selectedGenre === 'new' ? "white" : "#b3b3b3", borderColor: selectedGenre === 'new' ? "white" : "#b3b3b3"}}>New</span>
+                          </div> */}
+                          <div className=' w-fit'>
+                              <MultiColumnDropdown isMobile={isMobile} selectedGenre={selectedGenre} onSelect={this.handleGenreFilter.bind(this)}/>
                           </div>
                         </div>
                       )}
 
-                      <PerformerAdvancedFilter
-                        isMobile={isMobile}
-                        onSubmit={this.handleFilter.bind(this)}
-                        countries={countries}
-                        musicInfo={musicInfo}
-                        onSearch={this.changeEmptySearchBar.bind(this)}
-                        user={user}
-                      />
-
-                      {openSearchBox && (
-                        <div className='search-box-container'>
-                          <div className='search-box-wrapper'>
-                            {performers.map((p) => (
-                              <Link href={`/${p?.username || p?._id}`} onClick={()=> this.setState({openSearchBox: false})}>
-                                <Avatar src={p?.avatar || '/no-avatar.png'}></Avatar>
-                                <span className='search-box-artist-name'>{p.name}</span>
-                              </Link>
-                            ))}
-                            {performers.length === 0 && (
-                              <span className="search-box-no-res">No artists found.</span>
-                            )}
-                          </div>
+                      {!isMobile && isUser && (
+                        <div
+                        className={` ${user._id ? 'right-8' : 'right-8'} flex relative  rounded-lg hover:bg-[#ffffff20] transition p-2 cursor-pointer`}
+                        onClick={()=>  this.setState({openNavDropDown: !openNavDropDown})}
+                        >
+                          <MagnifyingGlassIcon  className='w-6 h-6'/>
                         </div>
                       )}
 
+                      {!user._id  && [
+                        <li key="login2" className={router.pathname === '/login' ? 'active logged-out kr ' : 'logged-out kr'} >
+                          {/* <div className='logged-out-link' onClick={()=> this.setState({openLogInModal: true})}>
+                             <UserCircleIcon className="logged-out-link-icon"/> <span>Sign In</span>
+                          </div> */}
+                          <CircleUserRound className='w-7 h-7 my-auto mt-[11px] sm:mt-0 stroke-[1.5]' onClick={()=> this.setState({openLogInModal: true})}/>
+
+                        </li>
+                      ]}
 
 
-
+                      <DropdownModal isOpen={openNavDropDown} onClose={() => this.setState({openNavDropDown: false})} isMobile={isMobile} isNavigation={true}>
+                        <NavigationContents isMobile={isMobile} user={user}/>
+                      </DropdownModal>
 
                     {!isMobile && (
                       <>
-                    {user._id && (
-                      <li key="avatar" aria-hidden onClick={() => this.setState({ openNavMenuModal: !openNavMenuModal })}>
-                        {user?.avatar ? <Avatar style={{minWidth: '32px', minHeight: '32px'}} src={user?.avatar || '/static/no-avatar.png'} /> : <UserIcon style={{minWidth: '24px', minHeight: '24px', marginTop: '3px'}}/>}
-
-
-                      </li>
-                      )}
+                        {user._id && (
+                          <li key="avatar" aria-hidden onClick={() => this.setState({ openNavMenuModal: !openNavMenuModal })}>
+                            <Avatar className='z-[40]' style={{minWidth: '45px', minHeight: '45px'}} src={user?.avatar || '/static/no-avatar.png'} />
+                          </li>
+                        )}
                       </>
                     )}
-
                   </ul>
                 </div>
               </Layout.Header>
-              {/* {openGenreSelection && (
-                <div className='genre-selection-container'>
-                  <div className={isMobile ? 'genre-selection-wrapper-mobile' : 'genre-selection-wrapper'} style={{marginLeft: !isMobile && (setSidebar ? "4.6rem" : "0rem")}}>
-                    {musicInfo?.activeTags.data.map((genre) => (
-                      <span className={selectedGenre === genre.value ? 'genre-selected-item' : 'genre-selection-item'} onClick={()=> this.handleGenreFilter(genre.value)}>
-                        {genre.text}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )} */}
-              {/* {openGenreSelection && (
-                <DropdownGenres genres={musicInfo?.activeTags.data} onSelect={this.handleGenreFilter.bind(this)}/>
-              )} */}
 
-              {(openNavMenuModal) &&(
-                <div  className='nav-menu-wrapper'>
-                  <NavMenu ref={this.myRef} onFinish={this.handleOpenModal.bind(this)} onClose={this.handleCloseMenu.bind(this)}/>
-                  {/* <BackgroundBeams/> */}
-                 <div className="absolute pointer-events-none inset-0 flex items-center justify-center dark:bg-black bg-white [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
-                </div>
-              )}
+                <AnimatePresence>
+                  {openNavMenuModal && (
+                    <motion.div
+                      className="nav-menu-wrapper"
+                      variants={menuVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                    >
+                      <NavMenu ref={this.myRef} onFinish={this.handleOpenModal.bind(this)} onClose={this.handleCloseMenu.bind(this)}/>
+                      <div className="absolute pointer-events-none inset-0 flex items-center justify-center dark:bg-black bg-white [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
               <SubscribePerformerModal onSubscribed={this.handleSubscribe} />
 
               <div className='log-in-modal-wrapper'>
+
+              {isMobile ? (
+                  <SlideUpModal
+                  isOpen={openLogInModal}
+                  onClose={() => this.setState(prevState => ({ ...prevState, openLogInModal: false }))}
+                  >
+                    <LogInModal onFinish={this.handleOpenSignUp.bind(this)}/>
+                  </SlideUpModal>
+              ) : (
                 <Modal
                   key="purchase_post"
                   className="auth-modal"
@@ -821,9 +924,22 @@ class NewHeader extends PureComponent<IProps> {
                 >
                   <LogInModal onFinish={this.handleOpenSignUp.bind(this)}/>
                 </Modal>
+              )}
               </div>
 
               <div className='sign-in-modal-wrapper'>
+              {isMobile ? (
+
+                  <SlideUpModal
+                  isOpen={openSignUpModal}
+                  onClose={() => this.setState(prevState => ({ ...prevState, openSignUpModal: false }))}
+                  >
+                    <SignUpModal onFinish={this.handleOpenModal.bind(this)} username={username}/>
+                  </SlideUpModal>
+
+
+              ):(
+
                 <Modal
                   key="purchase_post"
                   className="auth-modal"
@@ -835,10 +951,42 @@ class NewHeader extends PureComponent<IProps> {
                   destroyOnClose
                   onCancel={() => this.setState({ openSignUpModal: false })}
                 >
-                  <SignUpModal onFinish={this.handleOpenModal.bind(this)} />
+                  <SignUpModal onFinish={this.handleOpenModal.bind(this)} username={username}/>
                 </Modal>
-              </div>
 
+              )}
+
+
+              </div>
+              <Modal
+                  key="email-verify"
+                  className="subscription-modal border border-[#282828] min-w-[400px]"
+                  title={null}
+                  open={openEmailVerifyModal}
+                  footer={null}
+                  width={600}
+                  style={{minWidth: '100vw'}}
+                  destroyOnClose
+                  onCancel={() => this.setState({ openEmailVerifyModal: false })}
+                >
+                  <div className=' mx-auto px-4 pb-6 pt-8 gap-4 flex flex-col'>
+
+                      <span className='flex justify-center text-trax-white uppercase font-heading font-extrabold text-4xl text-center'>Verify your email</span>
+                      <span className='text-base text-trax-gray-300 px-4 text-center'>
+                        We've sent a verification link to your email. Can't find it? Check in your spam folder or click below to resend.
+                      </span>
+                       <div className='flex mx-auto mt-2'>
+                       <TraxButton
+                        htmlType="button"
+                        styleType="primary"
+                        buttonSize={"large"}
+                        buttonText="Resend email"
+                        onClick={() => this.handleSendEmail()}
+                      />
+                       </div>
+
+                  </div>
+                </Modal>
               {/* <div className='nav-menu-modal-wrapper'>
                 <Modal
                   key="nav-menu"
@@ -866,6 +1014,7 @@ NewHeader.contextType = SocketContext;
 
 const mapState = (state: any) => ({
   user: { ...state.user.current },
+  account: { ...state.user.account },
   ui: { ...state.ui },
   config: { ...state.settings },
   ...state.streaming

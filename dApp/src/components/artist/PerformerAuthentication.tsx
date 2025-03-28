@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Col, Form, Input, Modal, message } from 'antd';
 import PhoneInput from 'react-phone-number-input';
-import { performerService } from '@services/performer.service';
+import { performerService, accountService } from '@services/index';
 import { IPerformer } from 'src/interfaces';
+
+import TraxButton from '@components/common/TraxButton';
 
 const layout = {
   labelCol: { span: 24 },
@@ -66,14 +68,14 @@ const PerformerAuthentication: React.FC<IProps> = ({ onFinish, user, updating })
 
 
   const enable2FA = async () => {
-    await performerService.enable2FA(user._id);
+    await accountService.enable2FA(user._id);
     setOpenEnable2fa(true);
-    const qrCodeLink = await performerService.getQRCode(user._id);
+    const qrCodeLink = await accountService.getQRCode(user._id);
     setQrCode(qrCodeLink.data);
   };
 
   const verify2FA = async () => {
-    const res = await performerService.verify2FA(user._id, { token: tokenField });
+    const res = await accountService.verify2FA(user._id, { token: tokenField });
     if (res.data === true) {
       message.success('Two factor authentication enabled.');
       setOpenEnable2fa(false);
@@ -84,7 +86,7 @@ const PerformerAuthentication: React.FC<IProps> = ({ onFinish, user, updating })
   };
 
   const disable2FA = async () => {
-    const res = await performerService.disable2FA(user._id);
+    const res = await accountService.disable2FA(user._id);
     if (res.data === true) {
       message.success('Two factor authentication disabled.');
       setEnabled2fa(false);
@@ -97,14 +99,14 @@ const PerformerAuthentication: React.FC<IProps> = ({ onFinish, user, updating })
     const res = await form.validateFields();
     form.submit();
 
-    await performerService.enableSms(user._id);
+    await accountService.enableSms(user._id, {});
     setOpenEnableSms(true);
-    await performerService.getSMSCode(user._id);
+    await accountService.getSMSCode(user._id);
     setTokenSmsField('');
   };
 
   const verifySms = async () => {
-    const res = await performerService.verifySms(user._id, { token: tokenSmsField });
+    const res = await accountService.verifySms(user._id, { token: tokenSmsField });
     if (res.data === true) {
       message.success('SMS authentication enabled.');
       setOpenEnableSms(false);
@@ -115,7 +117,7 @@ const PerformerAuthentication: React.FC<IProps> = ({ onFinish, user, updating })
   };
 
   const disableSms = async () => {
-    const res = await performerService.disableSms(user._id);
+    const res = await accountService.disableSms(user._id);
     if (res.data === true) {
       message.success('SMS authentication disabled.');
       setEnabledSms(false);
@@ -136,19 +138,24 @@ const PerformerAuthentication: React.FC<IProps> = ({ onFinish, user, updating })
     >
       <div className="account-form-settings">
         <h1 className="profile-page-heading">QR code authentication</h1>
-        <span className='text-trax-gray-300 mb-6 flex'>Enable Two factor authentication for additional security.</span>
+        <span className='profile-page-subtitle'>Enable Two factor authentication for additional security.</span>
         <Col className="lg:w-full md:w-full w-full mb-6">
           <div className='flex flex-row gap-4 w-full'>
             {!enabled2fa ?
-              <Button className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-2 h-[38px] flex w-fit justify-center" onClick={enable2FA}>
-                Enable 2FA
-              </Button> :
-              <Button
-                className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-2 h-[38px] flex w-fit justify-center"
+              <TraxButton
+                htmlType="button"
+                styleType="primary"
+                buttonSize='full'
+                buttonText="Enable 2FA"
+                onClick={enable2FA}
+              /> :
+              <TraxButton
+                htmlType="button"
+                styleType="primary"
+                buttonSize='full'
+                buttonText="Disable 2FA"
                 onClick={disable2FA}
-              >
-                Disable 2FA
-              </Button>
+              />
             }
           </div>
         </Col>
@@ -167,26 +174,21 @@ const PerformerAuthentication: React.FC<IProps> = ({ onFinish, user, updating })
           </Form.Item>
         </Col>
         {!enabledSms ?
-          <Button className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-2 h-[38px] flex w-fit justify-center" onClick={enableSms}>
-            Enable SMS Auth
-          </Button> :
-          <Button
-            className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-2 h-[38px] flex w-fit justify-center"
+          <TraxButton
+            htmlType="button"
+            styleType="primary"
+            buttonSize='full'
+            buttonText="Enable SMS Auth"
+            onClick={enableSms}
+          /> :
+          <TraxButton
+            htmlType="button"
+            styleType="primary"
+            buttonSize='full'
+            buttonText="Disable SMS Auth"
             onClick={disableSms}
-          >
-            Disable SMS Auth
-          </Button>
+          />
         }
-        <Form.Item className="mb-8 mt-8">
-          <Button
-            className="profile-following-btn-card float-right"
-            htmlType="submit"
-            loading={updating}
-            disabled={updating}
-          >
-            Save Changes
-          </Button>
-        </Form.Item>
       </div>
       <Modal
         key="enable2fa"
@@ -209,12 +211,13 @@ const PerformerAuthentication: React.FC<IProps> = ({ onFinish, user, updating })
               value={tokenField} onChange={(e) => setTokenField(e.target.value)}
               className="mb-4 rounded-lg"
             />
-            <Button
-              className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 h-[38px] flex w-fit justify-center"
+            <TraxButton
+              htmlType="button"
+              styleType="primary"
+              buttonSize='full'
+              buttonText="Verify 2FA"
               onClick={verify2FA}
-            >
-              Verify 2FA
-            </Button>
+            />
           </div>
         </div>
       </Modal>
@@ -237,12 +240,13 @@ const PerformerAuthentication: React.FC<IProps> = ({ onFinish, user, updating })
               value={tokenSmsField} onChange={(e) => setTokenSmsField(e.target.value)}
               className="my-4 rounded-lg"
             />
-            <Button
-              className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 h-[38px] flex w-fit justify-center"
+            <TraxButton
+              htmlType="button"
+              styleType="primary"
+              buttonSize='full'
+              buttonText="Verify SMS"
               onClick={verifySms}
-            >
-              Verify SMS
-            </Button>
+            />
           </div>
         </div>
       </Modal>

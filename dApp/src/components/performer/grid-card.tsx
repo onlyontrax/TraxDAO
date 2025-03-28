@@ -80,8 +80,8 @@ class PerformerGridCard extends PureComponent<IProps> {
     return (
       <div className={styles.componentsPerformerVerificationFormModule}>
         <Link
-          href={`/${performer?.username || performer?._id}`}
-          as={`/${performer?.username || performer?._id}`}
+          href={`/artist/profile/?id=${performer?.username || performer?._id}`}
+          as={`/artist/profile/?id=${performer?.username || performer?._id}`}
           style={{ cursor: 'pointer' }}
         >
           <div className="grid-card" style={{ backgroundImage: `url(${performer?.avatar || '/static/no-avatar.png'})` }}>
@@ -91,7 +91,7 @@ class PerformerGridCard extends PureComponent<IProps> {
               <div className="artist-name">
                 {this.renderArtistName(performer?.name)}
                 {performer?.verifiedAccount && <CheckBadgeIcon className="performer-grid-card-v-badge" />}
-                {performer?.wallet_icp && (
+                {performer.account?.wallet_icp && (
                 <img src="/static/infinity-symbol.png" style={{ marginLeft: '3px', marginTop: '1px' }} className="profile-icp-badge-feed" />
                 )}
                   &nbsp;

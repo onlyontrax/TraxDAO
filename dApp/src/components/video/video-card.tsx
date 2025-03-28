@@ -2,15 +2,22 @@ import { shortenLargeNumber, videoDuration } from '@lib/index';
 import Link from 'next/link';
 import { PureComponent } from 'react';
 import { IVideo } from 'src/interfaces';
+import { Avatar } from 'antd';
 import {FaPlay, FaLock} from 'react-icons/fa'
-import { CheckBadgeIcon, LockClosedIcon } from '@heroicons/react/24/solid';
+import { CheckBadgeIcon, LockClosedIcon, UserCircleIcon } from '@heroicons/react/24/solid';
+import { PlayIcon, SpeakerWaveIcon, MusicalNoteIcon } from '@heroicons/react/24/outline';
 import styles from './video.module.scss';
+import TruncateText from '@components/common/truncate-text';
+import ScrollingText from '@components/common/layout/scrolling-text';
+import CollaboratorList from './collaborator-list';
+
 interface IProps {
   video: IVideo;
+  isFromRelatedList: boolean;
+  showStatusTags?: boolean;
 }
 
 export class VideoCard extends PureComponent<IProps> {
-
   formatSeconds(seconds) {
     if (!seconds) {
       return '00:00';
@@ -21,129 +28,105 @@ export class VideoCard extends PureComponent<IProps> {
     const paddedSeconds = String(remainingSeconds).padStart(2, '0');
     return `${paddedMinutes}:${paddedSeconds}`;
   }
+
   render() {
-    const { video } = this.props;
+    const { video, showStatusTags } = this.props;
     const canView = (video.isSale === 'subscription' && video.isSubscribed)
       || (video.isSale === 'pay' && video.isBought)
       || video.isSale === 'free';
-    const thumbUrl = (canView ? video?.thumbnail?.url : video?.thumbnail?.thumbnails && video?.thumbnail?.thumbnails[0])
-      || (video?.teaser?.thumbnails && video?.teaser?.thumbnails[0])
-      || (video?.video?.thumbnails && video?.video?.thumbnails[0])
-      || '/static/no-image.jpg';
+
+
+  const calcBackgroundStyle = () => {
+    const thumbnails = video?.thumbnail?.thumbnails;
+    const fallbackUrl = video?.thumbnail?.url;
+    
+    return thumbnails?.length ? thumbnails[0] : fallbackUrl ?? '/static/no-image.jpg';
+  }; 
+
+  const backgroundImageStyle = {
+    backgroundImage: `url("${calcBackgroundStyle()}")`
+  };
+    
 
     return (
       <div key={video._id} className={styles.componentVideoModule}>
-        <Link href={`/video?id=${video.slug}`} passHref>
-          <div
-            className={styles['new-track-link']}
-          >
-            <div className={styles['new-track-thumb']}>
-              <div className={styles['new-track-bg']} style={{ backgroundImage: `url(${thumbUrl})` }}>
-                {video.video?.duration ? (
-                  <div className={styles['track-duration']}>
-                    {this.formatSeconds(video.video?.duration)}
+        <div className={`min-w-[240px] min-h-[150px] md:min-w-[310px] md:min-h-[200px]`}>
+          <Link href={`/${video?.trackType === 'video' ? 'video' : 'track'}?id=${video.slug}`} passHref>
+            <div className={styles['new-track-link']}>
+              <div className={styles['new-track-thumb']}>
+                <div className={styles['new-track-bg']} style={backgroundImageStyle}>
+                  {video.video?.duration ? (
+                    <div className={styles['track-duration']}>
+                      {this.formatSeconds(video.video?.duration)}
+                    </div>
+                  ) : null}
+                  {video?.limitSupply && (
+                    <div style={{textShadow: '#c8ff00 1.5px 0.5px 12px'}} className=" absolute rounded uppercase font-heading top-0 left-0  m-3 font-bold rounded text-[16px] bg-[#7E2CDD] px-[6px] py-[2px] text-[#FFF] ">
+                    Limited release
                   </div>
-                ) : null}
-                {video?.limitSupply && (
-                <div className={styles['track-limited']}>
-                  Limited Edition
-                </div>
-              )}
+                  )}
+                  <div className={styles['track-type']}>
+                    {showStatusTags && (video.isBought || video.isBookmarked) ? (
+                      video.isBought ? 'purchased' : 'saved'
+                    ) : (
+                      <>
+                        {video.trackType === 'audio' ? <SpeakerWaveIcon className='w-[19px] h-[19px] mt-[2px]'/> : <PlayIcon className='w-[19px] h-[19px] mt-[2px]'/>}
+                        {video.trackType === 'audio' ? 'track' : 'video'}
+                      </>
+                    )}
+                  </div>
 
-
-              {video.isSale === 'subscription' && !video.isSubscribed && (
+                  {video.isSale === 'subscription' && !video.isSubscribed && (
                     <div className='w-full flex relative justify-center items-center h-full inset-0'>
-                      <div className='absolute m-auto flex justify-center items-center bg-[#0e0e0e] rounded-full flex flex-row py-2 px-3 gap-1'>
-                        <LockClosedIcon className='text-trax-white mt-[-2px]' width={14} height={14}/>
-                        <span className='text-trax-white text-xs font-heading'>Members only</span>
+                      <div className='absolute m-auto justify-center items-center bg-slaps-gray rounded-md backdrop-blur uppercase flex flex-row py-2 px-3 gap-1'>
+                        <LockClosedIcon className='text-trax-white font-heading -mt-[2px]' width={18} height={18}/>
+                        <span className='text-trax-white text-[16px] font-heading'>Members only</span>
                       </div>
                     </div>
                   )}
 
-
-                  {/* {video.isSale === 'pay' && !video.isBought && !video.isSchedule  && (
-                    <div className='w-full flex relative justify-center items-center h-full inset-0'>
-                      <div className='absolute m-auto flex justify-center items-center bg-[#0e0e0e] rounded-full flex flex-row py-2 px-3 gap-1'>
-                      <LockClosedIcon className='text-trax-white mt-[-2px]' width={14} height={14}/>
-                        <span className='text-trax-white text-xs'>Unlock for ${video.price}</span>
-                      </div>
-                    </div>
-                  )} */}
-
-                  {video.isSale === 'pay' && !video.isBought && !video.isSchedule  && (
+                  {video.isSale === 'pay' && !video.isBought && !video.isSchedule && (
                     <>
-                      {(video.limitSupply && video.supply === 0)  ? (
+                      {(video.limitSupply && video.supply === 0) ? (
                         <div className='w-full flex relative justify-center items-center h-full inset-0'>
-                          <div className='absolute m-auto flex justify-center items-center bg-trax-black rounded-full flex flex-row py-2 px-3 gap-1'>
-                            {/* <LockClosedIcon className='text-trax-white text-sm' width={18} height={18}/> */}
-                            <span className='text-trax-white '>Sold out</span>
+                          <div className='absolute m-auto justify-center items-center bg-slaps-gray rounded-md backdrop-blur uppercase flex flex-row py-2 px-3 gap-1'>
+                            <span className='text-trax-white font-heading'>Sold out</span>
                           </div>
                         </div>
-                      ):(
+                      ) : (
                         <div className='w-full flex relative justify-center items-center h-full inset-0'>
-                          <div className='absolute m-auto flex justify-center items-center bg-trax-black rounded-full flex flex-row py-2 px-3 gap-1'>
-                            <LockClosedIcon className='text-trax-white font-heading text-sm' width={18} height={18}/>
-                            <span className='text-trax-white font-heading'>Unlock for ${video.price}</span>
+                          <div className='absolute m-auto justify-center items-center bg-slaps-gray rounded-md backdrop-blur uppercase flex flex-row py-2 px-3 gap-1'>
+                            <LockClosedIcon className='text-trax-white font-heading -mt-[2px]' width={18} height={18}/>
+                            <span className='text-trax-white uppercase text-xs'>Unlock for ${video.price}</span>
                           </div>
                         </div>
                       )}
                     </>
                   )}
-
-                  </div>
-            </div>
-            <div className={styles['track-info-wrapper']}>
-              <div className={styles['track-info']}>
-                <Link href={`/video?id=${video.slug}`} passHref>
-                  <div className={styles['track-title']}>{video.title}</div>
-                </Link>
-                <Link href={`/${video.performer.username}`} passHref>
-                <div className={styles['track-artist']}>{video.performer.name}</div>
-              </Link>
+                </div>
               </div>
+              <div className={styles['track-info-wrapper']}>
+                <Link href={`/${video?.trackType === 'video' ? 'video' : 'track'}?id=${video.slug}`} passHref className='w-full'>
+                  <div className={styles['track-title-related']}>
+                    <ScrollingText text={video?.title}/>
+                  </div>
+                </Link>
 
+                <div className={styles['track-info']}>
+                  {/* <Link href={`/artist/profile/?id=${video?.performer?.username}`} passHref className={styles['track-avatar']}>
+                    {video?.performer?.avatar ? (
+                      <Avatar className='size-11' src={video?.performer?.avatar || '/static/no-avatar-dark-mode.png'} />
+                    ) : (
+                      <UserCircleIcon className='size-10' />
+                    )}
+                  </Link> */}
+                  <CollaboratorList isFromRelatedList={true} video={video} />
+                </div>
+              </div>
             </div>
-          </div>
-        </Link>
+          </Link>
+        </div>
       </div>
-
-
-
-
-
-
-
-
-
-      // <div className="tracks-wrapper">
-      //   <div className='tracks-wrapper-overlay'>
-      //   <Link
-      //     href={`/video?id=${video.slug || video._id}`}
-      //     as={`/video?id=${video.slug || video._id}`}
-      //     legacyBehavior
-      //   >
-      //     <div className="tracks-tab-stats">
-      //       <div className="track-image" style={{ backgroundImage: `url(${thumbUrl})` }} />
-      //       <div className="track-name">{video.title}</div>
-      //       <div className="track-views">{shortenLargeNumber(video?.stats?.views || 0)}</div>
-
-      //       <div className="track-length">{videoDuration(video?.video?.duration || 0)}</div>
-
-      //       <span className="track-price">
-      //         {video.isSale === 'pay' && (
-      //         <div className="price-badge">
-      //           $
-      //           {(video.price || 0).toFixed(2)}
-      //         </div>
-      //         )}
-      //         {video.isSale === 'free' && <div className="free-badge">Free</div>}
-      //         {video.isSale === 'subscription' && <div className="sub-badge">Subs</div>}
-      //       </span>
-      //       {/* )} */}
-      //     </div>
-      //   </Link>
-      //   </div>
-      // </div>
     );
   }
 }

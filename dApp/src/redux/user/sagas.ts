@@ -1,10 +1,13 @@
 import { flatten } from 'lodash';
 import { put } from 'redux-saga/effects';
 import { createSagas } from '@lib/redux';
-import { userService, authService, performerService } from '@services/index';
+import { userService, accountService, authService, performerService } from '@services/index';
 import { IReduxAction } from 'src/interfaces';
 import { message } from 'antd';
 import {
+  updateAccount,
+  updateAccountSuccess,
+  updateAccountFail,
   updateUser,
   updateUserSuccess,
   updateUserFail,
@@ -17,6 +20,24 @@ import {
 
 const userSagas = [
   // TODO - defind update current user or get from auth user info to reload current user data if needed
+  {
+    on: updateAccount,
+    * worker(data: IReduxAction<any>) {
+      try {
+        yield put(setUpdating(true));
+        const updated = yield accountService.updateMe(data.payload);
+        yield put(updateAccountSuccess(updated.data));
+        message.success('Changes saved');
+      } catch (e) {
+        // TODO - alert error
+        const error = yield Promise.resolve(e);
+        message.error(error?.message || 'Error occured, please try again later');
+        yield put(updateAccountFail(error));
+      } finally {
+        yield put(setUpdating(false));
+      }
+    }
+  },
   {
     on: updateUser,
     * worker(data: IReduxAction<any>) {

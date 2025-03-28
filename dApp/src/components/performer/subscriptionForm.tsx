@@ -11,6 +11,8 @@ import dynamic from 'next/dynamic';
 import { PureComponent } from 'react';
 import { IPerformer } from 'src/interfaces';
 
+import TraxButton from '@components/common/TraxButton';
+
 
 const { TextArea } = Input;
 const layout = {
@@ -130,15 +132,14 @@ export class PerformerSubscriptionForm extends PureComponent<IProps> {
 
         </div>
         <Form.Item wrapperCol={{ ...layout.wrapperCol, offset: 4 }} style={{ marginBottom: '2rem' }}>
-          <Button
-            className="profile-following-btn-card"
+          <TraxButton
             htmlType="submit"
+            styleType="primary"
+            buttonSize='full'
+            buttonText="Save Changes"
             loading={updating}
             disabled={updating}
-            style={{ float: 'right' }}
-          >
-            Save Changes
-          </Button>
+          />
         </Form.Item>
       </Form>
 

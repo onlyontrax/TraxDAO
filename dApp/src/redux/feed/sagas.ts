@@ -40,8 +40,9 @@ const performerSagas = [
     on: getContentFeeds,
     * worker(data: IReduxAction<any>) {
       try {
-        const resp = yield feedService.userSearchContentFeeds(data.payload);
-        yield put(getContentFeedsSuccess(resp.data));
+        //const resp = yield feedService.userSearchContentFeeds(data.payload);
+        //yield put(getContentFeedsSuccess(resp.data));
+        yield put(getContentFeedsSuccess([]));
       } catch (e) {
         const error = yield Promise.resolve(e);
         yield put(getContentFeedsFail(error));
@@ -52,8 +53,9 @@ const performerSagas = [
     on: moreContentFeeds,
     * worker(data: IReduxAction<any>) {
       try {
-        const resp = yield feedService.userSearchContentFeeds(data.payload);
-        yield put(moreContentFeedsSuccess(resp.data));
+        //const resp = yield feedService.userSearchContentFeeds(data.payload);
+        //yield put(moreContentFeedsSuccess(resp.data));
+        yield put(moreContentFeedsSuccess([]));
       } catch (e) {
         const error = yield Promise.resolve(e);
         yield put(moreContentFeedsFail(error));

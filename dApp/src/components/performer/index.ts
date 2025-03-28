@@ -1,7 +1,7 @@
 import PerformerCard from './card';
 import PerformerGridCard from './grid-card';
 import ConfirmSubscriptionPerformerForm from './confirm-subscription';
-import TipPerformerForm from './tip-form';
+import TipPerformerForm from './TipPerformerForm';
 import PPVPurchaseModal from './ppv-purchase';
 
 export * from './accountForm';

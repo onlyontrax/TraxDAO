@@ -1,0 +1,83 @@
+.library-container {
+  @apply px-3 md:px-10 pt-2 w-full;
+
+  .user-library {
+    .ant-tabs > .ant-tabs-nav {
+      @apply mb-4 sm:mb-8 w-full;
+
+      .ant-tabs-nav-wrap {
+        @apply ml-0 w-full pb-4;
+
+        .ant-tabs-nav-list {
+          @apply gap-4 flex;
+        }
+
+        .ant-tabs-tab {
+          @apply m-0 p-0;
+
+          .ant-tabs-tab-btn {
+            @apply bg-custom-black text-font-light-gray py-2.5 px-5 rounded-lg text-base font-heading uppercase hover:text-custom-green;
+
+            &:hover {
+              @apply text-custom-green;
+            }
+
+            &:active {
+              @apply text-custom-green;
+            }
+          }
+
+          &.ant-tabs-tab-active {
+            .ant-tabs-tab-btn {
+              @apply text-custom-green;
+            }
+          }
+        }
+      }
+    }
+
+    .ant-tabs-ink-bar {
+      @apply hidden;
+    }
+
+    .load-text {
+      @apply text-center py-8 text-trax-white;
+    }
+
+    .content-grid {
+      @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8;
+    }
+
+    .content-item {
+      @apply relative cursor-pointer w-full h-full min-h-60 lg:w-72 lg:h-80 xl:w-80 xl:h-96;
+
+      .artist-picture-container {
+        @apply w-full h-full rounded-lg overflow-hidden bg-slaps-gray;
+
+        .artist-picture {
+          @apply w-full h-full object-cover group-hover:scale-110 transition-transform duration-300;
+        }
+      }
+
+      .info-overlay {
+        @apply absolute bottom-0 left-0 right-0 p-4 max-w-full bg-gradient-to-t from-trax-black/80 to-trax-transparent;
+
+        .title {
+          @apply drop-shadow-[1.5px_0.5px_20px_rgba(0,0,0,1)] text-trax-white font-heading text-left break-words text-[4rem] leading-[3.5rem] font-extrabold tracking-tight uppercase overflow-hidden mb-0;
+        }
+      }
+
+      .status-tag {
+        @apply absolute top-2 left-2 z-10;
+
+        .tag-content {
+          @apply bg-slaps-gray rounded-md backdrop-blur uppercase flex flex-row py-2 px-3;
+
+          .tag-text {
+            @apply text-trax-white text-base font-heading;
+          }
+        }
+      }
+    }
+  }
+}

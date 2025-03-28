@@ -5,12 +5,28 @@ export class PaymentService extends APIRequest {
     return this.post('/payment/subscribe/performers', payload);
   }
 
+  createSubscriptionSetup(payload: any) {
+    return this.post('/payment/createSubscription/performers', payload);
+  }
+
+  activateSubscription(payload: any){
+    return this.post('/payment/activateSubscription/performers', payload);
+  }
+
   userSearch(payload) {
     return this.get(this.buildUrl('/transactions/user/search', payload));
   }
 
   addFunds(payload: any) {
     return this.post('/payment/wallet/top-up', payload);
+  }
+
+  addFundsExpress(payload: any) {
+    return this.post('/payment/wallet/top-up-express', payload);
+  }
+
+  handleSuccessExpress(params: { paymentIntentId: string }) {
+    return this.post('/payment/wallet/success-express', params);
   }
 
   applyCoupon(code: any) {

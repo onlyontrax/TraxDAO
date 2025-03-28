@@ -23,7 +23,7 @@ export class CardForm extends PureComponent<IProps> {
     const { error, source } = await stripe.createSource(cardElement, {
       type: 'card',
       redirect: {
-        return_url: `${window.location.origin}/user/payment-history`
+        // return_url: `${window.location.origin}/user/payment-history`
       }
     });
     if (error) {

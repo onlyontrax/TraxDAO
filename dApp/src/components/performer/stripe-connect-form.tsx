@@ -1,7 +1,5 @@
 import { PureComponent } from 'react';
-import {
-  Button
-} from 'antd';
+import TraxButton from '@components/common/TraxButton';
 
 interface IProps {
   loading: boolean;
@@ -15,55 +13,76 @@ export class StripeConnectForm extends PureComponent<IProps> {
     const {
       loading, stripeAccount, loginUrl, onConnectAccount
     } = this.props;
+
     return (
-      <div className="pb-6">
+      <div className="mb-6">
         {stripeAccount && stripeAccount.payoutsEnabled && stripeAccount.detailsSubmitted && (
-          <div className='profile-form-box-connected'>
-            <span className='text-lg'>Stripe account</span>
-            <span className='text-trax-gray-300'>You are connected with Stripe!</span>
-            <div className='flex justify-between '>
-              <Button className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-2 h-[38px] flex w-fit justify-center">
-                <a href={loginUrl} target="_blank" rel="noreferrer">
-                  Open account
-                </a>
-              </Button>
-              <Button
-                className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-2 h-[38px] flex w-fit justify-center"
+          <div className="profile-form-box-connected">
+            <span className="text-lg profile-box-heading">Stripe Connected</span>
+            <span className="profile-box-text">
+              You have successfully connected your Stripe account. You can open your account
+              to view details or reconnect with a different account.
+            </span>
+            <div className="w-full flex items-center justify-between gap-4">
+              <TraxButton
+                htmlType="button"
+                styleType="secondary"
+                buttonSize="medium"
+                buttonText="Open Account"
+                disabled={loading}
+                loading={loading}
+                onClick={() => window.open(loginUrl, '_blank', 'noreferrer')}
+              />
+              <TraxButton
+                htmlType="button"
+                styleType="secondary"
+                buttonSize="large"
+                buttonText="Reconnect Account"
                 disabled={loading}
                 loading={loading}
                 onClick={onConnectAccount.bind(this)}
-              >
-                Reconnect by another account
-              </Button>
+              />
             </div>
           </div>
         )}
+
         {(stripeAccount && !stripeAccount.payoutsEnabled) && (stripeAccount && !stripeAccount.detailsSubmitted) && (
-          <div className='profile-form-box-unconnected'>
-            <span className='text-lg'>Stripe account</span>
-            <span className='text-trax-gray-300'>There are some problems with your account, please go to your account and fix them to be able to connect.</span>
-            <div className='flex justify-end'>
-              <Button className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-4 h-[38px] flex w-fit justify-center">
-                <a href={loginUrl} target="_blank" rel="noreferrer">
-                  Open account
-                </a>
-              </Button>
+          <div className="profile-form-box-unconnected">
+            <span className="profile-box-heading">Stripe Account</span>
+            <span className="profile-box-text">
+              There are some issues with your Stripe account. Please access your account
+              settings to resolve them and complete the connection process.
+            </span>
+            <div className="w-full flex justify-end">
+              <TraxButton
+                htmlType="button"
+                styleType="secondary"
+                buttonSize="medium"
+                buttonText="Update Stripe Account"
+                disabled={loading}
+                loading={loading}
+                onClick={() => window.open(loginUrl, '_blank', 'noreferrer')}
+              />
             </div>
           </div>
         )}
+
         {(!stripeAccount) && (
-          <div className='profile-form-box-unconnected'>
-            <span className='text-lg'>Connect to Stripe</span>
-            <span className='text-trax-gray-700'>Please click here to complete the onboarding process & connect the account.</span>
-            <div className='flex justify-end'>
-              <Button
-                className="rounded-lg bg-[#1e1e1e] text-trax-white p-2 mt-2 h-[38px] flex w-fit justify-center"
+          <div className="profile-form-box-unconnected">
+            <span className="profile-box-heading">Connect to Stripe</span>
+            <span className="profile-box-text">
+              Click below to complete the Stripe onboarding process and connect your account.
+            </span>
+            <div className="w-full flex justify-end">
+              <TraxButton
+                htmlType="button"
+                styleType="primary"
+                buttonSize="full"
+                buttonText="Connect"
                 disabled={loading}
                 loading={loading}
                 onClick={onConnectAccount.bind(this)}
-              >
-                Connect
-              </Button>
+              />
             </div>
           </div>
         )}

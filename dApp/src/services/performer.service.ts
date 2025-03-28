@@ -51,11 +51,19 @@ export class PerformerService extends APIRequest {
   }
 
   updatePaymentGateway(id, payload) {
-    return this.put(`/performers/${id}/payment-gateway-settings`, payload);
+    return this.put(`/accounts/${id}/payment-gateway-settings`, payload);
   }
 
   getBookmarked(payload) {
     return this.get(this.buildUrl('/reactions/performers/bookmark', payload));
+  }
+
+  getAnalytics(range?: string) {
+    const url = this.buildUrl('/statistics/performer');
+    if (range) {
+      return this.get(`${url}?range=${range}`);
+    }
+    return this.get(url);
   }
 
   uploadDocuments(documents: {
@@ -65,46 +73,6 @@ export class PerformerService extends APIRequest {
     return this.upload('/performers/documents/upload', documents, {
       onProgress
     });
-  }
-
-  setWalletPrincipal(data: any) {
-    return this.put('/performers/setICPWallet', data);
-  }
-
-  disconnectWalletPrincipal() {
-    return this.put('/performers/disconnectICPWallet');
-  }
-
-  getQRCode(id: string) {
-    return this.get(`/performers/${id}/generateQRCode`);
-  }
-
-  enable2FA(id: string) {
-    return this.put(`/performers/${id}/enableTwoFactorSecret`);
-  }
-
-  disable2FA(id: string) {
-    return this.put(`/performers/${id}/disableTwoFactorSecret`);
-  }
-
-  verify2FA(id: string, payload: any) {
-    return this.put(`/performers/${id}/verify2FATokenForUser`, payload);
-  }
-
-  getSMSCode(id: string) {
-    return this.get(`/performers/${id}/generateSMSCode`);
-  }
-
-  enableSms(id: string) {
-    return this.put(`/performers/${id}/enableSmsAuthSecret`);
-  }
-
-  disableSms(id: string) {
-    return this.put(`/performers/${id}/disableSmsAuthSecret`);
-  }
-
-  verifySms(id: string, payload: any) {
-    return this.put(`/performers/${id}/verifySMSTokenForUser`, payload);
   }
 }
 

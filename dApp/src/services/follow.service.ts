@@ -20,6 +20,14 @@ class FollowService extends APIRequest {
   getFollowersByPerformerId(id: string) {
     return this.get(`/follows/followers/${id}`);
   }
+
+  getPerformerFollowers(req) {
+    return this.get(this.buildUrl("/follows/performers/followers", req));
+  }
+
+  exportFollowerEmailsCSV(req) {
+    return this.get(this.buildUrl("/follows/performers/followers/export-csv", req), { responseType: 'blob' }, 'blob');
+  }
 }
 
 export const followService = new FollowService();

@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */
 import React, { useState, useEffect } from 'react';
-import { Layout, Button, message, Statistic, Modal } from 'antd';
+import { Layout, Button, message, Statistic, Modal, Tabs } from 'antd';
 import { useSelector, RootStateOrAny } from 'react-redux';
 import SubscriptionPage from '../my-subscription';
 import ActivityHistoryPage from '../ActivityHistoryPage';
@@ -21,6 +21,57 @@ import { InternetIdentityProvider } from '@internet-identity-labs/react-ic-ii-au
 import { performerService, cryptoService } from '@services/index';
 import { AuthConnect } from '../../../src/crypto/nfid/AuthConnect'
 import useDeviceSize from 'src/components/common/useDeviceSize';
+import TraxButton from '@components/common/TraxButton';
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronRightIcon } from "@heroicons/react/20/solid";
+import SlideUpModal from '@components/common/layout/slide-up-modal';
+
+
+const initial_1 = { opacity: 0, y: '30%' };
+const animate_1 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 0.6,
+    delay: 0.3,
+    ease: "easeOut",
+    once: true,
+  },
+}
+const initial_2 = { opacity: 0, y: 30 };
+const animate_2 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 0.5,
+    delay: 0.4,
+    ease: "easeOut",
+    once: true,
+  },
+}
+
+const animate_3 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 0.5,
+    delay: 0.6,
+    ease: "easeOut",
+    once: true,
+  },
+}
+
+const animate_4 = {
+  opacity: 1,
+  y: 0,
+  transition: {
+    duration: 0.5,
+    delay: 0.9,
+    ease: "easeOut",
+    once: true,
+  },
+}
+const { TabPane } = Tabs;
 
 export default function MyPaymentsPage() {
   const { currentUser, ui, settings } = useSelector((data: RootStateOrAny) => ({
@@ -37,16 +88,10 @@ export default function MyPaymentsPage() {
   const [data, setData] = useState({
     stage: 0,
     isCopied: false,
-    balanceICPUSD: 0,
-    balanceCKBTCUSD: 0,
     balanceTRAXUSD: 0,
-    balanceICP: 0,
     balanceTRAX: 0,
-    balanceCKBTC: 0,
-    totalWalletBalance: 0,
+    totalWalletBalance: (currentUser && currentUser?.account?.balance) || 0.00,
     isBalanceLoading: true,
-    icpPrice: 0,
-    ckbtcPrice: 0,
     openDepositICPSheet: false,
     openPurchaseCreditSheet: false,
   });
@@ -54,54 +99,46 @@ export default function MyPaymentsPage() {
   const {
     stage,
     isCopied,
-    balanceICPUSD,
     balanceTRAXUSD,
-    balanceCKBTCUSD,
-    balanceICP,
     balanceTRAX,
-    balanceCKBTC,
     totalWalletBalance,
     openDepositICPSheet,
     openPurchaseCreditSheet,
   } = data;
 
-  const [walletNFID, setWalletNFID] = useState<string>(currentUser.wallet_icp);
+  const [walletNFID, setWalletNFID] = useState<string>(currentUser.account?.wallet_icp);
   const InternetIdentityProviderProps: any = cryptoService.getNfidInternetIdentityProviderProps();
   const [openConnectModal, setOpenConnectModal] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState('tokens')
 
   const { isMobile } = useDeviceSize();
 
   useEffect(() => {
+    setData(prevData => ({
+      ...prevData,
+      totalWalletBalance: (currentUser && currentUser?.account?.balance) || 0.00,
+    }));
+  }, [currentUser]);
+
+  useEffect(() => {
     const fetchData = async () => {
-      let ledgerActor;
-      let ledgerActorCKBTC;
       let ledgerActorTRAX;
       let agent;
 
       const host = settings.icHost;
-      const ledgerCanID = settings.icLedger;
-      const ckBTCLedgerCanID = Principal.fromText(settings.icCKBTCMinter);
       const TRAXLedgerCanID = Principal.fromText(settings.icTraxToken);
 
-      const icpPrice = (await tokenTransctionService.getExchangeRate()).data.rate;
-      const ckbtcPrice = (await tokenTransctionService.getExchangeRateBTC()).data.rate;
       const traxPrice = (await tokenTransctionService.getExchangeRateTRAX()).data.rate;
 
       setData(prevData => ({
         ...prevData,
-        icpPrice,
-        ckbtcPrice,
       }));
 
-      if (!currentUser.wallet_icp) {
+      if (!currentUser.account?.wallet_icp) {
         setData(prevData => ({
           ...prevData,
-          balanceICP: 0,
           isBalanceLoading: false,
-          balanceICPUSD: 0,
-          totalWalletBalance: (currentUser && currentUser.balance) || 0,
-          balanceCKBTC: 0,
-          balanceCKBTCUSD: 0,
+          totalWalletBalance: (currentUser && currentUser?.account?.balance) || 0,
         }));
       } else {
         agent = new HttpAgent({ host });
@@ -109,47 +146,22 @@ export default function MyPaymentsPage() {
           await agent.fetchRootKey();
         }
 
-        ledgerActor = await createLedgerActor(agent, ledgerCanID);
-        ledgerActorCKBTC = IcrcLedgerCanister.create({ agent, canisterId: ckBTCLedgerCanID });
         ledgerActorTRAX = IcrcLedgerCanister.create({ agent, canisterId: TRAXLedgerCanID });
 
-        const fanAI = AccountIdentifier.fromPrincipal({
-          principal: Principal.fromText(currentUser.wallet_icp),
-        });
 
-        // @ts-ignore
-        const fanBytes = fanAI.bytes;
-
-        const balArgs: AccountBalanceArgs = {
-          account: fanBytes,
-        };
-
-        const bal: Tokens = await ledgerActor.account_balance(balArgs);
-        const ckbtcBal = await ledgerActorCKBTC.balance({
-          owner: Principal.fromText(currentUser.wallet_icp),
-          certified: false,
-        });
         const traxBal = await ledgerActorTRAX.balance({
-          owner: Principal.fromText(currentUser.wallet_icp),
+          owner: Principal.fromText(currentUser.account?.wallet_icp),
           certified: false,
         });
 
-        const formattedBalance = Number(bal.e8s) / 100000000;
-        const ckbtcFormattedBalance = Number(ckbtcBal) / 100000000;
         const traxFormattedBalance = Number(traxBal) / 100000000;
 
-        const amountICPUSD = icpPrice * formattedBalance;
-        const amountCKBTCUSD = ckbtcPrice * ckbtcFormattedBalance;
         const amountTRAXUSD = traxPrice * traxFormattedBalance;
-        const total = amountTRAXUSD + amountCKBTCUSD + amountICPUSD + ((currentUser && currentUser.balance) || 0);
+        const total = amountTRAXUSD + ((currentUser && currentUser?.account?.balance) || 0);
 
         setData(prevData => ({
           ...prevData,
-          balanceICPUSD: amountICPUSD,
-          balanceCKBTCUSD: amountCKBTCUSD,
           balanceTRAXUSD: amountTRAXUSD,
-          balanceICP: formattedBalance,
-          balanceCKBTC: ckbtcFormattedBalance,
           balanceTRAX: traxFormattedBalance,
           totalWalletBalance: total,
           isBalanceLoading: false,
@@ -159,12 +171,12 @@ export default function MyPaymentsPage() {
 
     fetchData();
 
-  }, [settings]); // currentUser, settings
+  }, [currentUser, settings]); // currentUser, settings
 
   const handleCopyClick = async () => {
     const { protocol, hostname, port } = window.location;
     const baseUrl = `${protocol}//${hostname}${port ? `:${port}` : ''}`;
-    const referralLink = `${baseUrl}/register?referralCode=${currentUser.userReferral}`;
+    const referralLink = `${baseUrl}/register?referralCode=${currentUser?.account?.userReferral}`;
 
     try {
       await navigator.clipboard.writeText(referralLink);
@@ -186,6 +198,20 @@ export default function MyPaymentsPage() {
     }
   };
 
+  const formatNumber = (number) => {
+    if (number === '' || number === undefined) return '';
+    if (number === '0' || number === 0) return '0.00';
+    const numStr = number.toString().replace(/,/g, '');
+    const isNegative = numStr.startsWith('-');
+    const cleanNum = isNegative ? numStr.slice(1) : numStr;
+    const floatNum = parseFloat(cleanNum);
+    if (isNaN(floatNum)) return '';
+    const withDecimals = floatNum.toFixed(2);
+    const [integerPart, decimalPart] = withDecimals.split('.');
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return `${isNegative ? '-' : ''}${formattedInteger}.${decimalPart}`;
+  };
+
   const changeStage = val => {
     setData(prevData => ({
       ...prevData,
@@ -195,106 +221,109 @@ export default function MyPaymentsPage() {
 
   return (
     <Layout>
-      <div className="main-container px-2 sm:px-[36px]">
-        <div className='earnings-heading-user'>
-          {/* <span className='performer-name-earnings'>{currentUser?.username}&apos;s Wallet</span> */}
-          <span className='performer-name-earnings text-trax-gray-500'>{currentUser?.wallet_icp && `${currentUser?.wallet_icp?.slice(0, 5)}...${currentUser?.wallet_icp?.slice(-3)}`}</span>
+      <div className='bg-[#1F1F1FB2] overflow-hidden'>
+      <motion.div initial={initial_1} animate={animate_1} className='m-auto w-full sm:px-8 sm:pr-12 flex h-[32vh] sm:h-[23vh] gap-6 sm:gap-0 items-end justify-end sm:justify-between flex-col sm:flex-row  pb-4 max-w-[1400px]'>
 
-        </div>
-        <div className='wallet-earnings-wrapper'>
-          <Statistic prefix="$" value={(totalWalletBalance || 0)} precision={2} />
-        </div>
-        <div className='wallet-module-buttons'>
-          <Button
-            className="wallet-module-button hover:bg-trax-white/10 hover:text-trax-white"
+      <motion.span
+            initial={initial_2}
+            animate={animate_2}
+            className='w-full sm:w-3/5 flex font-body justify-center sm:justify-start block sm:hidden text-[14px] items-end font-medium tracking-normal -mb-8 text-trax-white/50'
+          >
+            Your balance
+          </motion.span>
+          <motion.span
+            initial={initial_2}
+            animate={animate_2}
+            className='w-full sm:w-3/5 flex font-body text-[120px]  leading-[110px] justify-center sm:justify-start items-end font-regular tracking-tighter mt-4 text-trax-white'
+          >
+            ${formatNumber(totalWalletBalance) || 0.00}
+          </motion.span>
+          <motion.div initial={initial_2} animate={animate_2} className='w-full sm:w-2/5 flex flex-row justify-center items-end sm:justify-end gap-2 px-8 sm:px-0'>
+          <TraxButton
+            htmlType="button"
+            styleType="icon"
+            buttonSize={isMobile ? "large" : 'full'}
+            buttonText="Add credit"
+            icon={<CreditCardIcon />}
             onClick={() => setData(prevData => ({ ...prevData, openPurchaseCreditSheet: true }))}
-          >
-            <div className='module-icon-container'>
-              <CreditCardIcon className='module-icon' />
-            </div>
-            <p className='module-text'>
-              Add credit
-            </p>
-          </Button>
-          <Button
-            className="wallet-module-button hover:bg-trax-white/10 hover:text-trax-white"
+          />
+          <TraxButton
+            htmlType="button"
+            styleType="icon"
+            buttonSize={isMobile ? "large" : 'full'}
+            buttonText="Deposit crypto"
+            icon={<PlusIcon />}
             onClick={() => setOpenConnectModal(true)}
-          >
-            <div className='module-icon-container'>
-              <PlusIcon className='module-icon' />
-            </div>
-            <p className='module-text '>
-              Deposit crypto
-            </p>
-          </Button>
+          />
+        </motion.div>
+
+        </motion.div>
         </div>
-        {/*  <div className='stats-earning-wrapper'>
-          <div className="stats-earning-referral">
-            <h2 className="stats-earning-referral-h1">
-              Refer a friend, earn 5%
-            </h2>
-            <h2 className="stats-earning-referral-h2">
-              Invite artists to join trax.so and earn commission on their earnings. 5% for the first year, 1% lifetime.
-            </h2>
-            <Button
-              className="referral-link-btn"
-              onClick={handleCopyClick}
+      <div className="main-container px-2 sm:px-[36px]">
+        <div className="main-container" style={{ width: "95% !important", maxWidth: "unset" }}>
+          <motion.div initial={initial_2} animate={animate_4} className="artist-content">
+            <div className="line-divider"/>
+            <Tabs
+              defaultActiveKey="tokens"
+              className="earnings-tabs sm:gap-10"
+              size="large"
+              onTabClick={(t: string) => {
+                setActiveTab(t)
+              }}
             >
-              {isCopied ? 'Link Copied!' : 'Invite friends'}
-            </Button>
-          </div>
-          <div className="stats-earning-referral">
-            <h2 className="stats-earning-referral-h1">
-              Connect a wallet, get $TRAX
-            </h2>
-            <h2 className="stats-earning-referral-h2">
-              Invite artists to join trax.so and earn commission on their earnings. 5% for the first year, 1% lifetime.
-            </h2>
-            <Button
-              className="referral-link-btn"
-              onClick={handleCopyClick}
-            >
-              {isCopied ? 'Link Copied!' : 'Invite friends'}
-            </Button>
-          </div>
-        </div> */}
+              <TabPane
+                key="tokens"
+                className="posts-tab-wrapper"
+                tab={ isMobile ? "Tokens" :
+                  <div className="flex flex-row">
+                    <span>Tokens</span>
+                    <div className={`absolute right-2 top-[1.25rem] bg-[#414141B2] rounded-lg ${activeTab === "tokens" && 'border border-custom-green'}`}>
+                      <ChevronRightIcon className={`w-7 h-7 ${activeTab === "tokens" ? 'text-custom-green' : 'text-trax-white'}`} />
+                    </div>
+                  </div>
+                }>
+                <MyTokens user={currentUser} balanceTRAXUSD={balanceTRAXUSD} balanceTRAX={balanceTRAX} />
+              </TabPane>
 
-        <div className="tab-bar">
-          <div onClick={() => changeStage(0)} className="tab-btn-wrapper">
-            <h1 className={`${stage === 0 ? 'selected-btn' : ''}`}>Tokens</h1>
-            <div className={`${stage === 0 ? 'active' : ''} tab-btn`} />
-          </div>
+              <TabPane
+                key="activity"
+                className="posts-tab-wrapper"
+                tab={ isMobile ? "Activity" :
+                  <div className="flex flex-row">
+                    <span>Activity</span>
+                    <div className={`absolute right-2 top-[1.25rem] bg-[#414141B2] rounded-lg ${activeTab === "activity" && 'border border-custom-green'}`}>
+                      <ChevronRightIcon className={`w-7 h-7 ${activeTab === "activity" ? 'text-custom-green' : 'text-trax-white'}`} />
+                    </div>
+                  </div>
+                }>
+                  <ActivityHistoryPage />
+              </TabPane>
 
-          <div onClick={() => changeStage(1)} className="tab-btn-wrapper">
-            <h1 className={`${stage === 1 ? 'selected-btn' : ''}`}>Activity</h1>
-            <div className={`${stage === 1 ? 'active' : ''} tab-btn`} />
-          </div>
-
-          <div onClick={() => changeStage(2)} className="tab-btn-wrapper">
-            <h1 className={`${stage === 2 ? 'selected-btn' : ''}`}>{isMobile ? "Subs" : "Subscriptions"}</h1>
-            <div className={`${stage === 2 ? 'active' : ''} tab-btn`} />
-          </div>
+              <TabPane
+              tab={ isMobile ? "Subscriptions" :
+                  <div className="flex flex-row">
+                    <span>Subscriptions</span>
+                    <div className={`absolute right-2 top-[1.25rem] bg-[#414141B2] rounded-lg ${activeTab === "subscriptions" && 'border border-custom-green'}`}>
+                      <ChevronRightIcon className={`w-7 h-7 ${activeTab === "subscriptions" ? 'text-custom-green' : 'text-trax-white'}`} />
+                    </div>
+                  </div>
+                } key="subscriptions" className="posts-tab-wrapper">
+                <SubscriptionPage currentUser={currentUser} ui={ui} settings={settings} />
+              </TabPane>
+            </Tabs>
+          </motion.div>
         </div>
-
-        {stage === 0 && <MyTokens user={currentUser} balanceICPUSD={balanceICPUSD} balanceCKBTCUSD={balanceCKBTCUSD} balanceTRAXUSD={balanceTRAXUSD} balanceICP={balanceICP} balanceTRAX={balanceTRAX} balanceCKBTC={balanceCKBTC} />}
-        {stage === 1 && <ActivityHistoryPage />}
-        {stage === 2 && <SubscriptionPage currentUser={currentUser} ui={ui} settings={settings} />}
       </div>
 
       {/* Deposit Modal */}
 
       {isMobile ? (
-        <Sheet
+        <SlideUpModal
           isOpen={openConnectModal}
-          onOpenStart={() => setData(prevData => ({ ...prevData, openPurchaseCreditSheet: false }))}
-          onClose={() => setOpenConnectModal(false)}
-          detent='content-height'
+          onClose={() => setData(prevData => ({ ...prevData, openPurchaseCreditSheet: false }))}
         >
-          <Sheet.Container className='bg-trax-black'>
-            <Sheet.Header />
-            <Sheet.Content>
-              {currentUser?.wallet_icp ? (
-                <DepositICP user={currentUser} />
+          {currentUser.account?.wallet_icp ? (
+            <DepositICP user={currentUser} />
               ) : (
                 <div className='p-8'>
                   <div style={{ marginBottom: '15px' }} >
@@ -304,14 +333,11 @@ export default function MyPaymentsPage() {
                     <span style={{ fontSize: '14px', color: 'grey' }}>Select your preferred wallet to connect to TRAX</span>
                   </div>
                   <InternetIdentityProvider {...InternetIdentityProviderProps}>
-                    <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer oldWalletPrincipal={currentUser.wallet_icp} />
+                    <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer={false} oldWalletPrincipal={currentUser.account?.wallet_icp} />
                   </InternetIdentityProvider>
                 </div>
-              )}
-            </Sheet.Content>
-          </Sheet.Container>
-          <Sheet.Backdrop />
-        </Sheet>
+            )}
+        </SlideUpModal>
       ) : (
         <div className='sign-in-modal-wrapper'>
           <Modal
@@ -324,7 +350,7 @@ export default function MyPaymentsPage() {
             destroyOnClose
             onCancel={() => setOpenConnectModal(false)}
           >
-            {currentUser?.wallet_icp ? (
+            {currentUser.account?.wallet_icp ? (
                 <DepositICP user={currentUser} />
               ) : (
             <div className='p-8'>
@@ -337,7 +363,7 @@ export default function MyPaymentsPage() {
                 <span style={{ fontSize: '14px', color: 'grey' }}>Select your preferred wallet to connect to TRAX</span>
               </div>
               <InternetIdentityProvider {...InternetIdentityProviderProps}>
-                <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer oldWalletPrincipal={currentUser.wallet_icp} />
+                <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer={false} oldWalletPrincipal={currentUser.account?.wallet_icp} />
               </InternetIdentityProvider>
             </div>
             )}
@@ -349,24 +375,16 @@ export default function MyPaymentsPage() {
       {/* Purchase Credit Modal */}
       {
         isMobile ? (
-          <Sheet
-            isOpen={openPurchaseCreditSheet}
-            onOpenStart={() => setOpenConnectModal(false)}
-            onClose={() => setData(prevData => ({ ...prevData, openPurchaseCreditSheet: false }))}
-            detent='content-height'
-          >
-            <Sheet.Container className='bg-trax-black '>
-              <Sheet.Header />
-              <Sheet.Content>
-                <PurchaseCredit user={currentUser} settings={settings} />
-              </Sheet.Content>
-            </Sheet.Container>
-            <Sheet.Backdrop />
-          </Sheet>
+            <SlideUpModal
+                  isOpen={openPurchaseCreditSheet}
+                  onClose={() => setData(prevData => ({ ...prevData, openPurchaseCreditSheet: false }))}
+                  >
+                  <PurchaseCredit user={currentUser} settings={settings} />
+              </SlideUpModal>
         ) : (
           <Modal
             key="purchase_credit"
-            className=""
+            className="border border-0.5 border-slaps-gray rounded"
             title={null}
             open={openPurchaseCreditSheet}
             footer={null}
@@ -374,7 +392,9 @@ export default function MyPaymentsPage() {
             destroyOnClose
             onCancel={() => setData(prevData => ({ ...prevData, openPurchaseCreditSheet: false }))}
           >
-            <PurchaseCredit user={currentUser} settings={settings} />
+            <div className='p-4'>
+              <PurchaseCredit user={currentUser} settings={settings} />
+            </div>
           </Modal>
         )
       }

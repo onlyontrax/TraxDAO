@@ -21,7 +21,7 @@ export class ThumbnailVideo extends PureComponent<IProps> {
     );
   }
 }
-
 ThumbnailVideo.defaultProps = {
   style: {}
 } as Partial<IProps>;
+

@@ -17,7 +17,7 @@ import { BsCheckCircleFill } from "react-icons/bs";
 import { CommentForm, ListComments } from "@components/comment";
 import { VideoPlayer } from "@components/common/video-player";
 import ConfirmSubscriptionPerformerForm from "@components/performer/confirm-subscription";
-import TipPerformerForm from "@components/performer/tip-form";
+import TipPerformerForm from "@components/performer/TipPerformerForm";
 import { ReportForm } from "@components/report/report-form";
 import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 import { formatDate, shortenLargeNumber, videoDuration } from "@lib/index";
@@ -324,7 +324,7 @@ class FeedCard extends Component<IProps> {
       message.error("Artists cannot tip for themselves");
       return;
     }
-    if (user.balance < price) {
+    if (user?.account?.balance < price) {
       message.error("Your wallet balance is not enough");
       Router.push("/wallet");
       return;
@@ -476,7 +476,7 @@ class FeedCard extends Component<IProps> {
       }
     } else {
       const obj2: Participants = {
-        participantID: Principal.fromText(feed?.performer?.wallet_icp),
+        participantID: feed && Principal.fromText(feed?.performer.account?.wallet_icp),
         participantPercentage: 1,
       };
       participants.push(obj2);
@@ -665,47 +665,47 @@ class FeedCard extends Component<IProps> {
       if (transfer.height) {
         this.setState({ tipProgress: 75 });
         const obj2: Participants = {
-          participantID: Principal.fromText(feed.performer?.wallet_icp),
+          participantID: feed && Principal.fromText(feed.performer.account?.wallet_icp),
           participantPercentage: 1,
         };
         participants.push(obj2);
         const participantArgs: TippingParticipants = participants;
 
 
-        await tippingActor
-          .sendTip(transfer.height, participantArgs, amountToSend, ticker)
-          .then(() => {
-            this.setState({ tipProgress: 100 });
-            tokenTransctionService
-              .sendCryptoTip(feed.performer?._id, {
-                performerId: feed.performer?._id,
-                price: Number(amountToSend),
-                tokenSymbol: ticker,
-              })
-              .then(() => {});
-            setTimeout(
-              () =>
-                this.setState({
-                  requesting: false,
-                  submiting: false,
-                  openTipProgressModal: false,
-                  tipProgress: 0,
-                }),
-              1000
-            );
-            message.success(`Payment successful! ${feed.performer?.name} has recieved your tip`);
-            this.setState({ requesting: false, submiting: false });
-          })
-          .catch(error => {
-            this.setState({
-              requesting: false,
-              submiting: false,
-              openTipProgressModal: false,
-              tipProgress: 0,
-            });
-            message.error(error.message || "error occured, please try again later");
-            return error;
-          });
+        // await tippingActor
+        //   .sendTip(transfer.height, participantArgs, amountToSend, ticker)
+        //   .then(() => {
+        //     this.setState({ tipProgress: 100 });
+        //     tokenTransctionService
+        //       .sendCryptoTip(feed.performer?._id, {
+        //         performerId: feed.performer?._id,
+        //         price: Number(amountToSend),
+        //         tokenSymbol: ticker,
+        //       })
+        //       .then(() => {});
+        //     setTimeout(
+        //       () =>
+        //         this.setState({
+        //           requesting: false,
+        //           submiting: false,
+        //           openTipProgressModal: false,
+        //           tipProgress: 0,
+        //         }),
+        //       1000
+        //     );
+        //     message.success(`Payment successful! ${feed.performer?.name} has recieved your tip`);
+        //     this.setState({ requesting: false, submiting: false });
+        //   })
+        //   .catch(error => {
+        //     this.setState({
+        //       requesting: false,
+        //       submiting: false,
+        //       openTipProgressModal: false,
+        //       tipProgress: 0,
+        //     });
+        //     message.error(error.message || "error occured, please try again later");
+        //     return error;
+        //   });
       } else {
         message.error("Transaction failed. Please try again later.");
       }
@@ -715,7 +715,7 @@ class FeedCard extends Component<IProps> {
   async sendTipCrypto(amount: number, ticker: string) {
     const { feed, settings } = this.props;
 
-    if (!feed?.performer?.wallet_icp) {
+    if (!feed?.performer.account?.wallet_icp) {
       this.setState({
         requesting: false,
         submiting: false,
@@ -842,7 +842,7 @@ class FeedCard extends Component<IProps> {
 
   purchaseFeed = async () => {
     const { feed, user, updateBalance: handleUpdateBalance } = this.props;
-    if (user.balance < feed.price) {
+    if (user?.account?.balance < feed.price) {
       message.error("Your wallet balance is not enough");
       Router.push("/wallet");
       return;
@@ -1002,8 +1002,8 @@ class FeedCard extends Component<IProps> {
         <div className="feed-card" style={{ margin: isPostDetails ? "auto" : "" }}>
           <div className="feed-top">
             <Link
-              href={`/${performer?.username || performer?._id}`}
-              as={`/${performer?.username || performer?._id}`}
+              href={`/artist/profile/?id=${performer?.username || performer?._id}`}
+              as={`/artist/profile/?id=${performer?.username || performer?._id}`}
               legacyBehavior
             >
               <div className="feed-top-left">
@@ -1031,7 +1031,7 @@ class FeedCard extends Component<IProps> {
                     {participants?.length === 2 && <>&amp; {participants[1].name}</>}{" "}
                     {performer?.verifiedAccount && <CheckBadgeIcon className="feed-v-badge" />}
                     &nbsp;
-                    {performer?.wallet_icp && (
+                    {performer.account?.wallet_icp && (
                       <Image preview={false} src="/static/infinity-symbol.png" className="profile-icp-badge-feed" />
                     )}
                     &nbsp; &nbsp;
@@ -1101,8 +1101,8 @@ class FeedCard extends Component<IProps> {
                       className="lock-btn"
                       onClick={() =>
                         Router.push(
-                          { pathname: `/${performer?.username || performer?._id}` },
-                          `/${performer?.username || performer?._id}`
+                          { pathname: `/artist/profile/?id=${performer?.username || performer?._id}` },
+                          `/artist/profile/?id=${performer?.username || performer?._id}`
                         )
                       }
                     >
@@ -1263,7 +1263,7 @@ class FeedCard extends Component<IProps> {
             )}
           </div>
 
-          <Modal
+          {/* <Modal
             key="tip_performer"
             className="tip-modal"
             title={null}
@@ -1275,13 +1275,11 @@ class FeedCard extends Component<IProps> {
           >
             <TipPerformerForm
               user={user}
-              isProfile={false}
               performer={performer}
-              participants={participants}
               submiting={requesting}
               onFinish={this.sendTip.bind(this)}
             />
-          </Modal>
+          </Modal> */}
 
           <Modal
             key="purchase_post"
@@ -1308,11 +1306,10 @@ class FeedCard extends Component<IProps> {
             <ReportForm performer={performer} submiting={requesting} onFinish={this.handleReport.bind(this)} />
           </Modal>
 
-          <Modal
+          {/* <Modal
             key="subscribe_performer"
             className="subscription-modal"
             centered
-            width={600}
             title={null}
             open={openSubscriptionModal}
             footer={null}
@@ -1327,7 +1324,7 @@ class FeedCard extends Component<IProps> {
               onClose={this.closeSubModal.bind(this)}
               user={user}
             />
-          </Modal>
+          </Modal> */}
 
 
             {openTipProgressModal && (

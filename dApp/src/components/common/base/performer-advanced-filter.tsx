@@ -1,76 +1,65 @@
-/* eslint-disable no-nested-ternary */
 import { SearchOutlined } from '@ant-design/icons';
 import { ICountry, IMusic, IUser } from '@interfaces/index';
 import {
   Button, Input, Select, message, Avatar
 } from 'antd';
 import { omit } from 'lodash';
-import { PureComponent } from 'react';
+import { PureComponent, createRef } from 'react';
 import { debounce } from 'lodash';
-import  Link  from 'next/link'
+import Link from 'next/link'
 import { performerService, videoService } from '@services/index';
 const { Option } = Select;
 import Router from 'next/router';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+
 interface IProps {
   onSubmit: Function;
-  countries: ICountry[];
-  musicInfo: IMusic;
   onSearch: Function;
+  // onOpen: Function;
   user?: IUser;
   isMobile?: boolean;
 }
 
-
-
-const searchInputWrapper = (expanded: boolean, isMobile: boolean) => ({
+const searchInputWrapper = (isMobile:boolean) => ({
   Transition: `0.5s all ease-in-out`,
-  width: (expanded) ? (isMobile) ? '240px' : '260px' : '51px',
-  padding: (expanded) ? (isMobile) ? '0px' : '5px' : '0px',
-  // opacity: (expanded && isMobile) ? '1' : '0',
-  // top: (expanded)  ? isMobile ? '3.5rem' : '' : '',
-  // top: (expanded && isMobile) && '3.5rem',
-  // margin: (expanded && isMobile) && 'auto',
-  // left: (expanded && isMobile) && '0',
-  // right: (expanded && isMobile) && '0',
-  // background: (expanded && isMobile) && '#000',
-  // borderRadius: (expanded && isMobile) && '40px',
-    
+  width: (isMobile) ? '85vw' : '300px',
+  padding: '5px',
 });
 
-const searchInputStyling = (expanded: boolean) => ({
+const searchInputStyling = () => ({
   Transition: `0.5s all ease-in-out`,
-  borderRadius: '40px',
-  backgroundColor: (expanded) ? 'rgb(27 27 27 / 37%)' :  '#00000000',
-  border: (expanded) ? '1px solid #303030' : '1px solid #00000000',
+  borderRadius: '8px',
+  backgroundColor: '#414141B2',
+  // border: '1px solid #303030',
   padding: '0px',
-  marginRight: '0.3rem'
-
-  // background-color: rgb(27 27 27 / 37%) !important;
-
+  marginRight: '0.3rem',
+  fontWeight: '300',
+  fontSize: '1.65rem'
 });
 
 export class PerformerAdvancedFilter extends PureComponent<IProps> {
+  private inputRef = createRef<any>();
+
   state = {
     showMore: false,
     searchValue: '',
     performers: [],
-    expandedSearch: false
+    expandedSearch: false,
+    isNavDropDownOpen: false,
   };
 
-  searchValueChange(val){
+  searchValueChange(val) {
     const { onSearch, onSubmit } = this.props;
-    if(val === ""){
+    if (val === "") {
       onSearch(true)
-    }else{
+    } else {
       onSearch(false)
       onSubmit(omit(this.state, ['showMore']), false)
     }
-    this.setState({searchValue: val});
+    this.setState({ searchValue: val });
   };
 
-
   getPerformers = debounce(async (q, performerIds) => {
-    console.log(q, performerIds)
     try {
       const resp = await (
         await performerService.search({
@@ -81,7 +70,6 @@ export class PerformerAdvancedFilter extends PureComponent<IProps> {
       ).data;
       const performers = resp.data || [];
 
-      console.log
       this.setState({ performers });
     } catch (e) {
       const err = await e;
@@ -94,32 +82,45 @@ export class PerformerAdvancedFilter extends PureComponent<IProps> {
     onSubmit(omit(this.state, ['showMore']), false);
   }
 
-  pushFeaturedArtists(username){
-    console.log(username);
-    Router.replace(`/${username}`);
-  } 
+  pushFeaturedArtists(username) {
+    Router.replace(`/artist/profile/?id=${username}`);
+  }
+
+  searchIconOnClick = () => {
+    // const { onOpen } = this.props;
+    const { expandedSearch } = this.state;
+    const newExpandedState = !expandedSearch;
+    
+    this.setState({
+      isNavDropDownOpen: newExpandedState,
+      expandedSearch: newExpandedState
+    }, () => {
+
+      if (newExpandedState && this.inputRef.current) {
+        this.inputRef.current.focus();
+      }
+    });
+  }
 
   render() {
-    const { musicInfo, user, isMobile } = this.props;
-    const { showMore, performers, expandedSearch } = this.state;
-
-    // console.log(performers)
-    // const { genreOne = [] } = musicInfo;
+    const { user, isMobile } = this.props;
+    const { showMore, performers, expandedSearch, isNavDropDownOpen } = this.state;
 
     return (
       <div className="filter-block-wrapper">
-        <div className="filter-block custom" style={{marginRight: user?._id ? '3.5rem' : '6rem' }}>
-          <div className="filter-item" style={searchInputWrapper(expandedSearch, isMobile)}>
+        <div className="filter-block custom" >
+          <div className="filter-item" style={searchInputWrapper(isMobile)}>
             <Input
-              style={searchInputStyling(expandedSearch)}
-              placeholder=" Search artists"
+              ref={this.inputRef}
+              
+              placeholder=" Search for artists"
               onChange={(evt) => {
-                this.setState({ q: evt.target.value }) 
+                this.setState({ q: evt.target.value })
                 this.searchValueChange(evt.target.value)
                 this.getPerformers.bind(evt.target.value)
               }}
-              addonBefore={<SearchOutlined onClick={()=> this.setState({expandedSearch: !expandedSearch})}/>}
-              // onSearch={this.getPerformers.bind(this)}
+              className='navigation-input rounded-lg bg-[#414141b2] p-0 mr-[0.3rem] font-light '
+              addonBefore={<MagnifyingGlassIcon className='flex w-5 h-5 text-trax-white cursor-pointer' onClick={this.searchIconOnClick} />}
               onPressEnter={this.handleSubmit.bind(this)}
             />
           </div>

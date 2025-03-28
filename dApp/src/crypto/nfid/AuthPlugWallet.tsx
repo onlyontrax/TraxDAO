@@ -1,14 +1,9 @@
-import { attachNfidLogout, logout } from '@redux/auth/actions';
-import {
-  Button
-} from 'antd';
-import { connect, useDispatch } from 'react-redux';
-import { NFIDIcon } from '../../icons/index';
+import { connect } from 'react-redux';
 import { ISettings } from "src/interfaces";
 import React, {useState} from 'react';
 import { LoadingOutlined } from '@ant-design/icons';
-import { getPlugWalletIsConnected, getPlugWalletAgent, getPlugWalletProvider } from '../mobilePlugWallet';
-
+import { getPlugWalletAgent, getPlugWalletProvider } from '../mobilePlugWallet';
+import TraxButton from '@components/common/TraxButton';
 interface IAuthButton {
   onSignOut: Function
   onConnect: Function,
@@ -36,58 +31,25 @@ function AuthPlugWallet({ onSignOut, onConnect, isAuthenticated, handlePlugWalle
 
   const handlePlugWalletConnectUp = () => handlePlugWalletConnect(from);
 
+
+
+  const icon = (
+    loading || plugLoading ?
+    <LoadingOutlined style={{color: '#c8ff00', fontSize: 17}} /> :
+    <img src="/static/plug-favicon-2.png" alt="Plug logo" />
+  );
+
   return (
     <div>
-      {!isAuthenticated ? (
-        <Button onClick={authenticateNow} htmlType="button" className="nfid-button-wrapper">
-            {from === 'sign-up' || 'log-in' ? (
-            <>
-            {loading || plugLoading? (
-                <LoadingOutlined style={{color: '#c8ff00', fontSize: 17, marginRight: '0.5rem'}}/>
-              ):(
-                <img src="/static/plug-favicon-2.png" alt="" className='plug-icon-sign'/>
-              )}
-              <span className='font-medium'>{from === 'sign-up' ? 'Sign up with Plug' : 'Continue with Plug'}</span>
-            </>
-          )
-          :
-          (
-            <>
-              {loading || plugLoading ? (
-                <LoadingOutlined style={{color: '#c8ff00', fontSize: 23, marginTop: 2}}/>
-              ):(
-                <img src="/static/plug-favicon-2.png" alt="" className='plug-icon-sign'/>
-              )}
-            </>
-          )}
-        </Button>
-      ) : (
-        <div>
-          <Button onClick={handlePlugWalletConnectUp} htmlType="button" className={from === 'sign-up' ? "nfid-button-wrapper-sign-up" : "nfid-button-wrapper"}>
-            {from === 'sign-up' || 'log-in' ? (
-            <>
-              {loading || plugLoading ? (
-                <LoadingOutlined style={{color: '#c8ff00', fontSize: 17, marginRight: '0.5rem'}}/>
-              ):(
-                <img src="/static/plug-favicon-2.png" alt="" className='plug-icon-sign'/>
-              )}
-              <span>Plug Wallet</span>
-            </>
-          )
-          :
-          (
-            <>
-             {loading || plugLoading ? (
-                <LoadingOutlined style={{color: '#c8ff00', fontSize: 23, marginTop: 2}}/>
-              ):(
-                <img src="/static/plug-favicon-2.png" alt="" className='plug-icon-sign'/>
-              )}
-
-            </>
-          )}
-          </Button>
-        </div>
-      )}
+      <TraxButton
+        htmlType="button"
+        styleType="picture"
+        buttonSize="auth"
+        buttonText="Continue with Plug Wallet"
+        icon={icon}
+        onClick={isAuthenticated ? handlePlugWalletConnectUp : authenticateNow}
+        disabled={loading || plugLoading}
+      />
     </div>
   );
 }
@@ -98,5 +60,7 @@ const mapState = (state: any) => ({
   settings: { ...state.settings },
   state: { ...state }
 });
+
 const mapDispatch = { };
+
 export default connect(mapState, mapDispatch)(AuthPlugWallet);

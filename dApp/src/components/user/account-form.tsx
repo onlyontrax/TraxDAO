@@ -1,8 +1,8 @@
 /* eslint-disable react/require-default-props */
-import {  PlusOutlined, CreditCardOutlined, MoreOutlined } from '@ant-design/icons';
+import { PlusOutlined, CreditCardOutlined, MoreOutlined } from '@ant-design/icons';
 import { AvatarUpload } from '@components/user/avatar-upload';
 import { InternetIdentityProvider } from '@internet-identity-labs/react-ic-ii-auth';
-import { userService, cryptoService, paymentService } from '@services/index';
+import { userService, cryptoService, paymentService, accountService } from '@services/index';
 import { connect } from 'react-redux';
 import {
   Button, Col, Form, Input, Row, Select, Modal, Tabs, Switch, message, Image, Spin
@@ -15,6 +15,9 @@ import { Sheet } from 'react-modal-sheet';
 import useDeviceSize from 'src/components/common/useDeviceSize';
 import PhoneInput from 'react-phone-number-input';
 import { useRouter } from 'next/router';
+import { useDispatch } from 'react-redux';
+import SlideUpModal from '@components/common/layout/slide-up-modal';
+import TraxButton from '@components/common/TraxButton';
 
 interface UserAccountFormIProps {
   user: IUser;
@@ -42,7 +45,8 @@ function UserAccountForm({
   updating, onFinish, user, options, ui, settings,
 }: UserAccountFormIProps) {
   const [form] = Form.useForm();
-  const [walletNFID, setWalletNFID] = useState(user.wallet_icp);
+  const [formData, setFormData] = useState(user);
+  const [walletNFID, setWalletNFID] = useState(user.account?.wallet_icp);
   const [phone, setPhone] = useState(user.phone);
   const InternetIdentityProviderProps: any = cryptoService.getNfidInternetIdentityProviderProps();
   const [openConnectModal, setOpenConnectModal] = useState<boolean>(false);
@@ -68,6 +72,7 @@ function UserAccountForm({
   const [isCardModalVisible, setIsCardModalVisible] = useState(false);
   const [cards, setCards] = useState([]);
   const [loadingCards, setLoadingCards] = useState(false);
+  const dispatch = useDispatch();
 
   const router = useRouter();
 
@@ -76,25 +81,27 @@ function UserAccountForm({
       ...user,
       phone: user.phone || ''
     });
-  }, [user]);
+  }, []);
 
-  const handleFinish = async (values) => {
-    const updatedValues = {
-      ...values,
-      phone
-    };
-    await onFinish(updatedValues);
+  const handleChange = (changedValues, allValues) => {
+    setFormData(prev => ({ ...prev, ...changedValues }));
+  };
+
+  const handleSubmit = async (values) => {
+    const updatedUser = { ...formData, ...values };
+    await onFinish(updatedUser);
+    setFormData(updatedUser);
   };
 
   const enable2FA = async () => {
-    await userService.enable2FA(user._id);
+    await accountService.enable2FA(user._id);
     setEnabled2FAModal(true);
-    const qrCodeLink = await userService.getQRCode(user._id);
+    const qrCodeLink = await accountService.getQRCode(user._id);
     setQrCode(qrCodeLink.data);
   };
 
   const verify2FA = async () => {
-    const res = await userService.verify2FA(user._id, { token: tokenField });
+    const res = await accountService.verify2FA(user._id, { token: tokenField });
     if (res.data === true) {
       message.success('Two factor authentication enabled.');
       setEnabled2FAModal(false);
@@ -105,7 +112,7 @@ function UserAccountForm({
   };
 
   const disable2FA = async () => {
-    const res = await userService.disable2FA(user._id);
+    const res = await accountService.disable2FA(user._id);
     if (res.data === true) {
       message.success('Two factor authentication disabled.');
       setEnabled2FA(false);
@@ -116,16 +123,16 @@ function UserAccountForm({
 
   const enableSms = async () => {
     const res = await form.validateFields();
-    form.submit();
+    await form.submit();
 
-    await userService.enableSms(user._id);
+    await accountService.enableSms(user._id, { phone: phone || user.phone });
     setEnabledSmsModal(true);
-    const qrCodeLink = await userService.getSMSCode(user._id);
+    const qrCodeLink = await accountService.getSMSCode(user._id);
     setTokenSmsField('');
   };
 
   const verifySms = async () => {
-    const res = await userService.verifySms(user._id, { token: tokenSmsField });
+    const res = await accountService.verifySms(user._id, { token: tokenSmsField });
     if (res.data === true) {
       message.success('SMS authentication enabled.');
       setEnabledSmsModal(false);
@@ -136,7 +143,7 @@ function UserAccountForm({
   };
 
   const disableSms = async () => {
-    const res = await userService.disableSms(user._id);
+    const res = await accountService.disableSms(user._id);
     if (res.data === true) {
       message.success('SMS authentication disabled.');
       setEnabledSms(false);
@@ -152,7 +159,7 @@ function UserAccountForm({
   };
 
   const disconnectWallet = (value: string) => {
-    userService.disconnectWalletPrincipal().then(val => {
+    accountService.disconnectWalletPrincipal().then(val => {
       message.success('Wallet Principal has been disconnected.');
       setWalletNFID('');
     }).catch(err => { message.error('There was a problem in disconnecting your wallet principal.'); });
@@ -211,6 +218,7 @@ function UserAccountForm({
     if (!window.confirm('Are you sure you want to remove this payment card?')) return;
     try {
       await paymentService.removeStripeCard(cardId);
+      userService.reloadCurrentUser(dispatch);
       getCards(); // Refresh the cards list after removal
       message.success('Card removed successfully');
     } catch (error) {
@@ -227,9 +235,10 @@ function UserAccountForm({
         form={form}
         {...layout}
         name="user-account-form"
-        onFinish={handleFinish}
+        onFinish={handleSubmit}
+        onValuesChange={handleChange}
+        initialValues={formData}
         scrollToFirstError
-        initialValues={user}
       >
         <Tabs activeKey={activeTab} onChange={handleTabChange} tabPosition={(isTablet || isMobile) ? "top" : "left"} className="" >
           <Tabs.TabPane tab={<span className='uppercase font-heading text-xl'>Edit Profile</span>} key="basic">
@@ -311,7 +320,7 @@ function UserAccountForm({
                       { required: true, message: 'Please input your first name!' },
                       {
                         pattern:
-                        // @ts-ignore
+                          // @ts-ignore
                           /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u,
                         message: 'First name can not contain number and special character'
                       }
@@ -333,7 +342,7 @@ function UserAccountForm({
                       { required: true, message: 'Please input your last name!' },
                       {
                         pattern:
-                        // @ts-ignore
+                          // @ts-ignore
                           /^[a-zA-ZàáâäãåąčćęèéêëėįìíîïłńòóôöõøùúûüųūÿýżźñçčšžÀÁÂÄÃÅĄĆČĖĘÈÉÊËÌÍÎÏĮŁŃÒÓÔÖÕØÙÚÛÜŲŪŸÝŻŹÑßÇŒÆČŠŽ∂ð ,.'-]+$/u,
                         message: 'Last name can not contain number and special character'
                       }
@@ -386,20 +395,16 @@ function UserAccountForm({
                   </Form.Item>
                 </div>
               </Col>
-              <Form.Item className="text-center">
-                <Button
+              <Form.Item>
+                <TraxButton
                   htmlType="submit"
-                  className="ant-btn profile-following-btn-card "
-                  style={{ float: 'right' }}
-                  disabled={updating}
+                  styleType="primary"
+                  buttonSize='full'
+                  buttonText="Save changes"
                   loading={updating}
-                >
-                  Save changes
-                </Button>
+                  disabled={updating}
+                />
               </Form.Item>
-
-
-
               <h1 className="profile-page-heading">Password</h1>
               <Col lg={24} md={24} xs={24} >
                 <div className=' flex flex-row gap-4 w-full'>
@@ -444,10 +449,15 @@ function UserAccountForm({
                   </Form.Item>
                 </div>
               </Col>
-              <Form.Item className="text-center">
-                <Button htmlType="submit" className="ant-btn profile-following-btn-card" style={{ float: 'right' }} disabled={updating} loading={updating}>
-                  Update password
-                </Button>
+              <Form.Item>
+                <TraxButton
+                  htmlType="submit"
+                  styleType="primary"
+                  buttonSize='full'
+                  buttonText="Update password"
+                  loading={updating}
+                  disabled={updating}
+                />
               </Form.Item>
             </div>
 
@@ -478,9 +488,15 @@ function UserAccountForm({
                           <Input className="account-form-input" value={walletNFID} readOnly />
                         </Form.Item>
                       </Row>
-                      <div className='cursor-pointer rounded-lg bg-[#f1f5f9] text-trax-black py-2 px-4 mt-4 flex w-24 justify-center' onClick={() => disconnectWallet('')}>
-                        <span>Disconnect</span>
-                      </div>
+                      <Form.Item>
+                        <TraxButton
+                          htmlType="button"
+                          styleType="secondary"
+                          buttonSize='full'
+                          buttonText="Disonnect"
+                          onClick={() => disconnectWallet('')}
+                        />
+                      </Form.Item>
                     </div>
                   </div>
                 ) : (
@@ -492,37 +508,36 @@ function UserAccountForm({
                       or
                       <a href="https://identity.ic0.app/" target="_blank" rel="noopener noreferrer" className='text-trax-blue-500'> Internet Identity</a>.
                     </span>                <div className='w-full flex justify-end'>
-                      <div className='cursor-pointer rounded-lg bg-[#1e1e1e] text-trax-white p-2 mt-4 flex w-20 justify-center' onClick={() => setOpenConnectModal(true)}>
-                        <span>Connect</span>
-                      </div>
+
+                      <Form.Item>
+                        <TraxButton
+                          htmlType="button"
+                          styleType="primary"
+                          buttonSize='full'
+                          buttonText="Connect"
+                          onClick={() => setOpenConnectModal(true)}
+                        />
+                      </Form.Item>
                     </div>
                   </div>
                 )}
 
                 {isMobile ? (
-                  <Sheet
+                  <SlideUpModal
                     isOpen={openConnectModal}
                     onClose={() => setOpenConnectModal(false)}
-                    detent='content-height'
                   >
-                    <Sheet.Container className='bg-trax-black'>
-                      <Sheet.Header />
-                      <Sheet.Content>
-                        <div className='p-8'>
-                          <div style={{ marginBottom: '15px' }} >
-
-                            <span style={{ fontSize: '23px', fontWeight: '600', color: 'white' }}>Connect </span>
-                            <br />
-                            <span style={{ fontSize: '14px', color: 'grey' }}>Select your preferred wallet to connect to TRAX</span>
-                          </div>
-                          <InternetIdentityProvider {...InternetIdentityProviderProps}>
-                            <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer oldWalletPrincipal={user.wallet_icp} />
-                          </InternetIdentityProvider>
-                        </div>
-                      </Sheet.Content>
-                    </Sheet.Container>
-                    <Sheet.Backdrop />
-                  </Sheet>
+                    <div className='p-8'>
+                      <div style={{ marginBottom: '15px' }} >
+                        <span style={{ fontSize: '23px', fontWeight: '600', color: 'white' }}>Connect </span>
+                        <br />
+                        <span style={{ fontSize: '14px', color: 'grey' }}>Select your preferred wallet to connect to TRAX</span>
+                      </div>
+                      <InternetIdentityProvider {...InternetIdentityProviderProps}>
+                        <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer={false} oldWalletPrincipal={user.account?.wallet_icp} />
+                      </InternetIdentityProvider>
+                    </div>
+                  </SlideUpModal>
                 ) : (
                   <div className='sign-in-modal-wrapper'>
                     <Modal
@@ -545,7 +560,7 @@ function UserAccountForm({
                           <span style={{ fontSize: '14px', color: 'grey' }}>Select your preferred wallet to connect to TRAX</span>
                         </div>
                         <InternetIdentityProvider {...InternetIdentityProviderProps}>
-                          <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer oldWalletPrincipal={user.wallet_icp} />
+                          <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer={false} oldWalletPrincipal={user.account?.wallet_icp} />
                         </InternetIdentityProvider>
                       </div>
                     </Modal>
@@ -566,7 +581,7 @@ function UserAccountForm({
                   <Spin />
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 mb-4">
                   {cards.map((card) => (
                     <div key={card.id} className="bg-custom-gray rounded-lg py-2 px-4 flex items-center justify-between">
                       <div className="flex items-center">
@@ -588,143 +603,146 @@ function UserAccountForm({
                 </div>
               )}
 
-              <Button
-
-                onClick={handleAddCard}
-                className="bg-custom-gray font-heading text-trax-white border-none flex items-center justify-center rounded-lg h-12 text-xl"
-              >
-                Add card
-              </Button>
-
+              <Form.Item>
+                <TraxButton
+                  htmlType="button"
+                  styleType="primary"
+                  buttonSize='full'
+                  buttonText="Add card"
+                  onClick={handleAddCard}
+                />
+              </Form.Item>
               <Modal
                 open={isCardModalVisible}
                 onCancel={handleCardModalClose}
                 footer={null}
                 width={600}
               >
-                <NewCardPage settings={settings} onSuccess={handleCardModalClose} />
+                <NewCardPage settings={settings} onSuccess={handleCardModalClose} isPPV={false}/>
               </Modal>
             </div>
           </Tabs.TabPane>
 
           <Tabs.TabPane tab={<span className='uppercase font-heading text-xl'>Authentication</span>} key="authentication">
-            <div className="account-form-settings" >
-              <h1 className="profile-page-heading">Enable 2FA authentication</h1>
+            <div className="account-form-settings">
+              <h1 className="profile-page-heading">2FA authentication</h1>
               <span className='profile-page-subtitle'>Enable Two factor authentication for additional security.</span>
               {!enabled2fa ?
-                <Button className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-2 h-[38px] flex w-fit justify-center" onClick={() => enable2FA()}>
-                  Enable 2FA
-                </Button> :
-                <Button
-                  className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 pb-4 mt-2 h-[38px] flex w-fit justify-center"
+                <TraxButton
+                  htmlType="button"
+                  styleType="primary"
+                  buttonSize='medium'
+                  buttonText="Enable 2FA"
+                  onClick={() => enable2FA()}
+                /> :
+                <TraxButton
+                  htmlType="button"
+                  styleType="secondary"
+                  buttonSize='medium'
+                  buttonText="Disable 2FA"
                   onClick={() => disable2FA()}
-                >
-                  Disable 2FA
-                </Button>
+                />
               }
-              <h1 className="profile-page-heading pt-8">Enable SMS authentication</h1>
+              <h1 className="profile-page-heading pt-8">SMS authentication</h1>
               <Col lg={12} md={12} xs={12} style={{ marginBottom: '24px', maxWidth: '100%' }}>
                 <Form.Item
                   name="phone"
                   label="Phone Number"
                 >
-                <PhoneInput
-                  placeholder="Enter phone number"
-                  value={phone}
-                  onChange={(value) => {
-                    setPhone(value);
-                    form.setFieldsValue({ phone: value });
-                  }}
-                />
+                  <PhoneInput
+                    placeholder="Enter phone number"
+                    value={phone}
+                    onChange={(value) => {
+                      setPhone(value);
+                      form.setFieldsValue({ phone: value });
+                    }}
+                  />
                 </Form.Item>
               </Col>
               <span className='text-trax-gray-300 mb-6 flex'>Enable SMS authentication for additional security.</span>
               {!enabledSms ?
-                <Button className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-2 h-[38px] flex w-fit justify-center" onClick={() => enableSms()}>
-                  Enable SMS Auth
-                </Button> :
-                <Button
-                  className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-2 h-[38px] flex w-fit justify-center"
+                <TraxButton
+                  htmlType="button"
+                  styleType="primary"
+                  buttonSize='medium'
+                  buttonText="Enable SMS Auth"
+                  onClick={enableSms}
+                /> :
+                <TraxButton
+                  htmlType="button"
+                  styleType="secondary"
+                  buttonSize='medium'
+                  buttonText="Disable SMS Auth"
                   onClick={disableSms}
-                >
-                  Disable SMS Auth
-                </Button>
+                />
               }
             </div>
-            <Form.Item className="text-center">
-              <Button
-                htmlType="submit"
-                className="ant-btn profile-following-btn-card "
-                style={{ float: 'right' }}
-                disabled={updating}
-                loading={updating}
-              >
-                Save changes
-              </Button>
-            </Form.Item>
           </Tabs.TabPane>
 
         </Tabs>
         <Modal
-            key="enable2fa"
-            className="enable2fa"
-            title={null}
-            open={openEnable2fa}
-            footer={null}
-            width={600}
-            destroyOnClose
-            onCancel={() => setEnabled2FAModal(false)}
-          >
-            <div className='p-8'>
-              <div className="mb-4" >
-                <span className="text-2xl font-semibold text-trax-white">Connect your 2FA Authenticator with this QR code</span>
-                <br />
-                <Image alt="qr_code" src={qrCode} className="w-fit lg:w-full max-w-md my-4" />
-                <br />
-                <Input
-                  placeholder="Enter the token from your authenticator app"
-                  value={tokenField} onChange={(e) => setTokenField(e.target.value)}
-                  className="mb-4 rounded-lg"
-                />
-                <Button
-                  className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-2 h-[38px] flex w-fit justify-center"
-                  onClick={() => verify2FA()}
-                >
-                  Verify 2FA
-                </Button>
-              </div>
+          key="enable2fa"
+          className="enable2fa"
+          title={null}
+          open={openEnable2fa}
+          footer={null}
+          width={600}
+          destroyOnClose
+          onCancel={() => setEnabled2FAModal(false)}
+        >
+          <div className='p-8'>
+            <div className="mb-4" >
+              <span className="text-2xl font-semibold text-trax-white">Connect your 2FA Authenticator with this QR code</span>
+              <br />
+              <Image alt="qr_code" src={qrCode} className="w-fit lg:w-full max-w-md my-4" />
+              <br />
+              <Input
+                placeholder="Enter the token from your authenticator app"
+                value={tokenField} onChange={(e) => setTokenField(e.target.value)}
+                className="mb-4 rounded-lg"
+              />
 
+              <TraxButton
+                htmlType="button"
+                styleType="primary"
+                buttonSize='medium'
+                buttonText="Verify 2FA"
+                onClick={() => verify2FA()}
+              />
             </div>
-          </Modal>
+
+          </div>
+        </Modal>
         <Modal
-            key="enableSms"
-            className="enableSms"
-            title={null}
-            open={openEnableSms}
-            footer={null}
-            width={600}
-            destroyOnClose
-            onCancel={() => setEnabledSmsModal(false)}
-          >
-            <div className='p-8'>
-              <div className="mb-4">
-                <span className="text-2xl font-semibold text-trax-white">Connect your Phone with SMS code</span>
-                <br />
-                <Input
-                  placeholder="Enter the SMS code sent on your phone"
-                  value={tokenSmsField} onChange={(e) => setTokenSmsField(e.target.value)}
-                  className="my-4 rounded-lg"
-                />
-                <Button
-                  className="rounded-lg bg-[#f1f5f9] text-trax-black p-2 mt-2 h-[38px] flex w-fit justify-center"
-                  onClick={() => verifySms()}
-                >
-                  Verify SMS
-                </Button>
-              </div>
-
+          key="enableSms"
+          className="enableSms"
+          title={null}
+          open={openEnableSms}
+          footer={null}
+          width={600}
+          destroyOnClose
+          onCancel={() => setEnabledSmsModal(false)}
+        >
+          <div className='p-8'>
+            <div className="mb-4">
+              <span className="text-2xl font-semibold text-trax-white">Connect your Phone with SMS code</span>
+              <br />
+              <Input
+                placeholder="Enter the SMS code sent to your phone"
+                value={tokenSmsField} onChange={(e) => setTokenSmsField(e.target.value)}
+                className="my-4 rounded-lg"
+              />
+              <TraxButton
+                htmlType="button"
+                styleType="primary"
+                buttonSize='medium'
+                buttonText="Verify SMS"
+                onClick={() => verifySms()}
+              />
             </div>
-          </Modal>
+
+          </div>
+        </Modal>
       </Form>
     </div>
   );

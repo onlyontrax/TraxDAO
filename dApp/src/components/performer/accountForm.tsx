@@ -1,11 +1,10 @@
 import { AvatarUpload } from '@components/user/avatar-upload';
 import { CoverUpload } from '@components/user/cover-upload';
-import {
-  Button, Col, Form, Input, Row, Select
-} from 'antd';
+import { Col, Form, Input, Row, Select } from 'antd';
 import moment from 'moment';
 import { PureComponent } from 'react';
 import { ICountry, IMusic, IPerformer } from 'src/interfaces';
+import TraxButton from '@components/common/TraxButton';
 
 const { Option } = Select;
 
@@ -92,11 +91,27 @@ export class PerformerAccountForm extends PureComponent<IProps> {
                     uploadUrl={coverUploadUrl}
                     onUploaded={onCoverUploaded}
                     image={user.cover}
+                    isForMobile={false}
                     options={{ fieldName: 'cover' }}
                   />
                 </div>
               </div>
             </div>
+            {/* <div className='flex flex-row gap-4 w-full'>
+              <p className="account-form-item-tag w-[35%] text-right">Cover photo &#40;mobile&#41;</p>
+              <div className='cover-wrapper'>
+                <div className="cover-upload">
+                  <CoverUpload
+                    headers={uploadHeaders}
+                    uploadUrl={coverUploadUrl}
+                    onUploaded={onCoverUploaded}
+                    image={user.cover}
+                    isForMobile={true}
+                    options={{ fieldName: 'coverMobile' }}
+                  />
+                </div>
+              </div>
+            </div> */}
           </Col>
           <Row>
             <Col lg={24} md={24} xs={24} className=''>
@@ -191,16 +206,15 @@ export class PerformerAccountForm extends PureComponent<IProps> {
               </Form.Item>
             </div>
           </Col>
-          <Form.Item wrapperCol={{ ...layout.wrapperCol, offset: 4 }} style={{ marginBottom: '2rem' }}>
-            <Button
-              className="profile-following-btn-card"
+          <Form.Item>
+            <TraxButton
               htmlType="submit"
+              styleType="primary"
+              buttonSize='full'
+              buttonText="Save Changes"
               loading={updating}
               disabled={updating}
-              style={{ float: 'right' }}
-            >
-              Save Changes
-            </Button>
+            />
           </Form.Item>
         </div>
       </Form>

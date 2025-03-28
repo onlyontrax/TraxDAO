@@ -1,5 +1,6 @@
 @import '../../../styles/vars.scss';
 .componentVideoModule{
+  
   :global {
     .upload-bl {
       position: relative;
@@ -45,25 +46,18 @@
   }
 
   .searched-video-container{
-    // @apply md:ml-3;
-  
     .searched-video-wrapper{
-      @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 overflow-auto;
-  
-      @media screen and (max-width: $mobile-screen) {
-        gap: 1.5rem;
-      }
-  
+      @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-3.5 overflow-auto px-[10px] sm:px-0;
+    }
+    .searched-video-wrapper-audio{
+      @apply grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-3.5 overflow-auto px-[10px] sm:px-0;
     }
   }  
 
+  
   .searched-video-container-music{
-    // @apply md:ml-3;
-  
     .searched-video-wrapper-music{
-      @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-2 overflow-auto;
-  
-      
+      @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 sm:gap-2 overflow-auto;
     }
   }  
 
@@ -72,9 +66,9 @@
     flex-direction: column;
     align-items: flex-start;
     background-color: #00000000;
-    padding: 0.3rem;
+    // padding: 0.3rem;
     padding-bottom: 1.5rem;
-    border-radius: 0.75rem;
+    border-radius: 7px;
 
     @media screen and (max-width: $mobile-screen) {
       padding: 0px;
@@ -88,15 +82,15 @@
     }
     
     .new-track-thumb{
-      
+
       @apply relative flex items-start justify-start w-full pt-[56.25%] overflow-hidden transition-transform duration-200 ease-in-out;
-      border-radius: 0.75rem;
+      border-radius: 7px;
       transition: all 0.1s ease-in;
 
-      @media screen and (max-width: $mobile-screen) {
+      // @media screen and (max-width: $mobile-screen) {
         
-        border-radius: 0px;
-      }
+      //   border-radius: 0px;
+      // }
 
       &:hover {
         opacity: 0.9;
@@ -104,45 +98,70 @@
       
 
       .new-track-bg{
-        background-color: $light-grey;
+        background-color: transparent;
         background-size: cover;
         background-repeat: no-repeat;
         background-position: center;
         transition: all 0.2s ease-in;
+        border-radius: 7px;
 
-        @apply absolute top-0 left-0 w-full h-full md:rounded-xl;
+        @apply absolute top-0 left-0 w-full h-full;
 
         .track-bg {
           @apply bg-trax-black transition-none;
         }
 
         .track-duration {
-          background-color: rgba(0, 0, 0, 0.6);
-          font-size: 11px;
-          padding: 0px 5px; 
-
-          @apply absolute bottom-0 right-0  m-3 text-trax-white rounded-md;
+          background: #1F1F1FB2;
+          backdrop-filter: blur(7px);
+          font-size: 13px;
+          padding: 5px 11px;
+          border-radius: 7px;
+          font-weight: 300;
+          @apply absolute bottom-0 right-0  m-2 text-trax-white;
+        }
+        .track-type{
+          font-size: 16px;
+          width: fit-content;
+          bottom: 0;
+          border-radius: 7px;
+          font-family: HeadingPro;
+          position: absolute;
+          font-weight: 600;
+          text-transform: uppercase;
+          padding: 5px 11px;
+          color: #FFF;
+          background: #1F1F1FB2;
+          backdrop-filter: blur(7px);
+          display: flex;
+          flex-direction: row;
+          gap: 6px;
+          margin: 0.5rem
         }
         .track-limited{
-          background-color: #7E2CDD;
+          background: #1F1F1FB2;
+          backdrop-filter: blur(7px);
           font-size: 16px;
-          padding: 5px 10px; 
-          border: 1px solid #7E2CDD50;
+          padding: 5px 11px;
           color: #FFF;
           font-family: HeadingPro;
-          font-weight: 800;
+          font-weight: 600;
           text-transform: uppercase;
-
-
-          @apply absolute top-0 left-0  m-3 rounded-sm;
+          width: fit-content;
+          border-radius: 7px;
+          position: absolute;
+          top: 0;
+          left: 0;
+          margin: 0.5rem
+          
         }
       }
     }
 
     .track-info-wrapper{
       display: flex;
-      margin-top: 12px;
-      flex-direction: row;
+      margin-top: 7px;
+      flex-direction: column;
       align-items: flex-start;
       justify-content: flex-start;
       width: 100%;
@@ -152,19 +171,26 @@
       }
 
       .track-avatar {
-        @apply text-trax-white md:pr-2 md:pl-0 px-2;
+        @apply text-trax-white pr-2 pl-0;
+      }
+
+      .track-info{
+        display: flex;
+        flex-direction: row;
       }
 
       .track-artist{
         flex: 1 1 0%;
-        color: #B3B3B3;
+        color: #b7b7b7;
         font-size: 15px;
-        margin-top: 0rem;
+        margin-top: 0.6rem;
         font-weight: 300;
 
         &:hover{
-          color: #A8FF00;
+          text-decoration: underline ;
         }
+
+        
 
         @media screen and (max-width: $mobile-screen) {
           font-size: 15px;
@@ -172,18 +198,35 @@
       }
 
       .track-title{
-        flex: 1 1 0%;
+        // flex: 1 1 0%;
         color: white;
-        margin-bottom: 0;
-        font-size: 20px;
+        margin-bottom: 0.5rem;
+        // font-size: 36px;
+        font-size: 1.8rem;
+        line-height: 1.8rem;
+        // line-height: 33px;
         font-weight: 600;
         font-family: HeadingPro;
+        width: 90%;
+        text-transform: uppercase;
 
         
 
         @media screen and (max-width: $mobile-screen) {
-          font-size: 20px;
+          font-size: 36px;
+          line-height: 33px;
         }
+      }
+
+      .track-title-related{
+        flex: 1 1 0%;
+        color: white;
+        margin-bottom: 0.2rem;
+        font-size: 25px;
+        line-height: 22px;
+        font-weight: 600;
+        font-family: HeadingPro;
+        text-transform: uppercase;
       }
     }
   }

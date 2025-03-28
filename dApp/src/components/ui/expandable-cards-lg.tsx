@@ -8,6 +8,9 @@ import { LockOpenIcon, LockClosedIcon } from '@heroicons/react/24/solid';
 import Link from 'next/link'
 import HoverVideoPlayer from 'react-hover-video-player';
 
+import { useRouter } from 'next/router';
+
+import TraxButton from "@components/common/TraxButton";
 
 export function ExpandableCardLarge(props) {
   const [active, setActive] = useState<(typeof props.cards)[number] | boolean | null>(
@@ -17,6 +20,7 @@ export function ExpandableCardLarge(props) {
   const [hovered, setHovered] = useState(false);
   const id = useId();
   const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -52,7 +56,7 @@ export function ExpandableCardLarge(props) {
 
   const thumbnailOverlay = (message: String) => (
     <div className='w-full flex relative justify-center items-center h-full inset-0'>
-      <div className='absolute m-auto justify-center items-center bg-[#0e0e0e] rounded-full flex flex-row py-2 px-3 gap-1'>
+      <div className='absolute m-auto flex justify-center items-center bg-slaps-gray rounded-md backdrop-blur uppercase flex flex-row py-2 px-3 gap-1'>
         <LockClosedIcon className='text-trax-white mt-[-2px]' width={14} height={14} />
         <span className='text-trax-white text-xs'>{message}</span>
       </div>
@@ -63,7 +67,7 @@ export function ExpandableCardLarge(props) {
     return (
       <div className=" rounded-lg relative flex items-start justify-start w-full pt-[56.25%] overflow-hidden transition-transform duration-200 ease-in-out">
         <div className="" style={{backgroundImage: `url("${(card?.thumbnail?.url ? card?.thumbnail?.url : card?.video.thumbnails[0])}")`}}>
-          <Link href={`/video?id=${card.slug}`} passHref>
+          <Link href={`/${card?.trackType === 'video' ? 'video' : 'track'}?id=${card.slug}`} passHref>
             <HoverVideoPlayer
               videoSrc={card.url}
               restartOnPaused
@@ -134,7 +138,7 @@ export function ExpandableCardLarge(props) {
                          </div>
                        )}
                        {active.limitSupply && (
-                         <div style={{textShadow: '#c8ff00 1.5px 0.5px 12px'}} className="absolute border border-[#A8FF00] top-12 sm:top-0 left-0  m-3 rounded-md text-[13px] bg-[#A8FF00] px-[5px] text-[#c8ff00] ">
+                         <div style={{textShadow: '#c8ff00 1.5px 0.5px 12px'}} className="absolute uppercase rounded font-heading top-0 left-0  m-3 text-[16px] bg-[#7E2CDD] px-[6px] py-[2px] text-[#FFF]  ">
                            Limited release
                          </div>
                        )}
@@ -147,7 +151,7 @@ export function ExpandableCardLarge(props) {
                         className="sm:rounded-tr-lg sm:rounded-tl-lg absolute top-0 left-0 w-full h-full bg-no-repeat bg-center bg-cover"
                         style={{transition: 'all 0.2s ease-in', backgroundImage: `url("${(active?.thumbnail?.url ? active?.thumbnail?.url : active?.video.thumbnails[0])}")`}}
                         >
-                          <Link href={`/video?id=${active.slug}`} passHref>
+                          <Link href={`/${active?.trackType === 'video' ? 'video' : 'track'}?id=${active.slug}`} passHref>
                             <HoverVideoPlayer
                               videoSrc={active.url}
                               restartOnPaused
@@ -192,17 +196,15 @@ export function ExpandableCardLarge(props) {
                       {active.description}
                     </motion.p>
                   </div>
-
-                  <motion.a
-                    layout
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    href={`/video?id=${active.slug}`}
-                    className="px-4 py-3 text-sm rounded-full font-bold bg-trax-lime-500 text-trax-black"
-                  >
-                    Play
-                  </motion.a>
+                  <TraxButton
+                          htmlType="button"
+                          styleType="primary"
+                          buttonSize="small"
+                          buttonText="Play"
+                          onClick={() => {
+                            window.location.href = `/${active?.trackType === 'video' ? 'video' : 'track'}?id=${active.slug}`;
+                          }}
+                        />
                 </div>
                 {/* <div className="pt-4 relative px-4">
                   <motion.div
@@ -222,7 +224,7 @@ export function ExpandableCardLarge(props) {
           </div>
         ) : null}
       </AnimatePresence>
-      <ul className=" mx-auto w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 items-start gap-4">
+      <ul className=" mx-auto max-w-[1200px] w-full grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-start gap-4">
         {props.cards.map((card, index) => (
           <motion.div
             layoutId={`card-${card.title}-${id}`}
@@ -244,8 +246,8 @@ export function ExpandableCardLarge(props) {
                       </div>
                     )}
                     {card.limitSupply && (
-                      <div className="absolute uppercase font-heading top-0 left-0  m-3 rounded-sm text-[16px] bg-[#7E2CDD] px-[5px] text-[#FFF] ">
-                        Limited Edition
+                      <div style={{textShadow: '#c8ff00 1.5px 0.5px 12px'}} className="absolute rounded uppercase font-heading top-0 left-0  m-3 rounded text-[16px] bg-[#7E2CDD] px-[6px] py-[2px] text-[#FFF] ">
+                        Limited release
                       </div>
                     )}
                     {(card.isSale === 'subscription' && !card.isSubscribed) && thumbnailOverlay('Members only')}
@@ -257,14 +259,14 @@ export function ExpandableCardLarge(props) {
               <div className="">
                 <motion.h3
                   layoutId={`title-${card.title}-${id}`}
-                  className="font-semibold text-2xl font-heading mb-0 text-[#FFFFFF] text-left"
+                  className="font-semibold text-2xl font-heading mb-0 text-trax-white text-left"
                 >
                   {card.title}
                 </motion.h3>
                 {(card.isSale === "pay" && !card.isBought || card.isSale === "subscribe" && !card.isSubscribed) && (
                   <motion.div
                     layoutId={`sale-${card.description}-${id}`}
-                    className="text-xl text-[#A8FF00] text-left"
+                    className="text-xl text-trax-white text-left"
                   >
                     <span>
                       {(card.isSale === "pay" && !card.isBought) && `$${card.price}`}

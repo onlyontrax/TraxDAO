@@ -173,7 +173,7 @@ class GalleryViewPage extends PureComponent<IProps> {
     const { user, updateBalance: handleUpdateBalance } = this.props;
     const { gallery } = this.state;
     if (gallery === null) return;
-    if (user?.balance < gallery.price) {
+    if (user?.account?.balance < gallery.price) {
       message.error('You have an insufficient token balance. Please top up.');
       Router.push('/wallet');
       return;
@@ -374,8 +374,8 @@ class GalleryViewPage extends PureComponent<IProps> {
           <div className="main-container">
             <div className="vid-act">
               <Link
-                href={`/${gallery?.performer?.username || gallery?.performer?._id}`}
-                as={`/${gallery?.performer?.username || gallery?.performer?._id}`}
+                href={`/artist/profile/?id=${gallery?.performer?.username || gallery?.performer?._id}`}
+                as={`/artist/profile/?id=${gallery?.performer?.username || gallery?.performer?._id}`}
               >
 
                 <div className="o-w-ner">
@@ -434,11 +434,10 @@ class GalleryViewPage extends PureComponent<IProps> {
             </Row>
           </div>
         </div>
-
+{/*
         <Modal
           key="subscribe_performer"
           className="subscription-modal"
-          width={600}
           centered
           title={null}
           open={openSubscriptionModal}
@@ -453,7 +452,7 @@ class GalleryViewPage extends PureComponent<IProps> {
             onClose={this.closeSubModal.bind(this)}
             user={user}
           />
-        </Modal>
+        </Modal> */}
 
         <Modal
           centered

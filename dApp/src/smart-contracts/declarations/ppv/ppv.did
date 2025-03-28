@@ -1,6 +1,4 @@
-type Tokens__1 = record {e8s: nat64;};
 type Tokens = record {e8s: nat64;};
-type Token = record {symbol: text;};
 type Timestamp = int;
 type Ticker = text;
 type StatusResponse = 
@@ -8,7 +6,7 @@ type StatusResponse =
    ckbtc_balance: opt nat;
    cycles: opt nat;
    heap_memory_size: opt nat;
-   icp_balance: opt Tokens__1;
+   icp_balance: opt Tokens;
    memory_size: opt nat;
    trax_balance: opt nat;
    version: opt nat;
@@ -23,6 +21,16 @@ type StatusRequest =
    trax_balance: opt bool;
    version: opt bool;
  };
+type Result_1 = 
+ variant {
+   err: text;
+   ok: nat;
+ };
+type Result = 
+ variant {
+   err: text;
+   ok;
+ };
 type Percentage = float64;
 type Participants = 
  record {
@@ -31,79 +39,41 @@ type Participants =
  };
 type PPV = 
  service {
-   accountBalance: (principal) -> (Tokens);
-   accountIdentifierToBlob: (AccountIdentifier__2) ->
-    (AccountIdentifierToBlobResult);
-   addPPVContent: (ContentID, Content) -> ();
-   canisterAccount: () -> (AccountIdentifier__1) query;
-   changePlatformFee: (float64) -> ();
+   addPPVContent: (ContentID, Content) -> (Result);
+   approveSpending: (nat) -> (Result_1);
    ckbtcBalanceOfCanister: () -> (nat);
-   cyclesBalance: () -> (nat);
-   drainCanisterBalance: (nat64, principal, Ticker) -> (bool);
-   fanHasPaid: (ContentID, FanID) -> (bool) query;
-   getAllArtistContentIDs: (ArtistID__1) -> (vec ContentID) query;
-   getAllArtistContentPayments: (ArtistID__1) ->
-    (vec record {
+   fanHasPaid: (ContentID, principal) -> (bool) query;
+   getAllContentPayments: (nat, nat) ->
+    (record {
+       data:
+        vec
+         record {
            ContentID;
+           ArtistID__1;
            FanID;
            Timestamp;
            nat;
-           Ticker;
-         });
-   getAllContentPayments: () ->
-    (vec
-      record {
-        ContentID;
-        ArtistID__1;
-        FanID;
-        Timestamp;
-        nat;
-        Ticker;
-        ContentType__1;
-      });
-   getAllFanContentPayments: (FanID) ->
-    (vec record {
-           ContentID;
-           Timestamp;
-           nat;
-           Ticker;
-         });
-   getContent: (ContentID) -> (opt Content) query;
-   getExchangeRate: (text) -> (float64);
-   getStatus: (opt StatusRequest) -> (opt StatusResponse);
-   get_account_identifier: (GetAccountIdentifierArgs) ->
-    (GetAccountIdentifierResult) query;
-   icpBalanceOfCanister: () -> (Tokens);
-   purchaseContent: (nat64, ContentID, text, nat64) -> ();
-   removeContent: (ContentID) -> ();
-   showEntriesOfContentMap: () -> (vec record {
-                                         ContentID;
-                                         Content;
-                                       });
-   traxBalanceOfCanister: () -> (nat);
-   updatePPVContent: (ContentID, Content) -> ();
- };
-type GetAccountIdentifierSuccess = record {
-                                     accountIdentifier: AccountIdentifier;};
-type GetAccountIdentifierResult = 
- variant {
-   err: GetAccountIdentifierErr;
-   ok: GetAccountIdentifierSuccess;
- };
-type GetAccountIdentifierErr = 
- record {
-   kind: variant {
-           InvalidToken;
-           Other;
+           ContentType__1;
          };
-   message: opt text;
- };
-type GetAccountIdentifierArgs = 
- record {
-   "principal": principal;
-   token: Token;
+       total: nat;
+     });
+   getAllEvents: () -> (vec Event) query;
+   getContent: (ContentID) -> (opt Content) query;
+   getStatus: (opt StatusRequest) -> (opt StatusResponse);
+   purchaseContent: (ContentID, Ticker, nat) -> (Result_1);
+   removeContent: (ContentID) -> (Result);
+   traxBalanceOfCanister: () -> (nat);
+   updatePPVContent: (ContentID, Content) -> (Result);
+   updatePlatformFee: (float64) -> (Result);
  };
 type FanID = principal;
+type Event = 
+ record {
+   caller: principal;
+   details: text;
+   eventType: text;
+   timestamp: int;
+ };
 type ContentType__1 = text;
 type ContentType = text;
 type ContentID = text;
@@ -117,31 +87,4 @@ type Content =
  };
 type ArtistID__1 = principal;
 type ArtistID = principal;
-type AccountIdentifier__2 = 
- variant {
-   "blob": blob;
-   "principal": principal;
-   "text": text;
- };
-type AccountIdentifier__1 = blob;
-type AccountIdentifierToBlobSuccess = blob;
-type AccountIdentifierToBlobResult = 
- variant {
-   err: AccountIdentifierToBlobErr;
-   ok: AccountIdentifierToBlobSuccess;
- };
-type AccountIdentifierToBlobErr = 
- record {
-   kind: variant {
-           InvalidAccountIdentifier;
-           Other;
-         };
-   message: opt text;
- };
-type AccountIdentifier = 
- variant {
-   "blob": blob;
-   "principal": principal;
-   "text": text;
- };
 service : () -> PPV

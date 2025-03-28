@@ -21,7 +21,7 @@ export class DepositICP extends PureComponent<IProps> {
   componentDidMount() {
     const { user } = this.props;
     if (user) {
-      const fanIdentifier = principalToAccountIdentifier(Principal.fromText(user?.wallet_icp));
+      const fanIdentifier = user && principalToAccountIdentifier(Principal.fromText(user.account?.wallet_icp));
       this.setState({
         AI: fanIdentifier
       });
@@ -60,10 +60,10 @@ export class DepositICP extends PureComponent<IProps> {
                   <h4 className="deposit-icp-body-1">Use when receiving from Plug, Stoic, Infinity etc accounts or other apps that support sending directly to Principal ID&apos;s.</h4>
                 </div>
                 <div className="deposit-icp-body-2">
-                  <span className="deposit-icp-value">{`${user?.wallet_icp.slice(0, 5)}...${user?.wallet_icp.slice(-3)}`}</span>
+                  <span className="deposit-icp-value">{`${user.account?.wallet_icp.slice(0, 5)}...${user.account?.wallet_icp.slice(-3)}`}</span>
                   <div className="deposit-icp-wrapper">
                     <span className="principal-id-tag">Principal ID</span>
-                    <div className="copy-clipboard" onClick={() => this.copy(user?.wallet_icp)}>
+                    <div className="copy-clipboard" onClick={() => this.copy(user.account?.wallet_icp)}>
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#999999">
                         <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
                         <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />

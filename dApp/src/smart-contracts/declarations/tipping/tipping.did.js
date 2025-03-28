@@ -1,24 +1,26 @@
 export const idlFactory = ({ IDL }) => {
-  const AccountIdentifier__1 = IDL.Variant({
-    'principal' : IDL.Principal,
-    'blob' : IDL.Vec(IDL.Nat8),
-    'text' : IDL.Text,
+  const Ticker = IDL.Text;
+  const Result_1 = IDL.Variant({ 'ok' : IDL.Nat, 'err' : IDL.Text });
+  const EventKind = IDL.Variant({
+    'Error' : IDL.Null,
+    'AdminAction' : IDL.Null,
+    'TipSent' : IDL.Null,
+    'AllowanceUpdated' : IDL.Null,
   });
-  const AccountIdentifierToBlobSuccess = IDL.Vec(IDL.Nat8);
-  const AccountIdentifierToBlobErr = IDL.Record({
-    'kind' : IDL.Variant({
-      'InvalidAccountIdentifier' : IDL.Null,
-      'Other' : IDL.Null,
-    }),
-    'message' : IDL.Opt(IDL.Text),
-  });
-  const AccountIdentifierToBlobResult = IDL.Variant({
-    'ok' : AccountIdentifierToBlobSuccess,
-    'err' : AccountIdentifierToBlobErr,
+  const Event = IDL.Record({
+    'kind' : EventKind,
+    'message' : IDL.Text,
+    'timestamp' : IDL.Int,
+    'details' : IDL.Opt(
+      IDL.Record({
+        'participants' : IDL.Opt(IDL.Vec(IDL.Principal)),
+        'error' : IDL.Opt(IDL.Text),
+        'amount' : IDL.Opt(IDL.Nat),
+      })
+    ),
+    'caller' : IDL.Principal,
   });
   const ArtistID__1 = IDL.Principal;
-  const AccountIdentifier = IDL.Vec(IDL.Nat8);
-  const Ticker = IDL.Text;
   const FanID = IDL.Principal;
   const Timestamp = IDL.Int;
   const StatusRequest = IDL.Record({
@@ -30,7 +32,7 @@ export const idlFactory = ({ IDL }) => {
     'ckbtc_balance' : IDL.Opt(IDL.Bool),
     'icp_balance' : IDL.Opt(IDL.Bool),
   });
-  const Tokens__1 = IDL.Record({ 'e8s' : IDL.Nat64 });
+  const Tokens = IDL.Record({ 'e8s' : IDL.Nat64 });
   const StatusResponse = IDL.Record({
     'memory_size' : IDL.Opt(IDL.Nat),
     'trax_balance' : IDL.Opt(IDL.Nat),
@@ -38,9 +40,8 @@ export const idlFactory = ({ IDL }) => {
     'cycles' : IDL.Opt(IDL.Nat),
     'heap_memory_size' : IDL.Opt(IDL.Nat),
     'ckbtc_balance' : IDL.Opt(IDL.Nat),
-    'icp_balance' : IDL.Opt(Tokens__1),
+    'icp_balance' : IDL.Opt(Tokens),
   });
-  const Tokens = IDL.Record({ 'e8s' : IDL.Nat64 });
   const Percentage = IDL.Float64;
   const ArtistID = IDL.Principal;
   const Participants = IDL.Record({
@@ -48,43 +49,33 @@ export const idlFactory = ({ IDL }) => {
     'participantID' : ArtistID,
   });
   const TippingParticipants = IDL.Vec(Participants);
+  const Result = IDL.Variant({ 'ok' : IDL.Vec(IDL.Nat), 'err' : IDL.Text });
   const Tipping = IDL.Service({
-    'accountIdentifierToBlob' : IDL.Func(
-        [AccountIdentifier__1],
-        [AccountIdentifierToBlobResult],
+    'approveSpending' : IDL.Func(
+        [IDL.Nat64, Ticker, IDL.Opt(IDL.Nat64)],
+        [Result_1],
         [],
       ),
-    'addToReferralMap' : IDL.Func([ArtistID__1, ArtistID__1], [], []),
-    'canisterAccount' : IDL.Func([], [AccountIdentifier], []),
-    'changePlatformFee' : IDL.Func([IDL.Float64], [], []),
-    'ckbtcBalance' : IDL.Func([IDL.Principal], [IDL.Nat], []),
     'ckbtcBalanceOfCanister' : IDL.Func([], [IDL.Nat], []),
-    'cyclesBalance' : IDL.Func([], [IDL.Nat], ['query']),
-    'drainCanisterBalance' : IDL.Func(
-        [IDL.Nat64, IDL.Principal, Ticker],
-        [IDL.Bool],
-        [],
-      ),
+    'getAllEvents' : IDL.Func([], [IDL.Vec(Event)], ['query']),
     'getAllTippingTransactions' : IDL.Func(
         [],
         [IDL.Vec(IDL.Tuple(ArtistID__1, FanID, Timestamp, IDL.Nat, Ticker))],
         ['query'],
       ),
+    'getMyBalance' : IDL.Func([Ticker], [Result_1], []),
     'getStatus' : IDL.Func(
         [IDL.Opt(StatusRequest)],
         [IDL.Opt(StatusResponse)],
         [],
       ),
-    'icpBalance' : IDL.Func([IDL.Principal], [Tokens], []),
-    'icpBalanceOfCanister' : IDL.Func([], [Tokens], []),
-    'myAccountId' : IDL.Func([IDL.Principal], [AccountIdentifier], []),
     'sendTip' : IDL.Func(
-        [IDL.Nat64, TippingParticipants, IDL.Nat64, Ticker],
-        [],
+        [TippingParticipants, IDL.Nat64, Ticker],
+        [Result],
         [],
       ),
-    'traxBalance' : IDL.Func([IDL.Principal], [IDL.Nat], []),
     'traxBalanceOfCanister' : IDL.Func([], [IDL.Nat], []),
+    'updatePlatformFee' : IDL.Func([IDL.Float64], [], []),
   });
   return Tipping;
 };

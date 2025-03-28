@@ -19,7 +19,9 @@ import { Content, Participants } from '../../../src/smart-contracts/declarations
 
 import { idlFactory as idlFactoryPPV } from '../../../src/smart-contracts/declarations/ppv/ppv.did.js';
 import type { _SERVICE as _SERVICE_PPV } from '../../../src/smart-contracts/declarations/ppv/ppv2.did';
-
+import {
+  updateContent
+} from "../../../src/crypto/transactions/plug-ppv";
 interface IProps {
   id: string;
   ui: IUIConfig;
@@ -96,7 +98,7 @@ class VideoUpdate extends PureComponent<IProps> {
       .updatePPVContent(id, content)
       .then(async () => {
         await videoService.update(id, files, data, this.onUploading.bind(this));
-        Router.replace(`/${user?.username || user?._id}`);
+        Router.replace(`/artist/profile/?id=${user?.username || user?._id}`);
         message.success('Update successful!');
       })
       .catch((error) => {
@@ -114,10 +116,27 @@ class VideoUpdate extends PureComponent<IProps> {
   }
 
   async submit(data: any) {
-
     const { user, settings } = this.props;
     const { video } = this.state;
-    const submitData = { ...data };
+    
+    // Only include fields defined in VideoUpdatePayload
+    const submitData = {
+      title: data.title,
+      description: data.description,
+      status: data.status,
+      trackType: data.trackType,
+      tags: [...data.tags],
+      isSchedule: data.isSchedule,
+      supply: data.supply,
+      limitSupply: data.limitSupply,
+      scheduledAt: data.scheduledAt,
+      isSale: data.isSale,
+      price: data.price,
+      performerId: data.performerId,
+      participantIds: [...data.participantIds],
+      royaltyCut: JSON.stringify(data.royaltyCut)
+    };
+
     if ((data.isSale === 'pay' && !data.price) || (data.isSale === 'pay' && data.price < 1)) {
       message.error('Invalid price');
       return;
@@ -126,8 +145,7 @@ class VideoUpdate extends PureComponent<IProps> {
       message.error('Invalid schedule date');
       return;
     }
-    submitData.tags = [...data.tags];
-    submitData.participantIds = [...data.participantIds];
+
     const files = Object.keys(this._files).reduce((f, key) => {
       if (this._files[key]) {
         f.push({
@@ -150,7 +168,6 @@ class VideoUpdate extends PureComponent<IProps> {
           if (rc[i].performerId === user._id) {
             pubPercentage = rc[i].percentage / 100;
           } else {
-
             const obj: Participants = {
               participantID: Principal.fromText(rc[i].wallet_id),
               participantPercentage: rc[i].percentage / 100
@@ -158,59 +175,25 @@ class VideoUpdate extends PureComponent<IProps> {
             participants.push(obj);
           }
         }
+
         const content: Content = {
-          publisher: Principal.fromText(user.wallet_icp),
+          publisher: user && Principal.fromText(user.account?.wallet_icp),
           publisherPercentage: pubPercentage,
           price: data.price,
           participants,
           contentType: data.trackType === null ? 'video' : data.trackType
         };
 
-        let identity;
-        let ppvActor;
-        let agent;
-        const host = settings.icHost;
-        const authClient = await AuthClient.create();
-
-        if (settings.icNetwork !== true) {
-          await authClient.login({
-            identityProvider: cryptoService.getIdentityProviderLink(),
-            onSuccess: async () => {
-              if (await authClient.isAuthenticated()) {
-                identity = authClient.getIdentity();
-                agent = new HttpAgent({
-                  identity,
-                  host
-                });
-
-                agent.fetchRootKey();
-                ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
-                  agent,
-                  canisterId: settings.icPPV
-                });
-              }
-
-              await this.handleUpdatePPVContent(video._id, content, ppvActor, files, data);
-            }
-          });
-        } else {
-          await authClient.login({
-            onSuccess: async () => {
-              identity = await authClient.getIdentity();
-              agent = new HttpAgent({ identity, host });
-              ppvActor = Actor.createActor<_SERVICE_PPV>(idlFactoryPPV, {
-                agent,
-                canisterId: settings.icPPV
-              });
-
-              await this.handleUpdatePPVContent(video._id, content, ppvActor, files, data);
-            }
-          });
-        }
+        await updateContent(
+          video._id,
+          content,
+          settings,
+          data.walletOption
+        );
       } else {
-        await videoService.update(video._id, files, data, this.onUploading.bind(this));
+        await videoService.update(video._id, files, submitData, this.onUploading.bind(this));
       }
-      Router.replace(`/${user?.username || user?._id}`);
+      Router.replace(`/artist/profile/?id=${user?.username || user?._id}`);
       message.success('Your track has been successfully updated');
     } catch (error) {
       message.error(getResponseError(error) || 'An error occurred, please try again!');
@@ -229,7 +212,7 @@ class VideoUpdate extends PureComponent<IProps> {
         <Head>
           <title>{`${ui?.siteName} | Edit Video`}</title>
         </Head>
-        <div className="main-container">
+        <div className="main-container mt-12 sm:mt-16 px-3">
           {/* <PageHeading title="Edit Video" icon={<VideoCameraOutlined />} /> */}
           {!fetching && video && (
             <FormUploadVideo
@@ -244,7 +227,7 @@ class VideoUpdate extends PureComponent<IProps> {
           )}
           {fetching && (
             <div className="text-center">
-              <Spin />
+              <img src="/static/trax_loading_optimize.gif" alt="Loading..." className='w-28 m-auto'/>
             </div>
           )}
         </div>

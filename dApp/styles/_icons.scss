@@ -1,0 +1,43 @@
+.profile-menu-items {
+  @apply flex flex-col gap-0;
+
+  .menu-item {
+    @apply flex justify-between flex-row gap-2 cursor-pointer py-2 px-3  rounded text-trax-white;
+
+    &.active,
+    &:hover {
+      @apply rounded-md transition;
+
+      .menu-icon {
+        @apply text-custom-green border border-custom-green;
+      }
+      .menu-icon-text{
+        @apply text-custom-green;
+
+      }
+    }
+  }
+
+  .ant-divider {
+    margin: 10px 0;
+  }
+}
+
+.ant-drawer .ant-drawer-close {
+  @apply text-font-light-gray bg-slaps-gray rounded;
+}
+
+.menu-icon {
+  @apply h-8 w-8 bg-font-disabled rounded p-1.5;
+}
+.menu-icon-mobile{
+  @apply flex mt-0.5 size-5 text-font-light-gray;
+}
+
+.menu-icon-text {
+  @apply flex text-xl font-heading uppercase items-center font-semibold tracking-[0.025rem];
+}
+
+.active-icon {
+  @apply text-custom-green;
+}

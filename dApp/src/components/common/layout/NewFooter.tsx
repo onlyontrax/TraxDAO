@@ -40,17 +40,21 @@ const navigation = [
   },
 ]
 
-export default function Example() {
+interface NewFooterProps {
+  isPerformer?: boolean;
+}
+
+export default function NewFooter({ isPerformer = false }: NewFooterProps) {
   return (
-    <footer className="mt-12 sm:mt-48 pt-12 border-t-2 border-[#B3B3B320]">
+    <footer className={`pt-12 ${!isPerformer ? 'mt-12 sm:mt-48 ' : ''}border-t-2 border-[#B3B3B320]`}>
       <div className="mt-8 px-6 md:order-1 md:mt-0">
-        <p className="text-left text-[3rem] sm:text-[10rem] leading-[2.5rem] sm:leading-[8rem] font-heading tracking-tighter font-bold text-[#FFF]">
+        <p className="text-left text-[3rem] lg:text-[10rem] leading-[2.5rem] lg:leading-[8rem] font-heading tracking-tighter font-bold text-[#FFF]">
           &copy;2024
         </p>
-        <p className="text-left text-[3rem] sm:text-[10rem] leading-[2.5rem] sm:leading-[8rem] font-heading tracking-tighter font-bold text-[#FFF]">
+        <p className="text-left text-[3rem] lg:text-[10rem] leading-[2.5rem] lg:leading-[8rem] font-heading tracking-tighter font-bold text-[#FFF]">
           TRAX MEDIA LTD.
         </p>
-        <p className="text-left text-[3rem] sm:text-[10rem] leading-[2.5rem] sm:leading-[8rem] font-heading tracking-tighter font-bold text-[#FFF]">
+        <p className="text-left text-[3rem] lg:text-[10rem] leading-[2.5rem] lg:leading-[8rem] font-heading tracking-tighter font-bold text-[#FFF]">
           ALL RIGHTS RESERVED.
         </p>
       </div>

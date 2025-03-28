@@ -31,6 +31,14 @@ export class IEarning {
 
   isPaid: boolean;
 
+  accountSenderId: string;
+
+  accountSenderInfo?: any;
+
+  accountReceiverId: string;
+
+  accountReceiverInfo?: any;
+
   createdAt: Date;
 
   paidAt: Date;

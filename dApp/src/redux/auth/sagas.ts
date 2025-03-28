@@ -7,7 +7,7 @@ import {
   ILogin, IFanRegister, IForgot
 } from 'src/interfaces';
 import { message } from 'antd';
-import { updateCurrentUser } from '../user/actions';
+import { setAccount } from '../user/actions';
 import { Capacitor } from '@capacitor/core';
 import {
   loginSocial,
@@ -49,40 +49,22 @@ const authSagas = [
           // store token, update store and redirect to dashboard page
           yield authService.setToken(resp.token, payload?.remember);
           const userResp = yield userService.me();
-          yield put(updateCurrentUser(userResp.data));
+          const activeSubaccount = userResp.data.activeSubaccount || 'user';
+          yield put(setAccount(userResp.data));
           yield put(loginSuccess());
-          if (!userResp?.data?.isPerformer) {
-            if (!userResp.data.email || !userResp.data.username) {
+
+          if (activeSubaccount === 'user') {
+            if (!userResp.data.email || !userResp.data.userInfo.username) {
               Router.push('/user/account');
             } else {
-              setTimeout(function(){
-                  location.reload();
-              }, 3000);
-              location.reload();
+              Router.push('/');
             }
-            //Router.push((!userResp.data.email || !userResp.data.username) ? '/user/account' : '/');
-            return;
-          }
-
-          if (userResp?.data?.isPerformer) {
-            if (!userResp.data.email || !userResp.data.username) {
+          } else if (activeSubaccount === 'performer') {
+            if (!userResp.data.email || !userResp.data.performerInfo.username) {
               Router.push('/artist/account');
             } else {
-              //console.log("redirectam na /username", `/${userResp.data.username || userResp.data._id}`);
-              /*setTimeout(function(){
-
-              }, 3000);*/
-              if (Capacitor.getPlatform() === 'ios') {
-                // do something
-                //location.href = `/?id=${userResp.data.username || userResp.data._id}`;
-                //location.reload();
-                //Router.push({ pathname: `/?id=${userResp.data.username || userResp.data._id}` }, `/?id=${userResp.data.username || userResp.data._id}`);
-              } else {
-                Router.push({ pathname: `/${userResp.data.username || userResp.data._id}` }, `/${userResp.data.username || userResp.data._id}`);
-              }
-              //location.reload();
+              Router.push(`/artist/profile/?id=${userResp.data.performerInfo.username || userResp.data._id}`);
             }
-            return;
           }
         }
       } catch (e) {
@@ -102,16 +84,29 @@ const authSagas = [
       try {
         const payload = data.payload as any;
         const { token } = payload;
+
         yield authService.setToken(token);
         const userResp = yield userService.me();
-        yield put(updateCurrentUser(userResp.data));
+        const activeSubaccount = userResp.data.activeSubaccount || 'user';
+        yield put(setAccount(userResp.data));
         yield put(loginSuccess());
-        if (!userResp?.data?.isPerformer) {
+
+        if (activeSubaccount === 'user') {
+          if (!userResp.data.email || !userResp.data.userInfo.username) {
+            Router.push('/user/account');
+          }
+        } else if (activeSubaccount === 'performer') {
+          if (!userResp.data.email || !userResp.data.performerInfo.username) {
+            Router.push('/artist/account');
+          }
+        }
+
+        /*if (!userResp?.data?.isPerformer) {
           Router.push((!userResp.data.email || !userResp.data.username) ? '/user/account' : '/');
         }
         if (userResp?.data?.isPerformer) {
-          (!userResp.data.email || !userResp.data.username) ? Router.push('/artist/account') : Router.push({ pathname: `/${userResp.data.username || userResp.data._id}` }, `/${userResp.data.username || userResp.data._id}`);
-        }
+          (!userResp.data.email || !userResp.data.username) ? Router.push('/artist/account') : Router.push({ pathname: `/artist/profile/?id=${userResp.data.username || userResp.data._id}` }, `/artist/profile/?id=${userResp.data.username || userResp.data._id}`);
+        }*/
       } catch (e) {
         const error = yield Promise.resolve(e);
         message.error(error?.message || 'Incorrect credentials!');
@@ -125,18 +120,33 @@ const authSagas = [
       try {
         const payload = data.payload as any;
         const { token, noRedirect } = payload;
+
         yield authService.setToken(token);
         const userResp = yield userService.me();
-        yield put(updateCurrentUser(userResp.data));
+        const activeSubaccount = userResp.data.activeSubaccount || 'user';
+        yield put(setAccount(userResp.data));
+        yield put(loginSuccess());
+
+        if (activeSubaccount === 'user') {
+          if (!userResp.data.email || !userResp.data.userInfo.username) {
+            Router.push('/user/account');
+          }
+        } else if (activeSubaccount === 'performer') {
+          if (!userResp.data.email || !userResp.data.performerInfo.username) {
+            Router.push('/artist/account');
+          }
+        }
+
+        /*yield put(setAccount(userResp.data));
         yield put(loginSuccess());
         if (noRedirect !== true) {
           if (!userResp?.data?.isPerformer) {
             Router.push((!userResp.data.email || !userResp.data.username) ? '/user/account' : '/');
           }
           if (userResp?.data?.isPerformer) {
-            (!userResp.data.email || !userResp.data.username) ? Router.push('/artist/account') : Router.push({ pathname: `/${userResp.data.username || userResp.data._id}` }, `/${userResp.data.username || userResp.data._id}`);
+            (!userResp.data.email || !userResp.data.username) ? Router.push('/artist/account') : Router.push({ pathname: `/artist/profile/?id=${userResp.data.username || userResp.data._id}` }, `/artist/profile/?id=${userResp.data.username || userResp.data._id}`);
           }
-        }
+        }*/
       } catch (e) {
         const error = yield Promise.resolve(e);
         message.error(error?.message || 'Incorrect credentials!');
@@ -151,35 +161,39 @@ const authSagas = [
         const payload = data.payload as IFanRegister;
         const resp = (yield authService.register(payload)).data;
         message.success(resp?.message || 'Sign up success!', 10);
+        //yield put(registerFanSuccess(resp));
+        yield authService.setToken(resp.token, true);
+        const userResp = yield userService.me();
+        yield put(setAccount(userResp.data));
+        yield put(loginSuccess());
         Router.push('/');
-        yield put(registerFanSuccess(resp));
       } catch (e) {
         const error = yield Promise.resolve(e);
-        message.error(error?.message || 'This Username or email address has been already taken.', 5);
+        message.error(error?.message || 'This email address has been already taken.', 5);
         yield put(registerFanFail(error));
       }
     }
   },
   {
     on: registerPerformer,
-    async worker(data: any) {
+    * worker(data: any) {
       try {
-        const firstName = 'John';
-        const lastName = 'Doe';
+        const firstName = '';
+        const lastName = '';
         const payload = {
-          ...pick(data.payload, ['name', 'username', 'password', 'gender', 'email', 'country', 'dateOfBirth', 'wallet_icp', 'referralCode']),
+          ...pick(data.payload, ['name', 'username', 'gender', 'country', 'dateOfBirth']),
           firstName,
           lastName
         };
-        const resp = (await authService.registerPerformer(payload)).data;
-        if (resp.token) {
-          localStorage.setItem("tempToken", resp.token)
+        const resp = (yield authService.registerPerformer(payload)).data;
+        if (resp.account) {
+          yield put(setAccount(resp.account));
         }
-        await put(registerPerformerSuccess(resp));
+        yield put(registerPerformerSuccess(resp));
       } catch (e) {
-        const error = await Promise.resolve(e);
+        const error = yield Promise.resolve(e);
         message.error(error.message || 'An error occured, please try again later');
-        await put(registerPerformerFail(error));
+        yield put(registerPerformerFail(error));
       }
     }
   },
@@ -187,7 +201,7 @@ const authSagas = [
     on: logout,
     * worker() {
       yield authService.removeToken();
-      window.location.href = '/';
+      window.location.replace('/');
     }
   },
   {
@@ -213,7 +227,7 @@ const authSagas = [
     * worker() {
       try {
         const userResp = yield userService.me();
-        yield put(updateCurrentUser(userResp.data));
+        yield put(setAccount(userResp.data));
       } catch (e) {
         const error = yield Promise.resolve(e);
         // eslint-disable-next-line no-console

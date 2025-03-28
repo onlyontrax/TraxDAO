@@ -1,8 +1,7 @@
 /* eslint-disable react/require-default-props */
 import { InternetIdentityProvider } from '@internet-identity-labs/react-ic-ii-auth';
-import { performerService, cryptoService } from '@services/index';
+import { performerService, cryptoService, accountService } from '@services/index';
 import {
-  Button,
   Col,
   Form, Input,
   Row,
@@ -14,6 +13,9 @@ import { IPerformer } from 'src/interfaces';
 import { AuthConnect } from '../../crypto/nfid/AuthConnect';
 import { Sheet } from 'react-modal-sheet';
 import useDeviceSize from 'src/components/common/useDeviceSize';
+
+import TraxButton from '@components/common/TraxButton';
+import SlideUpModal from '@components/common/layout/slide-up-modal';
 
 const layout = {
   labelCol: { span: 24 },
@@ -36,7 +38,7 @@ interface IProps {
 
 export function PerformerWalletForm({ onFinish, user, updating }: IProps) {
   const [form] = Form.useForm();
-  const [walletNFID, setWalletNFID] = useState<string>(user.wallet_icp);
+  const [walletNFID, setWalletNFID] = useState<string>(user.account?.wallet_icp);
   const InternetIdentityProviderProps: any = cryptoService.getNfidInternetIdentityProviderProps();
   const [openConnectModal, setOpenConnectModal] = useState<boolean>(false);
 
@@ -49,7 +51,7 @@ export function PerformerWalletForm({ onFinish, user, updating }: IProps) {
   };
 
   const disconnectWallet = (value: string) => {
-    performerService.disconnectWalletPrincipal().then(val => {
+    accountService.disconnectWalletPrincipal().then(val => {
       message.success('Wallet Principal has been disconnected.');
       setWalletNFID('');
     }).catch(err => { message.error('There was a problem in disconnecting your wallet principal.'); });
@@ -113,40 +115,38 @@ export function PerformerWalletForm({ onFinish, user, updating }: IProps) {
                   <a href="https://plugwallet.ooo/" target="_blank" rel="noopener noreferrer" className='text-trax-blue-500'> Plug Wallet </a>
                   or
                   <a href="https://identity.ic0.app/" target="_blank" rel="noopener noreferrer" className='text-trax-blue-500'> Internet Identity</a>.
-                </span>                <div className='w-full flex justify-end'>
-                  <div className='cursor-pointer rounded-lg bg-[#1e1e1e] text-trax-white p-2 mt-4 flex w-20 justify-center' onClick={() => setOpenConnectModal(true)}>
-                    <span>Connect</span>
-                  </div>
-                </div>
+                </span>
+                  <Form.Item>
+                    <TraxButton
+                      htmlType="button"
+                      styleType="primary"
+                      buttonSize='full'
+                      buttonText="Connect"
+                      onClick={() => setOpenConnectModal(true)}
+                    />
+                </Form.Item>
               </div>
             )}
 
           </div>
         </div>
         {isMobile ? (
-          <Sheet
+          <SlideUpModal
             isOpen={openConnectModal}
             onClose={() => setOpenConnectModal(false)}
-            detent='content-height'
           >
-            <Sheet.Container className='bg-trax-black'>
-              <Sheet.Header />
-              <Sheet.Content>
-                  <div className='p-8'>
-                    <div style={{ marginBottom: '15px' }} >
+          <div className='p-8'>
+            <div style={{ marginBottom: '15px' }} >
 
-                      <span style={{ fontSize: '23px', fontWeight: '600', color: 'white' }}>Connect </span>
-                      <br />
-                      <span style={{ fontSize: '14px', color: 'grey' }}>Select your preferred wallet to connect to TRAX</span>
-                    </div>
-                    <InternetIdentityProvider {...InternetIdentityProviderProps}>
-                      <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer oldWalletPrincipal={user.wallet_icp} />
-                    </InternetIdentityProvider>
-                  </div>
-              </Sheet.Content>
-            </Sheet.Container>
-            <Sheet.Backdrop />
-          </Sheet>
+              <span style={{ fontSize: '23px', fontWeight: '600', color: 'white' }}>Connect </span>
+              <br />
+              <span style={{ fontSize: '14px', color: 'grey' }}>Select your preferred wallet to connect to TRAX</span>
+            </div>
+            <InternetIdentityProvider {...InternetIdentityProviderProps}>
+              <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer oldWalletPrincipal={user.account?.wallet_icp} />
+            </InternetIdentityProvider>
+          </div>
+          </SlideUpModal>
         ) : (
           <div className='sign-in-modal-wrapper'>
             <Modal
@@ -169,7 +169,7 @@ export function PerformerWalletForm({ onFinish, user, updating }: IProps) {
                   <span style={{ fontSize: '14px', color: 'grey' }}>Select your preferred wallet to connect to TRAX</span>
                 </div>
                 <InternetIdentityProvider {...InternetIdentityProviderProps}>
-                  <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer oldWalletPrincipal={user.wallet_icp} />
+                  <AuthConnect onNFIDConnect={onNFIDCopy} isPerformer oldWalletPrincipal={user.account?.wallet_icp} />
                 </InternetIdentityProvider>
               </div>
             </Modal>

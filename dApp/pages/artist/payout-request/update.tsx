@@ -111,7 +111,7 @@ class PayoutRequestUpdatePage extends React.PureComponent<Props, States> {
       message.error('Please recheck request payout status');
       return;
     }
-    if (data.requestTokens > user.balance) {
+    if (data.requestTokens > user?.account?.balance) {
       message.error('Requested amount must be less than or equal your wallet balance');
       return;
     }
@@ -138,7 +138,7 @@ class PayoutRequestUpdatePage extends React.PureComponent<Props, States> {
     const { submiting, statsPayout, payout } = this.state;
 
     if (payout === null) {
-      return <div style={{ margin: 30, textAlign: 'center' }}><Spin /></div>;
+      return <div style={{ margin: 30, textAlign: 'center' }}><img src="/static/trax_loading_optimize.gif" alt="Loading..." className='w-28 m-auto'/></div>;
     }
     return (
       <>

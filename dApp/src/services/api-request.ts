@@ -7,13 +7,14 @@ import { getGlobalConfig } from './config';
 
 export interface IResponse<T> {
   status: number;
-  data: T;
+  data: T | T[];
 }
 
 export const TOKEN = 'token';
 
 export abstract class APIRequest {
   static token: string = '';
+  static subaccount: string = '';
 
   setAuthHeaderToken(token: string) {
     APIRequest.token = token;
@@ -61,6 +62,49 @@ export abstract class APIRequest {
 
   request(
     url: string,
+    method: string = 'GET',
+    body?: any,
+    headers?: { [key: string]: string },
+    responseType: string = 'json'
+  ): Promise<any> {
+    const verb = method.toUpperCase();
+
+    const updatedHeader = {
+      'Content-Type': responseType === 'json' ? 'application/json' : undefined,
+      Authorization: APIRequest.token || cookie.get(TOKEN) || null,
+      ...(headers || {})
+    };
+
+    return fetch(isUrl(url) ? url : `${process.env.API_ENDPOINT || process.env.NEXT_PUBLIC_API_ENDPOINT}${url}`, {
+      method: verb,
+      headers: updatedHeader,
+      body: body ? JSON.stringify(body) : null
+    })
+      .then(this.checkStatus)
+      .then((response) => {
+        if (responseType === 'blob') {
+          // For file downloads, return the blob
+          return response.blob();
+        } else {
+          // For JSON, parse the response as JSON
+          return response.json();
+        }
+      })
+      .then((response) => {
+        startTransition(() => {
+          // Handle Redux store update or any other side effect here
+          // TODO: replace `updateReduxStore` with the appropriate action
+          // updateReduxStore(response.data);
+        });
+        return response;
+      })
+      .catch((error) => {
+        throw error;
+      });
+  }
+
+  /*request(
+    url: string,
     method?: string,
     body?: any,
     headers?: { [key: string]: string }
@@ -91,7 +135,7 @@ export abstract class APIRequest {
         // Handle errors here
         throw error;
       });
-  }
+  }*/
 
   buildUrl(baseUrl: string, params?: { [key: string]: any }) {
     if (!params) {
@@ -110,8 +154,8 @@ export abstract class APIRequest {
     return `${baseUrl}?${queryString}`;
   }
 
-  get(url: string, headers?: { [key: string]: string }) {
-    return this.request(url, 'get', null, headers);
+  get(url: string, headers?: { [key: string]: string }, responseType: string = 'json') {
+    return this.request(url, 'get', null, headers, responseType);
   }
 
   post(url: string, data?: any, headers?: { [key: string]: string }) {

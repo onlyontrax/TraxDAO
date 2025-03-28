@@ -33,3 +33,4 @@ export * from './crypto.service';
 export * from './nft.service';
 export * from './ticket.service';
 export * from './router.service';
+export * from './account.service';

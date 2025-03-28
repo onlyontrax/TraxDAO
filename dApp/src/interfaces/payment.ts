@@ -16,7 +16,7 @@ export class PaymentProductModel {
   productType: string;
 
   productId: string;
-  
+
   purchasedTier?: string;
 
   limitSupply?: boolean;
@@ -59,6 +59,10 @@ export interface ITransaction {
   tokenSymbol?: string;
   cryptoTransactionId?: string;
   isCrypto?: boolean;
+  accountSenderId: string;
+  accountSenderInfo?: any;
+  accountReceiverId: string;
+  accountReceiverInfo?: any;
 }
 
 export interface ICoupon {
@@ -125,4 +129,12 @@ export interface IOrder {
   digitalPath: string;
 
   deliveryAddressId: string;
+
+  accountSenderId: string;
+
+  accountSenderInfo?: any;
+
+  accountReceiverId: string;
+
+  accountReceiverInfo?: any;
 }

@@ -1,5 +1,8 @@
+import { IAccount } from './account';
+
 export interface IUser {
   _id: string;
+  account: IAccount;
   avatar: string;
   name: string;
   email: string;
@@ -21,10 +24,12 @@ export interface IUser {
   stripeCustomerId: string;
   stats: any;
   stripeAccount: any;
-  wallet_icp?: string;
   userReferral: string;
   referredBy?: string;
   enabled2fa?: boolean;
   currency?: string;
   enabledSms?: boolean;
+  unsubscribed?: boolean;
+  themeColor?: string;
+  backgroundColor?: string;
 }

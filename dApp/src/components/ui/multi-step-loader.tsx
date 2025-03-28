@@ -13,7 +13,7 @@ const CheckIconWhite = ({ className }: { className?: string, value: any, index: 
       fill="none"
       viewBox="0 0 24 24"
       strokeWidth={1.5}
-      stroke={"#ffffff"}
+      stroke={"#ffffff63"}
       className={cn("w-6 h-6 ", className)}
     >
       <path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -65,45 +65,49 @@ const LoaderCore = ({
   value?: number;
 }) => {
   return (
-    <div className="flex relative justify-start max-w-xl mx-auto flex-col mt-40">
+    <div className="flex relative justify-start max-w-xl mx-auto flex-col ">
       {loadingStates.map((loadingState, index) => {
         const distance = Math.abs(index - value);
         const opacity = Math.max(1 - distance * 0.2, 0); // Minimum opacity is 0, keep it 0.2 if you're sane.
 
         return (
-          <motion.div
-            key={index}
-            className={cn("text-left flex gap-2 mb-4")}
-            initial={{ opacity: 0, y: -(value * 40) }}
-            animate={{ opacity: opacity, y: -(value * 40) }}
-            transition={{ duration: 0.5 }}
-          >
+          // <motion.div
+          //   key={index}
+          //   className={cn("text-left flex gap-2 mb-4")}
+          //   initial={{ opacity: 0, y: -(value * 40) }}
+          //   animate={{ opacity: opacity, y: -(value * 40) }}
+          //   transition={{ duration: 0.5 }}
+          // >
+          <div className="text-left flex gap-2 mb-8">
+
+          
             <div>
               {(index > value + 1) && (
-                <CheckIconWhite className="text-trax-white" value={value} index={index} />
+                <CheckIconWhite className="text-[#ffffff63] w-11 h-11" value={value} index={index} />
               )}
               {(value + 1 === index) && (
-                <CheckIconBlue className="text-trax-white" value={value} index={index} />
+                <CheckIconBlue className="text-[#ffffff63] w-11 h-11" value={value} index={index} />
               )}
               {(index <= value) && (
                 <CheckFilled
                   className={cn(
-                    "text--trax-lime-500",
-                    value === index && "text--trax-lime-500 opacity-100"
+                    "text-trax-lime-500 w-11 h-11",
+                    value === index && "text-trax-lime-500 opacity-100"
                   )}
                 />
               )}
             </div>
             <span
               className={cn(
-                "text-trax-white",
+                "text-[#ffffff63] font-heading text-4xl flex items-center uppercase",
                 (value === index || value > index) && "text-trax-lime-500 opacity-100",
                 (value + 1 === index) && "text-[#62b2f8] opacity-100"
               )}
             >
               {loadingState.text}
             </span>
-          </motion.div>
+            </div>
+          // </motion.div>
         );
       })}
     </div>
@@ -161,14 +165,14 @@ export const MultiStepLoader = ({
           exit={{ opacity: 0  }}
           className="w-full h-full fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-2xl"
         >
-          <div className="h-96  relative">
+          <div className=" relative">
             <div className="m-auto absolute inset-0 flex justify-center w-full h-full">
               <Confetti active={ confetti } config={ config }/>
             </div>
             <LoaderCore value={currentState} loadingStates={loadingStates} />
           </div>
 
-          <div className="bg-gradient-to-t inset-x-0 z-20 bottom-0 bg-white h-full absolute [mask-image:radial-gradient(900px_at_center,transparent_30%,white)]" />
+          <div style={{background: 'linear-gradient(45deg, black, #00000000)'}} className="bg-gradient-to-t inset-x-0 z-20 bottom-0 bg-white h-full absolute " />
         </motion.div>
       )}
     </AnimatePresence>

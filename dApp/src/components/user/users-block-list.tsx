@@ -34,7 +34,7 @@ export function UsersBlockList({
       render: (targetInfo: any) => (
         <span>
           {/* eslint-disable-next-line react/destructuring-assignment */}
-          <Avatar src={targetInfo?.avatar || '/static/no-avatar.png'} size={28} />
+          <Avatar src={targetInfo?.avatar || '/static/no-avatar-dark-mode.png'} size={28} />
           {' '}
           {/* eslint-disable-next-line react/destructuring-assignment */}
           {targetInfo?.name || targetInfo?.username || 'N/A'}

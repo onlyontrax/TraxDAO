@@ -13,6 +13,7 @@ import {
 import Image from 'next/image';
 import Router from 'next/router';
 import { ISettings, PayoutRequestInterface } from 'src/interfaces';
+import TraxButton from '@components/common/TraxButton';
 
 interface Props {
   submit: Function;
@@ -44,7 +45,7 @@ function PayoutRequestForm({
       initialValues={{
         requestNote: requestNote || '',
         requestTokens: requestTokens || statsPayout?.remainingUnpaidTokens || 0,
-        paymentAccountType: paymentAccountType || 'paypal'
+        paymentAccountType: paymentAccountType || 'stripe'
       }}
       scrollToFirstError
     >
@@ -54,21 +55,21 @@ function PayoutRequestForm({
       <div className="req-payout-stats-wrapper">
         <Space size="large" className="req-payout-stats">
           <Statistic
-            title="Total Earned"
+            title="Available balance"
+            value={statsPayout?.remainingUnpaidTokens || 0}
+            precision={2}
+            prefix="$"
+          />
+          <Statistic
+            title="Total earned"
             value={statsPayout?.totalEarnedTokens || 0}
             precision={2}
             prefix="$"
 
           />
           <Statistic
-            title="Withdrew"
+            title="Claimed balance"
             value={statsPayout?.previousPaidOutTokens || 0}
-            precision={2}
-            prefix="$"
-          />
-          <Statistic
-            title="Wallet Balance"
-            value={statsPayout?.remainingUnpaidTokens || 0}
             precision={2}
             prefix="$"
           />
@@ -104,28 +105,22 @@ function PayoutRequestForm({
           </Select.Option>
         </Select>
       </Form.Item>
-      <div className="payout-req-btn-wrapper">
-        <Button
-          className="submit-content-previous"
-          loading={submiting}
-          htmlType="button"
-          disabled={submiting}
-          style={{ margin: '5px' }}
-          onClick={() => Router.back()}
-        >
-          Cancel
-        </Button>
-        <Form.Item>
-          <Button
-            className="submit-content-green"
-            loading={submiting}
+      <div className="flex flex-row gap-4 pt-2">
+          <TraxButton
+            htmlType="button"
+            styleType="secondary"
+            buttonSize="small"
+            buttonText="Cancel"
+            disabled={submiting}
+            onClick={() => Router.back()}
+          />
+          <TraxButton
             htmlType="submit"
+            styleType="primary"
+            buttonSize="small"
+            buttonText="Submit"
             disabled={['done', 'approved'].includes(status) || submiting}
-            style={{ margin: '0 5px' }}
-          >
-            Submit
-          </Button>
-        </Form.Item>
+          />
       </div>
     </Form>
   );

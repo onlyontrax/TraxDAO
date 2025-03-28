@@ -33,7 +33,7 @@ class NFTCreatePage extends PureComponent<IProps, IStates> {
       message.warning('Your Identity has not been verified yet! You can\'t post any content right now. Please to to Account settings to verify your account.');
       Router.back();
     }
-    if (!user?.wallet_icp) {
+    if (!user.account?.wallet_icp) {
       message.info('You must connect your wallet id to TRAX in order to make use of web3 features.');
     }
   }

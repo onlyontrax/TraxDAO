@@ -62,7 +62,7 @@ class UserListModal<OtherProps> extends Component<IProps & OtherProps> {
               );
               if (u.isPerformer)
                 return (
-                  <Link key={u.username} href={`/${u.username}`}>
+                  <Link key={u.username} href={`/artist/profile/?id=${u.username}`}>
                     <LR />
                   </Link>
                 );

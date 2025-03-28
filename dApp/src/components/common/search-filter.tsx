@@ -6,6 +6,7 @@ import {
   Select
 } from 'antd';
 import { PureComponent } from 'react';
+import { SearchOutlined } from '@ant-design/icons';
 
 const { RangePicker } = DatePicker;
 interface IProps {
@@ -24,6 +25,10 @@ interface IProps {
   }[];
   searchWithPerformer?: boolean;
   searchWithKeyword?: boolean;
+  keywordPlaceholder?: string;
+  className?: string;
+  isPerformer?: boolean;
+  prefixIcon?: boolean;
   dateRange?: boolean;
   isFree?: boolean;
 }
@@ -37,19 +42,25 @@ export class SearchFilter extends PureComponent<IProps> {
       type = [],
       searchWithPerformer,
       searchWithKeyword,
+      keywordPlaceholder,
+      className,
+      isPerformer = false,
+      prefixIcon = false,
       dateRange,
       isFree,
       onSubmit,
       subscriptionTypes
     } = this.props;
     return (
-      <Row className="search-filter">
+      <Row className={`search-filter ${isPerformer ? 'px-0' : ''}`}>
         {searchWithKeyword && (
-          <Col lg={8} md={8} xs={12}>
+          <Col lg={isPerformer ? 16 : 8} md={8} xs={12}>
             <Input
-              placeholder="Enter keyword"
+              placeholder={keywordPlaceholder ? keywordPlaceholder : "Enter keyword"}
               onChange={(evt) => this.setState({ q: evt.target.value })}
               onPressEnter={() => onSubmit(this.state)}
+              prefix={prefixIcon === true ? <SearchOutlined style={{ fontSize: '18px', paddingRight: '0.5rem' }} /> : ''}
+              className={className ? className : ''}
             />
           </Col>
         )}
@@ -64,7 +75,7 @@ export class SearchFilter extends PureComponent<IProps> {
               {statuses.map((s) => (
                 <Select.Option key={s.key} value={s.key}>
                   {s.text || s.key}
-                </Select.Option>
+                </Select.Option>   
               ))}
             </Select>
           </Col>
